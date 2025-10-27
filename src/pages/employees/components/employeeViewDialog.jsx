@@ -19,8 +19,23 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
 
         <div className="space-y-4 text-gray-800">
           <div>
-            <Label className="font-semibold text-base">Full Name</Label>
-            <p className="text-sm">{employee.fullName}</p>
+            <Label className="font-semibold text-base">Last Name</Label>
+            <p className="text-sm">{employee.lastName}</p>
+          </div>
+
+          <div>
+            <Label className="font-semibold text-base">First Name</Label>
+            <p className="text-sm">{employee.firstName}</p>
+          </div>
+
+          <div>
+            <Label className="font-semibold text-base">Middle Name</Label>
+            <p className="text-sm">{employee.middleName}</p>
+          </div>
+
+          <div>
+            <Label className="font-semibold text-base">Suffix</Label>
+            <p className="text-sm">{employee.suffixName}</p>
           </div>
 
           <div>

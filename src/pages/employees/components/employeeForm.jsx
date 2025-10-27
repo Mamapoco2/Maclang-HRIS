@@ -14,7 +14,10 @@ import { toast } from "sonner";
 
 export default function EmployeeForm({ employee, refresh, onClose }) {
   const [formData, setFormData] = useState({
-    fullName: "",
+    lastName: "",
+    firstName: "",
+    middleName: "",
+    suffixName: "",
     email: "",
     position: "",
     department: "",
@@ -26,7 +29,10 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       setFormData(employee);
     } else {
       setFormData({
-        fullName: "",
+        lastName: "",
+        firstName: "",
+        middleName: "",
+        suffixName: "",
         email: "",
         position: "",
         department: "",
@@ -38,7 +44,10 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (
-      !formData.fullName ||
+      !formData.lastName ||
+      !formData.firstName ||
+      !formData.middleName ||
+      !formData.suffixName ||
       !formData.email ||
       !formData.position ||
       !formData.department
@@ -59,14 +68,38 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Full Name */}
+      {/* Name*/}
       <div className="grid gap-2">
-        <Label>Full Name</Label>
+        <Label>Last Name</Label>
         <Input
           placeholder="Juan Dela Cruz"
-          value={formData.fullName}
+          value={formData.lastName}
           onChange={(e) =>
-            setFormData({ ...formData, fullName: e.target.value })
+            setFormData({ ...formData, lastName: e.target.value })
+          }
+        />
+        <Label>First Name</Label>
+        <Input
+          placeholder="Juan Dela Cruz"
+          value={formData.firstName}
+          onChange={(e) =>
+            setFormData({ ...formData, firstName: e.target.value })
+          }
+        />
+        <Label>Middle Name</Label>
+        <Input
+          placeholder="Juan Dela Cruz"
+          value={formData.middleName}
+          onChange={(e) =>
+            setFormData({ ...formData, middleName: e.target.value })
+          }
+        />
+         <Label>Suffix</Label>
+        <Input
+          placeholder="Juan Dela Cruz"
+          value={formData.suffixName}
+          onChange={(e) =>
+            setFormData({ ...formData, suffixName: e.target.value })
           }
         />
       </div>
