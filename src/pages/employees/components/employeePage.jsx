@@ -10,7 +10,7 @@ import { employeeService } from "@/services/employeeService";
 import EmployeeTable from "./employeeTable";
 import EmployeeForm from "./employeeForm";
 import EmployeeDeleteDialog from "./employeeDeleteDialog";
-import EmployeeViewDialog from "./employeeViewDialog"; // ✅ import this
+import EmployeeViewDialog from "./employeeViewDialog";
 import { toast } from "sonner";
 
 export default function EmployeePage() {
@@ -18,7 +18,7 @@ export default function EmployeePage() {
   const [openForm, setOpenForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [deleteEmployeeId, setDeleteEmployeeId] = useState(null);
-  const [viewEmployee, setViewEmployee] = useState(null); // ✅ add this state
+  const [viewEmployee, setViewEmployee] = useState(null);
 
   const loadEmployees = async () => {
     const data = await employeeService.getEmployees();
@@ -44,7 +44,7 @@ export default function EmployeePage() {
   };
 
   const handleView = (employee) => {
-    setViewEmployee(employee); 
+    setViewEmployee(employee);
   };
 
   const confirmDelete = async () => {
@@ -65,7 +65,7 @@ export default function EmployeePage() {
         employees={employees}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onView={handleView} 
+        onView={handleView}
       />
 
       {/* Add/Edit Employee Modal */}
@@ -84,7 +84,6 @@ export default function EmployeePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <EmployeeDeleteDialog
         open={!!deleteEmployeeId}
         onClose={() => setDeleteEmployeeId(null)}

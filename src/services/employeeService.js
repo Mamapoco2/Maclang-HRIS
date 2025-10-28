@@ -1,7 +1,9 @@
 let employees = [
   {
     id: 1,
-    fullName: "Juan Dela Cruz",
+    firstName: "Maria",
+    lastName: "Santos",
+    middleName: "Dela Cruz",
     email: "juan@example.com",
     contact: "09123456789",
     position: "HR Manager",
