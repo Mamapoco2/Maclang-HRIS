@@ -17,6 +17,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     firstName: "",
     middleName: "",
     lastName: "",
+    suffix: "",
     email: "",
     contact: "",
     position: "",
@@ -38,6 +39,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         firstName: "",
         middleName: "",
         lastName: "",
+        suffix: "",
         email: "",
         contact: "",
         position: "",
@@ -104,6 +106,13 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         </div>
         <div>
           <Label>Last Name</Label>
+          <Input
+            value={formData.lastName}
+            onChange={(e) => handleChange("lastName", e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Suffix</Label>
           <Input
             value={formData.lastName}
             onChange={(e) => handleChange("lastName", e.target.value)}

@@ -4,6 +4,7 @@ let employees = [
     firstName: "Maria",
     lastName: "Santos",
     middleName: "Dela Cruz",
+    suffix: "III",
     email: "juan@example.com",
     contact: "09123456789",
     position: "HR Manager",

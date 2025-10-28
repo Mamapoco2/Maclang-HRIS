@@ -33,7 +33,8 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
             </Avatar>
             <div>
               <h2 className="text-lg font-semibold">
-                {employee.firstName} {employee.middleName} {employee.lastName}
+                {employee.firstName} {employee.middleName} {employee.lastName}{" "}
+                {employee.suffix}
               </h2>
               <p className="text-sm text-gray-500">{employee.position}</p>
             </div>
@@ -91,13 +92,11 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
               </p>
             </div>
 
-            {/* Employee Type */}
             <div>
               <Label className="font-semibold text-base">Employee Type</Label>
               <p className="text-sm">{employee.employeeType || "N/A"}</p>
             </div>
 
-            {/* Status */}
             <div>
               <Label className="font-semibold text-base">Status</Label>
               <p
