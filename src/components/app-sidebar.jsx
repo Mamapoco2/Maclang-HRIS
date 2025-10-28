@@ -19,6 +19,7 @@ import {
   IconPlane,
   IconUsersGroup,
   IconSchool,
+  IconSpeakerphone,
 } from "@tabler/icons-react";
 
 import { Link } from "react-router-dom";
@@ -78,6 +79,11 @@ const data = {
       title: "Recruitment",
       url: "/recruitment",
       icon: IconBriefcase,
+    },
+    {
+      title: "Announcement",
+      url: "/announcement",
+      icon: IconSpeakerphone,
     },
   ],
   navClouds: [
