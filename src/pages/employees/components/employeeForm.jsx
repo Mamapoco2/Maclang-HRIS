@@ -10,7 +10,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { employeeService } from "@/services/employeeService";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 
 export default function EmployeeForm({ employee, refresh, onClose }) {
   const [formData, setFormData] = useState({
@@ -89,7 +89,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       onSubmit={handleSubmit}
       className="space-y-4 max-h-[80vh] overflow-y-auto p-2"
     >
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <div>
           <Label>First Name</Label>
           <Input
@@ -114,8 +114,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         <div>
           <Label>Suffix</Label>
           <Input
-            value={formData.lastName}
-            onChange={(e) => handleChange("lastName", e.target.value)}
+            value={formData.suffix}
+            onChange={(e) => handleChange("suffix", e.target.value)}
           />
         </div>
       </div>
