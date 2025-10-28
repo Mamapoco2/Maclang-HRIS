@@ -1,13 +1,17 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AppLayout from "../layout/layout";
+
 import Dashboard from "../pages/dashboard/dashboard";
 import EmployeePage from "../pages/employees/components/employeePage";
 import AnnouncementPage from "../pages/announcement/announcement";
+import Login from "../pages/login/login";
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/login" element={<Login />} />
+
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/employees" element={<EmployeePage />} />
