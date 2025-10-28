@@ -4,6 +4,12 @@ import Dashboard from "../pages/dashboard/dashboard";
 import EmployeePage from "../pages/employees/components/employeePage";
 import Login from "../login";
 
+
+
+
+
+
+
 function App() {
   return (
     <Router>
@@ -11,8 +17,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/employees" element={<EmployeePage />} />
-          
+          <Route path="/employees" element={<EmployeePage />} />   
         </Route>
       </Routes>
     </Router>
