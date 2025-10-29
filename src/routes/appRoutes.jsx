@@ -3,11 +3,13 @@ import AppLayout from "../layout/layout";
 
 import Dashboard from "../pages/dashboard/dashboard";
 import EmployeePage from "../pages/employees/components/employeePage";
-import Login from "../pages/login/components/loginPage";
+import Login from "../login";
+import Inbox from "../pages/announcement/inbox";
+import Sentbox from "../pages/announcement/sentbox";
 
-import Inbox from "../pages/announcement/inbox/inbox";
-import Forward from "../pages/announcement/Forward/forward";
-import Sent from "../pages/announcement/sent/sent";
+
+
+
 
 function App() {
   return (
@@ -16,11 +18,10 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/employees" element={<EmployeePage />} />
-          <Route path="/inbox" element={<Inbox />} />
-          <Route path="/forward" element={<Forward />} />
-          <Route path="/sent" element={<Sent />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/employees" element={<EmployeePage />} /> 
+          <Route path="/inbox" element={<Inbox />} /> 
+          <Route path="/sentbox" element={<Sentbox />} />     
         </Route>
       </Routes>
     </Router>
