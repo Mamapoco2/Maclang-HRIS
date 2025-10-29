@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
-import logo from "../../assets/rmbghlogo.png";
-import LoginHeader from "./components/loginHeader";
-import LoginForm from "./components/loginForm";
-import LoginFooter from "./components/loginFooter";
-import { useCurrentTime } from "./components/useLogin";
+import logo from "../../../assets/rmbghlogo.png";
+import LoginHeader from "./loginHeader";
+import LoginForm from "./loginForm";
+import LoginFooter from "./loginFooter";
+import { useCurrentTime } from "./useLogin";
 
-export default function Login() {
+export default function LoginPage() {
   const { formattedDate, formattedTime } = useCurrentTime();
 
   return (

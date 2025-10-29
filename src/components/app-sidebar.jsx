@@ -82,8 +82,21 @@ const data = {
     },
     {
       title: "Announcement",
-      url: "/announcement",
       icon: IconSpeakerphone,
+      items: [
+        {
+          title: "Inbox",
+          url: "/inbox",
+        },
+        {
+          title: "Forwarded",
+          url: "/forward",
+        },
+        {
+          title: "sent",
+          url: "/sent",
+        },
+      ],
     },
   ],
   navClouds: [
