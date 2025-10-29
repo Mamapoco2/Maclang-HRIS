@@ -1,23 +1,21 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AppLayout from "../layout/layout";
+
 import Dashboard from "../pages/dashboard/dashboard";
 import EmployeePage from "../pages/employees/components/employeePage";
-import Login from "../login";
-
-
-
-
-
-
+import AnnouncementPage from "../pages/announcement/announcement";
+import Login from "../pages/login/login";
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+
         <Route element={<AppLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/employees" element={<EmployeePage />} />   
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/employees" element={<EmployeePage />} />
+          <Route path="/announcement" element={<AnnouncementPage />} />
         </Route>
       </Routes>
     </Router>

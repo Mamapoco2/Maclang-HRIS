@@ -14,14 +14,21 @@ import { toast } from "sonner";
 
 export default function EmployeeForm({ employee, refresh, onClose }) {
   const [formData, setFormData] = useState({
-    lastName: "",
     firstName: "",
     middleName: "",
-    suffixName: "",
+    lastName: "",
+    suffix: "",
     email: "",
+    contact: "",
     position: "",
     department: "",
+    gender: "",
     status: "Active",
+    address: "",
+    birthdate: "",
+    salary: "",
+    employeeType: "",
+    image: null,
   });
 
   useEffect(() => {
@@ -29,30 +36,37 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       setFormData(employee);
     } else {
       setFormData({
-        lastName: "",
         firstName: "",
         middleName: "",
-        suffixName: "",
+        lastName: "",
+        suffix: "",
         email: "",
+        contact: "",
         position: "",
         department: "",
+        gender: "",
         status: "Active",
+        address: "",
+        birthdate: "",
+        salary: "",
+        employeeType: "",
+        image: "",
       });
     }
   }, [employee]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (
-      !formData.lastName ||
-      !formData.firstName ||
-      !formData.middleName ||
-      !formData.suffixName ||
-      !formData.email ||
-      !formData.position ||
-      !formData.department
-    )
-      return toast.error("Please fill out all fields.");
+    const required = [
+      "firstName",
+      "lastName",
+      "email",
+      "position",
+      "department",
+      "image",
+    ];
+    const missing = required.find((key) => !formData[key]);
+    if (missing) return toast.error("Please fill out all required fields.");
 
     if (employee) {
       await employeeService.updateEmployee(employee.id, formData);
@@ -66,85 +80,143 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     onClose();
   };
 
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Name*/}
-      <div className="grid gap-2">
-        <Label>Last Name</Label>
-        <Input
-          placeholder="Juan Dela Cruz"
-          value={formData.lastName}
-          onChange={(e) =>
-            setFormData({ ...formData, lastName: e.target.value })
-          }
-        />
-        <Label>First Name</Label>
-        <Input
-          placeholder="Juan Dela Cruz"
-          value={formData.firstName}
-          onChange={(e) =>
-            setFormData({ ...formData, firstName: e.target.value })
-          }
-        />
-        <Label>Middle Name</Label>
-        <Input
-          placeholder="Juan Dela Cruz"
-          value={formData.middleName}
-          onChange={(e) =>
-            setFormData({ ...formData, middleName: e.target.value })
-          }
-        />
-         <Label>Suffix</Label>
-        <Input
-          placeholder="Juan Dela Cruz"
-          value={formData.suffixName}
-          onChange={(e) =>
-            setFormData({ ...formData, suffixName: e.target.value })
-          }
-        />
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 max-h-[80vh] overflow-y-auto p-2"
+    >
+      <div className="grid grid-cols-4 gap-2">
+        <div>
+          <Label>First Name</Label>
+          <Input
+            value={formData.firstName}
+            onChange={(e) => handleChange("firstName", e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Middle Name</Label>
+          <Input
+            value={formData.middleName}
+            onChange={(e) => handleChange("middleName", e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Last Name</Label>
+          <Input
+            value={formData.lastName}
+            onChange={(e) => handleChange("lastName", e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Suffix</Label>
+          <Input
+            value={formData.suffix}
+            onChange={(e) => handleChange("suffix", e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* Email */}
-      <div className="grid gap-2">
+      <div>
         <Label>Email</Label>
         <Input
           type="email"
-          placeholder="juan@example.com"
           value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          onChange={(e) => handleChange("email", e.target.value)}
         />
       </div>
 
-      {/* Position */}
-      <div className="grid gap-2">
+      <div>
+        <Label>Contact</Label>
+        <Input
+          value={formData.contact}
+          onChange={(e) => handleChange("contact", e.target.value)}
+        />
+      </div>
+
+      <div>
         <Label>Position</Label>
         <Input
-          placeholder="HR Manager"
           value={formData.position}
-          onChange={(e) =>
-            setFormData({ ...formData, position: e.target.value })
-          }
+          onChange={(e) => handleChange("position", e.target.value)}
         />
       </div>
 
-      {/* Department */}
-      <div className="grid gap-2">
+      <div>
         <Label>Department</Label>
         <Input
-          placeholder="Human Resources"
           value={formData.department}
-          onChange={(e) =>
-            setFormData({ ...formData, department: e.target.value })
-          }
+          onChange={(e) => handleChange("department", e.target.value)}
         />
       </div>
 
-      {/* Status */}
-      <div className="grid gap-2">
+      <div>
+        <Label>Gender</Label>
+        <Select
+          value={formData.gender}
+          onValueChange={(val) => handleChange("gender", val)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select gender" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Male">Male</SelectItem>
+            <SelectItem value="Female">Female</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Address</Label>
+        <Input
+          value={formData.address}
+          onChange={(e) => handleChange("address", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <Label>Birthdate</Label>
+        <Input
+          type="date"
+          value={formData.birthdate}
+          onChange={(e) => handleChange("birthdate", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <Label>Salary</Label>
+        <Input
+          type="number"
+          value={formData.salary}
+          onChange={(e) => handleChange("salary", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <Label>Employee Type</Label>
+        <Select
+          value={formData.employeeType}
+          onValueChange={(val) => handleChange("employeeType", val)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Full-time">Full-time</SelectItem>
+            <SelectItem value="Part-time">Part-time</SelectItem>
+            <SelectItem value="Contractual">Contractual</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
         <Label>Status</Label>
         <Select
           value={formData.status}
-          onValueChange={(value) => setFormData({ ...formData, status: value })}
+          onValueChange={(val) => handleChange("status", val)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select status" />
@@ -156,8 +228,19 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         </Select>
       </div>
 
+      <div>
+        <Label>Profile Image</Label>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) =>
+            handleChange("image", e.target.files ? e.target.files[0] : null)
+          }
+        />
+      </div>
+
       <Button type="submit" className="w-full">
-        {employee ? "Update" : "Add"}
+        {employee ? "Update Employee" : "Add Employee"}
       </Button>
     </form>
   );
