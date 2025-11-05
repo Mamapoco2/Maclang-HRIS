@@ -51,7 +51,7 @@ const Department = () => {
     setAnnouncements(updated);
     toast.success(
       updated.find((a) => a.id === id).pinned
-        ? "📌 Message pinned!"
+        ? "Message pinned!"
         : "Message unpinned."
     );
   };

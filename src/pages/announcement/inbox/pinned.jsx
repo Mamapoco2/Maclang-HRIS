@@ -34,7 +34,7 @@ const Pinned = () => {
     e.stopPropagation();
     const updated = announcements.map((a) => (a.id === id ? { ...a, pinned: !a.pinned } : a));
     updateStorage(updated);
-    toast.success(updated.find((a) => a.id === id).pinned ? "📌 Message pinned!" : "Message unpinned.");
+    toast.success(updated.find((a) => a.id === id).pinned ? "Message pinned!" : "Message unpinned.");
   };
 
   const selectAnnouncement = (ann) => navigate(`/view/${ann.id}`, { state: { email: ann } });
