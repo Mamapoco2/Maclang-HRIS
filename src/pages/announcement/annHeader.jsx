@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
+import Compose from "./compose"; 
 
 const AnnHeader = ({
   search,
@@ -10,71 +11,64 @@ const AnnHeader = ({
   setFromDate,
   toDate,
   setToDate,
-  filter,
-  setFilter,
 }) => {
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
+
+  const handleOpenCompose = () => setIsComposeOpen(true);
+  const handleCloseCompose = () => setIsComposeOpen(false);
+
   return (
-    <div className="flex items-center justify-between border-b px-4 py-3 bg-background">
-      {/* Left side: Tabs */}
-      <div className="flex gap-4">
+    <>
+      <div className="flex flex-wrap items-center justify-between border-b px-4 py-3 bg-background gap-4">
+        {/* Left: Create Announcement */}
         <Button
-          size="sm"
-          onClick={() => setFilter("All")}
-          className={`px-4 py-2 rounded ${
-            filter === "All"
-              ? "bg-blue-100 text-blue-700 font-medium" // Light blue highlight
-              : "bg-white text-gray-600 hover:bg-blue-200"
-          }`}
+          onClick={handleOpenCompose}
+          variant="default" // shadcn default (black)
+          className="shadow-sm"
         >
-          All Department
+          <Plus size={16} className="mr-2" />
+          Create Announcement
         </Button>
 
-        <Button
-          size="sm"
-          onClick={() => setFilter("Department")}
-          className={`px-4 py-2 rounded ${
-            filter === "Department"
-              ? "bg-blue-100 text-blue-700 font-medium"
-              : "bg-white text-gray-600 hover:bg-blue-200"
-          }`}
-        >
-          Department
-        </Button>
-      </div>
+        {/* Right: Filters + Search */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Date Filters */}
+          <div className="flex items-center gap-2 text-sm">
+            <label className="text-muted-foreground">From:</label>
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="w-32"
+            />
+            <label className="text-muted-foreground">To:</label>
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="w-32"
+            />
+          </div>
 
-      {/* Right side: Search & Date Filters */}
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-3">
-          <Input
-            type="text"
-            placeholder="Search announcements"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-[280px] max-w-full"
-          />
-          <Button variant="outline" size="sm" className="text-muted-foreground">
-            <Search size={16} />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-3 text-sm">
-          <label className="text-muted-foreground">From:</label>
-          <Input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="w-32"
-          />
-          <label className="text-muted-foreground">To:</label>
-          <Input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="w-32"
-          />
+          {/* Search Box */}
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              placeholder="Search announcements..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-[240px]"
+            />
+            <Button variant="outline" size="sm" className="text-muted-foreground">
+              <Search size={16} />
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Compose Modal */}
+      <Compose isOpen={isComposeOpen} onClose={handleCloseCompose} />
+    </>
   );
 };
 
