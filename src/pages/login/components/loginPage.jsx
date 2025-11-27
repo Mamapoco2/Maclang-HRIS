@@ -35,7 +35,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
-        className="z-10"
+        className="z-10 border-2 border-blue-300/50 dark:border-blue-600/50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md rounded-lg shadow-lg p-8 w-full max-w-md"
       >
         <LoginHeader logo={logo} />
         <LoginForm />

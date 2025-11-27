@@ -20,6 +20,7 @@ import {
   IconUsersGroup,
   IconSchool,
   IconSpeakerphone,
+  IconClipboardList,
 } from "@tabler/icons-react";
 
 import { Link } from "react-router-dom";
@@ -47,7 +48,7 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
@@ -79,6 +80,16 @@ const data = {
       title: "Recruitment",
       url: "/recruitment",
       icon: IconBriefcase,
+    },
+    {
+      title: "Applications",
+      url: "/applications",
+      icon: IconClipboardList,
+    },
+    {
+      title: "Applicants",
+      url: "/applicants",
+      icon: IconUsers,
     },
     {
       title: "Announcement",
