@@ -65,8 +65,18 @@ export function ChartBarMultiple() {
               cursor={false}
               content={<ChartTooltipContent indicator="dashed" />}
             />
-            <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-            <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
+            <Bar
+              dataKey="desktop"
+              fill="var(--color-desktop)"
+              opacity="0.5"
+              radius={4}
+            />
+            <Bar
+              dataKey="mobile"
+              fill="var(--color-mobile)"
+              opacity="0.5"
+              radius={4}
+            />
           </BarChart>
         </ChartContainer>
       </CardContent>

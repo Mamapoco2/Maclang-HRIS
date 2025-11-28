@@ -23,7 +23,7 @@ export default function LoginForm() {
   const onSubmit = async (data) => {
     const success = await authService.login(data.username, data.password);
     if (success) {
-      navigate("/");
+      navigate("/dashboard");
     }
   };
 

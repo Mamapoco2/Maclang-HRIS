@@ -19,13 +19,9 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
         </DialogHeader>
 
         <div className="space-y-4 text-gray-800">
-          {/* Profile Image */}
           <div className="flex items-center gap-3">
             <Avatar className="h-16 w-16">
-              <AvatarImage
-                src={employee.image ? URL.createObjectURL(employee.image) : ""}
-                alt={employee.firstName}
-              />
+              <AvatarImage src={employee.avatar} alt={employee.firstName} />
               <AvatarFallback>
                 {employee.firstName?.[0]}
                 {employee.lastName?.[0]}
@@ -41,37 +37,31 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* Email */}
             <div>
               <Label className="font-semibold text-base">Email</Label>
               <p className="text-sm">{employee.email || "N/A"}</p>
             </div>
 
-            {/* Contact */}
             <div>
               <Label className="font-semibold text-base">Contact</Label>
               <p className="text-sm">{employee.contact || "N/A"}</p>
             </div>
 
-            {/* Department */}
             <div>
               <Label className="font-semibold text-base">Department</Label>
               <p className="text-sm">{employee.department || "N/A"}</p>
             </div>
 
-            {/* Gender */}
             <div>
               <Label className="font-semibold text-base">Gender</Label>
               <p className="text-sm">{employee.gender || "N/A"}</p>
             </div>
 
-            {/* Address */}
             <div>
               <Label className="font-semibold text-base">Address</Label>
               <p className="text-sm">{employee.address || "N/A"}</p>
             </div>
 
-            {/* Birthdate */}
             <div>
               <Label className="font-semibold text-base">Birthdate</Label>
               <p className="text-sm">
@@ -81,7 +71,6 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
               </p>
             </div>
 
-            {/* Salary */}
             <div>
               <Label className="font-semibold text-base">Salary</Label>
               <p className="text-sm">

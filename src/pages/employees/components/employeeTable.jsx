@@ -63,6 +63,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead></TableHead>
             <TableHead>First Name</TableHead>
             <TableHead>Last Name</TableHead>
             <TableHead>Middle Name</TableHead>
@@ -77,20 +78,26 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
           {filteredEmployees.length > 0 ? (
             filteredEmployees.map((emp) => (
               <TableRow key={emp.id}>
+                <TableCell className="flex text-center items-center gap-3">
+                  <img
+                    src={emp.avatar}
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
+                </TableCell>
                 <TableCell>{emp.firstName}</TableCell>
                 <TableCell>{emp.lastName}</TableCell>
                 <TableCell>{emp.middleName}</TableCell>
                 <TableCell>{emp.email}</TableCell>
                 <TableCell>{emp.position}</TableCell>
                 <TableCell>{emp.department}</TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <Badge
                     variant={emp.status === "Active" ? "default" : "secondary"}
                   >
                     {emp.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right space-x-2">
+                <TableCell className="text-center space-x-2">
                   <Button
                     variant="outline"
                     size="sm"

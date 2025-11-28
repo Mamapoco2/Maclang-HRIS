@@ -68,7 +68,6 @@ export default function EmployeePage() {
         onView={handleView}
       />
 
-      {/* Add/Edit Employee Modal */}
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent>
           <DialogHeader>

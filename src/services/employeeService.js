@@ -1,6 +1,7 @@
 let employees = [
   {
     id: 1,
+    avatar: "https://randomuser.me/api/portraits/women/13.jpg",
     firstName: "Maria",
     lastName: "Santos",
     middleName: "Dela Cruz",
