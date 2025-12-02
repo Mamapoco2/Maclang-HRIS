@@ -6,6 +6,8 @@ import Employee from "../pages/employees/components/employeePage";
 import Login from "../pages/login/components/loginPage";
 import Team from "../pages/team/components/teamPage";
 import Analytics from "../pages/analytics/components/analyticsPage";
+import Trainings from "../pages/trainings/components/trainingPage";
+import Applications from "../pages/application/components/applicationsPage";
 
 import Inbox from "../pages/announcement/inbox/inbox";
 import Forward from "../pages/announcement/Forward/forward";
@@ -21,6 +23,8 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/employees" element={<Employee />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/trainings" element={<Trainings />} />
+          <Route path="/applications" element={<Applications />} />
           <Route path="/team" element={<Team />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/forward" element={<Forward />} />

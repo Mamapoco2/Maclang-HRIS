@@ -11,35 +11,43 @@ import {
 } from "recharts";
 
 const data = [
-  { name: "Jan", sales: 4000 },
-  { name: "Feb", sales: 2500 },
-  { name: "Mar", sales: 3200 },
-  { name: "Apr", sales: 2700 },
-  { name: "May", sales: 4000 },
-  { name: "Jun", sales: 3800 },
-  { name: "Jul", sales: 4200 },
-  { name: "Aug", sales: 3900 },
-  { name: "Sep", sales: 3100 },
-  { name: "Oct", sales: 3600 },
-  { name: "Nov", sales: 3300 },
-  { name: "Dec", sales: 4100 },
+  { month: "Jan", applications: 120 },
+  { month: "Feb", applications: 95 },
+  { month: "Mar", applications: 140 },
+  { month: "Apr", applications: 110 },
+  { month: "May", applications: 180 },
+  { month: "Jun", applications: 165 },
+  { month: "Jul", applications: 190 },
+  { month: "Aug", applications: 175 },
+  { month: "Sep", applications: 130 },
+  { month: "Oct", applications: 155 },
+  { month: "Nov", applications: 145 },
+  { month: "Dec", applications: 185 },
 ];
 
-export default function BarChartCard() {
+export default function MonthlyApplicationsChart() {
   return (
     <Card className="shadow-md rounded-2xl">
       <CardHeader>
-        <CardTitle>Monthly Sales</CardTitle>
+        <CardTitle>Monthly Job Applications</CardTitle>
       </CardHeader>
+
       <CardContent className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" className="text-xs" />
+            <XAxis dataKey="month" className="text-xs" />
             <YAxis />
             <Tooltip />
             <Legend className="text-xs" />
-            <Bar dataKey="sales" fill="var(--chart-2)" opacity="0.5" />
+
+            <Bar
+              dataKey="applications"
+              name="Applications"
+              fill="var(--chart-2)"
+              opacity={0.7}
+              radius={[6, 6, 0, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

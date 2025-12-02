@@ -123,7 +123,11 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="text-center">
+              <TableCell
+                colSpan={9}
+                className="text-center py-8"
+                style={{ textAlign: "center" }}
+              >
                 No employees found
               </TableCell>
             </TableRow>

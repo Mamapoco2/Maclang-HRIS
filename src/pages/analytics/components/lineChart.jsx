@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import {
   Area,
@@ -19,11 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import {
   Select,
   SelectContent,
@@ -33,30 +27,30 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export const description = "An interactive area chart";
+export const description = "Employee growth trend";
 
-// Updated chart data with desktop & mobile breakdown
+// ✅ HR Employee Growth Data
 const chartData = [
-  { date: "Jan", desktop: 2800, mobile: 1200 },
-  { date: "Feb", desktop: 1500, mobile: 1000 },
-  { date: "Mar", desktop: 2000, mobile: 1200 },
-  { date: "Apr", desktop: 1700, mobile: 1000 },
-  { date: "May", desktop: 2500, mobile: 1500 },
-  { date: "Jun", desktop: 2300, mobile: 1500 },
-  { date: "Jul", desktop: 2700, mobile: 1500 },
-  { date: "Aug", desktop: 2600, mobile: 1300 },
-  { date: "Sep", desktop: 2100, mobile: 1000 },
-  { date: "Oct", desktop: 2400, mobile: 1200 },
-  { date: "Nov", desktop: 2200, mobile: 1100 },
-  { date: "Dec", desktop: 2600, mobile: 1500 },
+  { date: "Jan", regular: 120, contractual: 40 },
+  { date: "Feb", regular: 130, contractual: 45 },
+  { date: "Mar", regular: 135, contractual: 48 },
+  { date: "Apr", regular: 140, contractual: 50 },
+  { date: "May", regular: 150, contractual: 55 },
+  { date: "Jun", regular: 155, contractual: 58 },
+  { date: "Jul", regular: 160, contractual: 60 },
+  { date: "Aug", regular: 162, contractual: 62 },
+  { date: "Sep", regular: 168, contractual: 65 },
+  { date: "Oct", regular: 170, contractual: 67 },
+  { date: "Nov", regular: 175, contractual: 68 },
+  { date: "Dec", regular: 180, contractual: 70 },
 ];
 
 const chartConfig = {
-  desktop: { label: "Desktop", color: "var(--chart-2)" }, // Blue
-  mobile: { label: "Mobile", color: "var(--chart-5)" }, // Purple
+  regular: { label: "Regular Employees", color: "var(--chart-2)" },
+  contractual: { label: "Contractual Employees", color: "var(--chart-5)" },
 };
 
-export default function LineChartCard() {
+export default function EmployeeGrowthTrend() {
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("90d");
 
@@ -64,26 +58,26 @@ export default function LineChartCard() {
     if (isMobile) setTimeRange("7d");
   }, [isMobile]);
 
-  // Filter data based on timeRange
   const filteredData = React.useMemo(() => {
-    if (timeRange === "90d") return chartData.slice(0, 12); // last 3 months simulated with full data
-    if (timeRange === "30d") return chartData.slice(9, 12); // Oct-Dec
-    if (timeRange === "7d") return chartData.slice(11); // Dec only
+    if (timeRange === "90d") return chartData.slice(0, 12);
+    if (timeRange === "30d") return chartData.slice(9, 12);
+    if (timeRange === "7d") return chartData.slice(11);
     return chartData;
   }, [timeRange]);
 
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Total Visitors</CardTitle>
+        <CardTitle>Employee Growth Trend</CardTitle>
         <CardDescription>
           <span className="hidden @[540px]/card:block">
-            Total for the last 3 months
+            Employee headcount for the last 3 months
           </span>
           <span className="@[540px]/card:hidden">Last 3 months</span>
         </CardDescription>
+
         <CardAction>
-          {/* Toggle for larger screens */}
+          {/* Toggle for large screens */}
           <ToggleGroup
             type="single"
             value={timeRange}
@@ -96,25 +90,15 @@ export default function LineChartCard() {
             <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
           </ToggleGroup>
 
-          {/* Select for smaller screens */}
+          {/* Select for small screens */}
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
-              size="sm"
-              aria-label="Select a value"
-            >
+            <SelectTrigger className="flex w-40 @[767px]/card:hidden" size="sm">
               <SelectValue placeholder="Last 3 months" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              <SelectItem value="90d" className="rounded-lg">
-                Last 3 months
-              </SelectItem>
-              <SelectItem value="30d" className="rounded-lg">
-                Last 30 days
-              </SelectItem>
-              <SelectItem value="7d" className="rounded-lg">
-                Last 7 days
-              </SelectItem>
+              <SelectItem value="90d">Last 3 months</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
             </SelectContent>
           </Select>
         </CardAction>
@@ -128,27 +112,28 @@ export default function LineChartCard() {
           <AreaChart data={filteredData}>
             {/* Gradients */}
             <defs>
-              <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="fillRegular" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor={chartConfig.desktop.color}
+                  stopColor={chartConfig.regular.color}
                   stopOpacity={0.5}
                 />
                 <stop
                   offset="95%"
-                  stopColor={chartConfig.desktop.color}
+                  stopColor={chartConfig.regular.color}
                   stopOpacity={0.1}
                 />
               </linearGradient>
-              <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
+
+              <linearGradient id="fillContractual" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor={chartConfig.mobile.color}
+                  stopColor={chartConfig.contractual.color}
                   stopOpacity={0.5}
                 />
                 <stop
                   offset="95%"
-                  stopColor={chartConfig.mobile.color}
+                  stopColor={chartConfig.contractual.color}
                   stopOpacity={0.1}
                 />
               </linearGradient>
@@ -156,29 +141,21 @@ export default function LineChartCard() {
 
             <CartesianGrid vertical={false} />
             <XAxis dataKey="date" tickLine={false} axisLine={false} />
-            <Tooltip
-              content={({ payload, label }) => (
-                <ChartTooltipContent
-                  labelFormatter={() => label}
-                  indicator="dot"
-                  data={payload?.[0]?.payload}
-                />
-              )}
-            />
+            <Tooltip />
             <Legend />
 
             <Area
-              dataKey="desktop"
+              dataKey="regular"
               type="natural"
-              fill="url(#fillDesktop)"
-              stroke={chartConfig.desktop.color}
+              fill="url(#fillRegular)"
+              stroke={chartConfig.regular.color}
               stackId="a"
             />
             <Area
-              dataKey="mobile"
+              dataKey="contractual"
               type="natural"
-              fill="url(#fillMobile)"
-              stroke={chartConfig.mobile.color}
+              fill="url(#fillContractual)"
+              stroke={chartConfig.contractual.color}
               stackId="a"
             />
           </AreaChart>
