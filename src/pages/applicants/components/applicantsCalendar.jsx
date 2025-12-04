@@ -80,7 +80,7 @@ export default function EventsCalendar() {
 
   return (
     <Card>
-      <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-lg">
+      <div className="max-w-full mx-auto bg-white ">
         <Header
           currentDate={currentDate}
           view={view}
