@@ -92,7 +92,9 @@ export default function Dashboard() {
       {/* Distribution + Insights */}
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <div>
-          <h2 className="text-lg font-semibold mb-1">Employee Distribution</h2>
+          <h2 className="text-lg font-semibold mb-1">
+            Employee Application Distribution
+          </h2>
           <p className="text-sm text-muted-foreground mb-4">By department</p>
           <PieChartComponent />
         </div>

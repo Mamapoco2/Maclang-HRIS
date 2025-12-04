@@ -31,13 +31,13 @@ export default function ApplicantsModule() {
     <div className="p-6 grid gap-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
-          title="Total Applicants"
+          title="Total Applications"
           value={applicants.length}
           trend="+12%"
           status="Trending up this month"
         />
         <SummaryCard
-          title="Approved Applicants"
+          title="Approved Applications"
           value={applicants.filter((a) => a.documents).length}
           trend="+8%"
           status="Increasing approvals"

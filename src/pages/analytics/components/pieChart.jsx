@@ -1,12 +1,13 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Tooltip,
-  Cell,
-  Legend,
-} from "recharts";
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+} from "@/components/ui/chart";
 
 const data = [
   { name: "Walk-in Applicants", value: 30 },
@@ -14,43 +15,39 @@ const data = [
   { name: "Social Media", value: 20 },
 ];
 
-const COLORS = ["#ef4444", "#3b82f6", "#10b981"];
+const chartConfig = {
+  "Walk-in Applicants": { label: "Walk-in Applicants", color: "#10b981" },
+  "Employee Referrals": { label: "Employee Referrals", color: "#f59e0b" },
+  "Social Media": { label: "Social Media", color: "#ef4444" },
+};
 
-export default function RecruitmentSourcesPieChart() {
+export default function LeaveDistributionPieChart() {
   return (
-    <Card className="shadow-md rounded-2xl">
+    <Card className="shadow-sm rounded-2xl border">
       <CardHeader>
-        <CardTitle>Recruitment Sources</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          Leave Distribution
+        </CardTitle>
       </CardHeader>
-      <CardContent className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie dataKey="value" data={data} outerRadius={100} label>
-              {data.map((_, i) => (
-                <Cell key={i} fill={COLORS[i]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend
-              content={({ payload }) => (
-                <ul className="text-[10px] space-y-1">
-                  {payload.map((entry, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center flex-row gap-2"
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span>{entry.value}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+
+      <CardContent className="h-80 px-2">
+        <ChartContainer config={chartConfig} className="w-full h-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie dataKey="value" data={data} nameKey="name" outerRadius={110}>
+                {data.map((entry) => (
+                  <Cell key={entry.name} fill={chartConfig[entry.name].color} />
+                ))}
+              </Pie>
+
+              <ChartTooltip />
+              <ChartLegend
+                content={<ChartLegendContent nameKey="name" />}
+                className="mt-4 flex-wrap gap-3 justify-center"
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
