@@ -43,10 +43,45 @@ export default function EventsCalendar() {
 
   const calendarDays = useMemo(() => {
     const days = [];
-    for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
-    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+    // Get previous month's details
+    const prevMonthDays = calendarService.getDaysInMonth(
+      currentDate.getMonth() === 0
+        ? currentDate.getFullYear() - 1
+        : currentDate.getFullYear(),
+      currentDate.getMonth() === 0 ? 11 : currentDate.getMonth() - 1
+    );
+
+    // Add days from previous month
+    for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+      days.push({
+        day: prevMonthDays - i,
+        isCurrentMonth: false,
+        isPrevMonth: true,
+      });
+    }
+
+    // Add days of current month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        day: i,
+        isCurrentMonth: true,
+        isPrevMonth: false,
+      });
+    }
+
+    // Add days from next month to complete 6 weeks (42 cells)
+    let nextMonthDay = 1;
+    while (days.length < 42) {
+      days.push({
+        day: nextMonthDay++,
+        isCurrentMonth: false,
+        isPrevMonth: false,
+      });
+    }
+
     return days;
-  }, [firstDayOfMonth, daysInMonth]);
+  }, [firstDayOfMonth, daysInMonth, currentDate]);
 
   const handleAddEvent = () => {
     if (!newEvent.title || !newEvent.startDate) return;
@@ -79,8 +114,12 @@ export default function EventsCalendar() {
   };
 
   return (
-    <Card>
-      <div className="max-w-full mx-auto bg-white ">
+    <Card className="h-[900px] flex flex-col">
+      {" "}
+      {/* ADD THESE CLASSES */}
+      <div className="flex-1 flex flex-col min-h-0 bg-white">
+        {" "}
+        {/* ADD THESE CLASSES */}
         <Header
           currentDate={currentDate}
           view={view}
@@ -90,7 +129,6 @@ export default function EventsCalendar() {
           prevMonth={prevMonth}
           onOpenDialog={() => setIsDialogOpen(true)}
         />
-
         <CreateEventDialog
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}
@@ -98,12 +136,15 @@ export default function EventsCalendar() {
           setNewEvent={setNewEvent}
           onSave={handleAddEvent}
         />
-
-        <CalendarGrid
-          currentDate={currentDate}
-          calendarDays={calendarDays}
-          getEventsForDay={getEventsForDay}
-        />
+        <div className="flex-1 min-h-0">
+          {" "}
+          {/* ADD THIS WRAPPER */}
+          <CalendarGrid
+            currentDate={currentDate}
+            calendarDays={calendarDays}
+            getEventsForDay={getEventsForDay}
+          />
+        </div>
       </div>
     </Card>
   );
