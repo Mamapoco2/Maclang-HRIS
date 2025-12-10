@@ -16,6 +16,8 @@ import Inbox from "../pages/announcement/inbox/inbox";
 import Forward from "../pages/announcement/Forward/forward";
 import Sent from "../pages/announcement/sent/sent";
 
+import ProtectedRoute from "./protectedRoutes";
+
 function App() {
   return (
     <Router>
@@ -23,7 +25,13 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        <Route element={<AppLayout />}>
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/employees" element={<Employee />} />
           <Route path="/analytics" element={<Analytics />} />
