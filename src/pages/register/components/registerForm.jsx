@@ -30,13 +30,37 @@ export default function RegisterForm() {
   return (
     <CardContent>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* Name */}
+        {/* First Name */}
         <div className="space-y-2">
-          <Label>Name</Label>
-          <Input {...register("name")} placeholder="Full name" />
-          {errors.name && (
-            <p className="text-red-500 text-sm">{errors.name.message}</p>
+          <Label>First Name</Label>
+          <Input {...register("firstName")} placeholder="First name" />
+          {errors.firstName && (
+            <p className="text-red-500 text-sm">{errors.firstName.message}</p>
           )}
+        </div>
+
+        {/* Last Name */}
+        <div className="space-y-2">
+          <Label>Last Name</Label>
+          <Input {...register("lastName")} placeholder="Last name" />
+          {errors.lastName && (
+            <p className="text-red-500 text-sm">{errors.lastName.message}</p>
+          )}
+        </div>
+
+        {/* Middle Name */}
+        <div className="space-y-2">
+          <Label>Middle Name</Label>
+          <Input
+            {...register("middleName")}
+            placeholder="Middle name (optional)"
+          />
+        </div>
+
+        {/* Suffix */}
+        <div className="space-y-2">
+          <Label>Suffix</Label>
+          <Input {...register("suffix")} placeholder="Jr, Sr, III (optional)" />
         </div>
 
         {/* Email */}
@@ -75,19 +99,16 @@ export default function RegisterForm() {
         </div>
 
         {/* Confirm Password */}
-        <div className="space-y-2">
-          <Label>Confirm Password</Label>
-          <Input
-            type={showPassword ? "text" : "password"}
-            {...register("confirmPassword")}
-            placeholder="Confirm password"
-          />
-          {errors.confirmPassword && (
-            <p className="text-red-500 text-sm">
-              {errors.confirmPassword.message}
-            </p>
-          )}
-        </div>
+        <Input
+          type={showPassword ? "text" : "password"}
+          {...register("password_confirmation")}
+          placeholder="Confirm password"
+        />
+        {errors.password_confirmation && (
+          <p className="text-red-500 text-sm">
+            {errors.password_confirmation.message}
+          </p>
+        )}
 
         {/* Submit */}
         <Button

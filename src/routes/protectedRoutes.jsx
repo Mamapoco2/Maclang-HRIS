@@ -3,12 +3,16 @@ import { useContext } from "react";
 import { AuthContext } from "../context/authContext";
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useContext(AuthContext);
+  const { isAuthenticated, loading, user } = useContext(AuthContext);
 
-  if (loading) return <div>Loading...</div>; // Optional: loading spinner
+  if (loading) return <div>Loading...</div>;
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+
+  if (user?.status !== "Active") {
+    return <Navigate to="/status/403" replace />;
   }
 
   return children;

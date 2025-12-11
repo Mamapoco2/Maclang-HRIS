@@ -12,6 +12,8 @@ import Applications from "../pages/application/components/applicationsPage";
 import Leave from "../pages/leave/components/leavePage";
 import Applicants from "../pages/applicants/components/applicantsPage";
 
+import Status from "../pages/status/403/403Status";
+
 import Inbox from "../pages/announcement/inbox/inbox";
 import Forward from "../pages/announcement/Forward/forward";
 import Sent from "../pages/announcement/sent/sent";
@@ -24,6 +26,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/status/403" element={<Status />} />
 
         <Route
           element={

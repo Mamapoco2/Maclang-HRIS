@@ -48,21 +48,19 @@ export const authService = {
   register: async (data) => {
     try {
       const response = await api.post("/register", {
-        name: data.name,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        middleName: data.middleName,
+        suffix: data.suffix,
         email: data.email,
         password: data.password,
-        password_confirmation:
-          data.confirmPassword || data.password_confirmation,
+        password_confirmation: data.password_confirmation,
       });
+      toast.success("Registration successful! Awaiting HR approval.");
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-
-      toast.success("Registration successful!");
       return { success: true, user: response.data.user };
     } catch (error) {
       console.error("Registration error:", error.response || error);
-      console.error("Validation errors:", error.response?.data?.errors);
 
       if (error.response?.data?.errors) {
         const errors = error.response.data.errors;
