@@ -11,6 +11,7 @@ import Trainings from "../pages/trainings/components/trainingPage";
 import Applications from "../pages/application/components/applicationsPage";
 import Leave from "../pages/leave/components/leavePage";
 import Applicants from "../pages/applicants/components/applicantsPage";
+import Accounts from "../pages/accounts/components/accountsPage";
 
 import Status from "../pages/status/403/403Status";
 
@@ -39,6 +40,7 @@ function App() {
           <Route path="/employees" element={<Employee />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/trainings" element={<Trainings />} />
+          <Route path="/accounts" element={<Accounts />} />
           <Route path="/applications" element={<Applications />} />
           <Route path="/applicants" element={<Applicants />} />
           <Route path="/leave" element={<Leave />} />

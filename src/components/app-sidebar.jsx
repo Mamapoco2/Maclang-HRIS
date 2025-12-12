@@ -21,6 +21,7 @@ import {
   IconSchool,
   IconSpeakerphone,
   IconClipboardList,
+  IconUserCheck,
 } from "@tabler/icons-react";
 
 import { Link } from "react-router-dom";
@@ -75,6 +76,11 @@ const data = {
       title: "Recruitment",
       url: "/recruitment",
       icon: IconBriefcase,
+    },
+    {
+      title: "Accounts",
+      url: "/accounts",
+      icon: IconUserCheck,
     },
     {
       title: "Applications",
