@@ -19,7 +19,7 @@ export default function UsersTable() {
     const load = async () => {
       try {
         const data = await getUsers();
-        setUsers(data);
+        setUsers(data.users);
       } finally {
         setLoading(false);
       }
