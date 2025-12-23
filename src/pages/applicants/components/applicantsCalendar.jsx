@@ -5,6 +5,9 @@ import CalendarGrid from "./calendarGrid";
 import { Card } from "@/components/ui/card";
 import { useCalendar } from "../../../hooks/useCaldendar";
 import { calendarService } from "../../../services/calendarService";
+import DayView from "./calendarDayView";
+import WeekView from "./calendarWeekView";
+import AgendaView from "./calendarAgendaView";
 
 export default function EventsCalendar() {
   const {
@@ -137,13 +140,34 @@ export default function EventsCalendar() {
           onSave={handleAddEvent}
         />
         <div className="flex-1 min-h-0">
-          {" "}
-          {/* ADD THIS WRAPPER */}
-          <CalendarGrid
-            currentDate={currentDate}
-            calendarDays={calendarDays}
-            getEventsForDay={getEventsForDay}
-          />
+          {view === "Month" && (
+            <CalendarGrid
+              currentDate={currentDate}
+              calendarDays={calendarDays}
+              getEventsForDay={getEventsForDay}
+            />
+          )}
+
+          {view === "Week" && (
+            <WeekView
+              currentDate={currentDate}
+              getEventsForDay={getEventsForDay}
+            />
+          )}
+
+          {view === "Day" && (
+            <DayView
+              currentDate={currentDate}
+              getEventsForDay={getEventsForDay}
+            />
+          )}
+
+          {view === "Agenda" && (
+            <AgendaView
+              currentDate={currentDate}
+              getEventsForDay={getEventsForDay}
+            />
+          )}
         </div>
       </div>
     </Card>
