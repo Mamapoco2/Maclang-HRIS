@@ -2,7 +2,7 @@ import { CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginHeader({ logo }) {
   return (
-    <CardHeader className="flex flex-col items-center space-y-3">
+    <CardHeader className="flex flex-col items-center space-y-3 pt-5">
       <img
         src={logo}
         alt="RMBGH Logo"
