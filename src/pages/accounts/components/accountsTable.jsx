@@ -15,23 +15,24 @@ export default function UsersTable() {
   const [loading, setLoading] = useState(true);
   const [activatingId, setActivatingId] = useState(null);
 
+  const loadUsers = async () => {
+    try {
+      const data = await getUsers();
+      setUsers(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getUsers();
-        setUsers(data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadUsers();
   }, []);
 
   const handleActivate = async (id) => {
     setActivatingId(id);
     try {
-      const updatedUser = await activateUser(id);
-      setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)));
+      await activateUser(id);
+      await loadUsers();
     } finally {
       setActivatingId(null);
     }
