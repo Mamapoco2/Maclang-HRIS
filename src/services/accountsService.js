@@ -20,7 +20,7 @@ api.interceptors.request.use(
 
 export const getUsers = async () => {
   try {
-    const res = await api.get("/users/pending");
+    const res = await api.get("/pending-users");
     return res.data;
   } catch (error) {
     console.error("Get users error:", error);
@@ -31,12 +31,23 @@ export const getUsers = async () => {
 
 export const activateUser = async (id) => {
   try {
-    const res = await api.post(`/users/${id}/activate`);
+    const res = await api.patch(`/users/${id}/activate`);
     toast.success(res.data.message);
     return res.data.user;
   } catch (error) {
     console.error("Activate user error:", error);
     toast.error("Failed to activate user");
+    throw error;
+  }
+};
+
+export const getPendingUserCount = async () => {
+  try {
+    const res = await api.get("/pending-users/count");
+    return res.data.count;
+  } catch (error) {
+    console.error("Get pending user count error:", error);
+    toast.error("Failed to load pending user count");
     throw error;
   }
 };

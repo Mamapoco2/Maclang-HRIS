@@ -59,10 +59,6 @@ export default function MultiStepRegisterForm() {
 
   const prevStep = () => setStep((s) => s - 1);
 
-  const onSubmit = (data) => {
-    // console.log("Submitted data", data);
-  };
-
   const avatar = watch("avatar");
 
   return (

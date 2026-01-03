@@ -1,132 +1,73 @@
 import React from "react";
 
-const HOURS = Array.from({ length: 24 }).map((_, i) => i); // 0-23
-
 export default function WeekView({ currentDate, getEventsForDay }) {
   const startOfWeek = new Date(currentDate);
   startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
 
   const days = Array.from({ length: 7 }).map((_, i) => {
-    const date = new Date(startOfWeek);
-    date.setDate(startOfWeek.getDate() + i);
-    return date;
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    return d;
   });
 
-  // Format hour label, e.g., "1 AM"
-  const formatHour = (hour) => {
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const h = hour % 12 === 0 ? 12 : hour % 12;
-    return `${h} ${ampm}`;
+  const parseTimeToOffset = (timeStr) => {
+    if (!timeStr) return 0;
+    const [time, modifier] = timeStr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+    if (hours === 12) hours = 0;
+    if (modifier === "PM") hours += 12;
+    return hours * 60 + minutes;
   };
 
-  const getAllDayEvents = (day) => getEventsForDay(day).filter((e) => e.allDay);
-
-  const getTimedEvents = (day) => getEventsForDay(day).filter((e) => !e.allDay);
-
-  // Height per hour row (can be adjusted)
-  const hourRowHeight = 48;
-
   return (
-    <div className="border rounded h-full w-full overflow-auto">
-      <div
-        className="grid grid-cols-8"
-        style={{
-          gridTemplateRows: `auto repeat(24, ${hourRowHeight}px)`,
-          minWidth: 700,
-        }}
-      >
-        {/* Top-left empty cell */}
-        <div className="border-b border-r bg-gray-50"></div>
-
-        {/* Days header (col 2-8, row 1) */}
-        {days.map((day, idx) => (
+    <div className="h-full overflow-y-auto bg-white border-t">
+      <div className="grid grid-cols-8 min-w-[800px]">
+        <div className="bg-gray-50 border-r border-b h-12"></div>
+        {days.map((day, i) => (
           <div
-            key={idx}
-            className={`border-b border-r p-2 text-center bg-gray-50 ${
-              day.toDateString() === new Date().toDateString()
-                ? "bg-gray-200 font-semibold"
-                : ""
-            }`}
-            style={{ gridColumnStart: idx + 2, gridRowStart: 1 }}
+            key={i}
+            className="bg-gray-50 border-r border-b h-12 flex flex-col items-center justify-center"
           >
-            <div>{day.toLocaleDateString("en-US", { weekday: "short" })}</div>
-            <div className="font-medium">{day.getDate()}</div>
+            <span className="text-xs text-gray-500 uppercase">
+              {day.toLocaleDateString("en-US", { weekday: "short" })}
+            </span>
+            <span className="font-bold">{day.getDate()}</span>
+          </div>
+        ))}
 
-            {/* All-day events */}
-            <div className="mt-1 space-y-1">
-              {getAllDayEvents(day).map((event) => (
-                <div
-                  key={event.id}
-                  className={`text-xs rounded px-1 py-0.5 truncate ${event.color}`}
-                  title={event.title}
-                >
-                  {event.title}
-                </div>
-              ))}
+        {Array.from({ length: 24 }).map((_, hour) => (
+          <React.Fragment key={hour}>
+            <div className="h-16 border-r border-b text-[10px] text-gray-400 text-right pr-2 pt-1 bg-gray-50">
+              {hour % 12 === 0 ? 12 : hour % 12} {hour >= 12 ? "PM" : "AM"}
             </div>
-          </div>
+            {days.map((day, dayIdx) => {
+              const dayEvents = getEventsForDay(day).filter((e) => !e.allDay);
+              return (
+                <div
+                  key={dayIdx}
+                  className="h-16 border-r border-b relative bg-white"
+                >
+                  {dayEvents.map((event) => {
+                    const totalMinutes = parseTimeToOffset(event.startTime);
+                    const eventHour = Math.floor(totalMinutes / 60);
+                    if (eventHour !== hour) return null;
+
+                    const topOffset = ((totalMinutes % 60) / 60) * 64; // 64px is row height
+                    return (
+                      <div
+                        key={event.id}
+                        className={`absolute inset-x-1 p-1 rounded text-white text-[10px] z-10 ${event.color}`}
+                        style={{ top: `${topOffset}px`, minHeight: "30px" }}
+                      >
+                        {event.startTime} - {event.title}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </React.Fragment>
         ))}
-
-        {/* Time labels (col 1, rows 2-25) */}
-        {HOURS.map((hour, idx) => (
-          <div
-            key={hour}
-            className="border-b border-r text-xs text-gray-500 pr-1 flex items-start justify-end select-none bg-gray-50"
-            style={{
-              gridColumnStart: 1,
-              gridRowStart: idx + 2,
-              height: hourRowHeight,
-            }}
-          >
-            {formatHour(hour)}
-          </div>
-        ))}
-
-        {/* Day hour cells (cols 2-8, rows 2-25) */}
-        {days.map((day, dayIdx) =>
-          HOURS.map((hour, hourIdx) => (
-            <div
-              key={`${dayIdx}-${hourIdx}`}
-              className="border-b border-r relative"
-              style={{
-                gridColumnStart: dayIdx + 2,
-                gridRowStart: hourIdx + 2,
-                height: hourRowHeight,
-              }}
-            ></div>
-          ))
-        )}
-
-        {/* Timed events positioned absolutely inside their cell */}
-        {days.map((day, dayIdx) =>
-          getTimedEvents(day).map((event) => {
-            const eventDate = new Date(event.date);
-            const startHour = eventDate.getHours();
-            const startMinutes = eventDate.getMinutes();
-
-            // For now, place event top with minute offset and height fixed to 1 hour
-            const topOffset = (startMinutes / 60) * hourRowHeight;
-            const eventHeight = hourRowHeight; // can be dynamic with end time
-
-            return (
-              <div
-                key={event.id}
-                className={`absolute left-0 right-0 mx-1 rounded px-1 text-xs overflow-hidden cursor-pointer ${event.color}`}
-                title={event.title}
-                style={{
-                  gridColumnStart: dayIdx + 2,
-                  gridRowStart: startHour + 2,
-                  height: eventHeight,
-                  top: topOffset,
-                  position: "relative",
-                  zIndex: 10,
-                }}
-              >
-                {event.title}
-              </div>
-            );
-          })
-        )}
       </div>
     </div>
   );

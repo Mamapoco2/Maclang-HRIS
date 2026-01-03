@@ -17,70 +17,53 @@ export default function CalendarGrid({
   };
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      <div className="grid grid-cols-7 gap-px mb-2">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="grid grid-cols-7 border-b">
         {weekDays.map((d) => (
           <div
             key={d}
-            className="p-3 text-center text-sm font-medium text-gray-500"
+            className="p-2 text-center text-xs font-semibold text-gray-500 uppercase"
           >
             {d}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 grid-rows-6 gap-px bg-gray-200 flex-1">
+      <div className="grid grid-cols-7 flex-1 bg-gray-200 gap-px">
         {calendarDays.map((dayObj, idx) => {
-          const events = dayObj?.isCurrentMonth
+          const dayEvents = dayObj.isCurrentMonth
             ? getEventsForDay(dayObj.day)
             : [];
-          const visible = events.slice(0, 2);
-          const extra = events.length - 2;
-
           return (
             <div
               key={idx}
-              className={`bg-white p-2 flex flex-col overflow-hidden ${
-                dayObj ? "hover:bg-gray-50 cursor-pointer" : ""
-              }`}
+              className="bg-white p-1 min-h-[100px] flex flex-col group"
             >
-              {dayObj && (
-                <>
+              <span
+                className={`text-xs font-bold p-1 w-7 h-7 flex items-center justify-center rounded-full 
+                ${
+                  isToday(dayObj)
+                    ? "bg-black text-white"
+                    : dayObj.isCurrentMonth
+                    ? "text-gray-900"
+                    : "text-gray-300"
+                }`}
+              >
+                {dayObj.day}
+              </span>
+              <div className="mt-1 space-y-1 overflow-y-auto max-h-24">
+                {dayEvents.map((event) => (
                   <div
-                    className={`text-sm font-medium mb-2 flex-shrink-0 ${
-                      isToday(dayObj)
-                        ? "w-8 h-8 flex items-center justify-center bg-black text-white rounded-full"
-                        : dayObj.isCurrentMonth
-                        ? "text-gray-700"
-                        : "text-gray-400" // Dimmed for other months
-                    }`}
+                    key={event.id}
+                    className={`${event.color} text-[10px] text-white p-1 rounded truncate shadow-sm`}
                   >
-                    {dayObj.day}
+                    {event.startTime && (
+                      <span className="opacity-80 mr-1">{event.startTime}</span>
+                    )}
+                    {event.title}
                   </div>
-
-                  {dayObj.isCurrentMonth && (
-                    <div className="space-y-1 flex-1 overflow-hidden">
-                      {visible.map((event) => (
-                        <div
-                          key={event.id}
-                          className={`text-xs px-2 py-1 rounded w-full block ${event.color} truncate`}
-                        >
-                          {event.time && (
-                            <span className="font-medium">{event.time} </span>
-                          )}
-                          {event.title}
-                        </div>
-                      ))}
-
-                      {extra > 0 && (
-                        <div className="text-xs text-gray-500 pl-1">
-                          + {extra} more
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
+                ))}
+              </div>
             </div>
           );
         })}
