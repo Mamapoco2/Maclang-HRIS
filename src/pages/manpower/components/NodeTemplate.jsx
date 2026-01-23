@@ -13,7 +13,21 @@ const NodeTemplate = (node) => {
 
   return (
     <>
-      {/* NODE CARD */}
+      <style jsx global>{`
+        .p-organizationchart .p-organizationchart-line-down {
+          background-color: #000000 !important;
+        }
+        .p-organizationchart .p-organizationchart-line-left {
+          border-right: 2px solid #000000 !important;
+        }
+        .p-organizationchart .p-organizationchart-line-right {
+          border-left: 2px solid #000000 !important;
+        }
+        .p-organizationchart .p-organizationchart-line-top {
+          border-top: 2px solid #000000 !important;
+        }
+      `}</style>
+
       <div className="flex flex-col items-center relative">
         <div
           onClick={() => setOpen(true)}

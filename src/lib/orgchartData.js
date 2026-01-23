@@ -519,9 +519,11 @@ export const orgChartData = [
               employmentType: "Plantilla",
               aligned: true,
               employeeId: "RMBGH-00008",
-              image: `https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png`,
+              image:
+                "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
             },
             children: [
+              // ================= LEFT (RUEL) =================
               {
                 type: "person",
                 expanded: true,
@@ -533,7 +535,8 @@ export const orgChartData = [
                   employmentType: "Plantilla",
                   aligned: true,
                   employeeId: "RMBGH-00009",
-                  image: `https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png`,
+                  image:
+                    "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
                 },
                 children: [
                   {
@@ -546,35 +549,110 @@ export const orgChartData = [
                       borderColor: "brown",
                       employmentType: "Plantilla",
                       employeeId: "RMBGH-HIM-001",
-                      image: `https://cdn2.iconfinder.com/data/icons/business-finance-ii-flat/2048/Business_Woman-4096.png`,
+                      image:
+                        "https://cdn2.iconfinder.com/data/icons/business-finance-ii-flat/2048/Business_Woman-4096.png",
+                    },
+                    children: [],
+                  },
+                ],
+              },
+
+              // ================= CENTER (DOC BRAD – VERTICAL) =================
+              {
+                type: "person",
+                expanded: true,
+                data: {
+                  motherUnit: "Medical Services Cluster",
+                  name: "Doc Brad",
+                  role: "Head",
+                  borderColor: "blue",
+                  employmentType: "Plantilla",
+                  aligned: true,
+                  employeeId: "RMBGH-DOC-001",
+                  image:
+                    "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
+                },
+                children: [
+                  {
+                    type: "person",
+                    expanded: true,
+                    data: {
+                      motherUnit: "Administrative Services Cluster ",
+                      name: "Cristela V. Veñegas, MD",
+                      role: "Head",
+                      borderColor: "brown",
+                      employmentType: "Plantilla",
+                      aligned: true,
+                      employeeId: "RMBGH-00010",
+                      image:
+                        "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
                     },
                     children: [
                       {
                         type: "person",
                         expanded: true,
                         data: {
-                          motherUnit: "Information Technology",
-                          name: "Jan Bert I. Doqunia",
+                          motherUnit: "Human Resources",
+                          name: "Naomi Noreen O. Buenafe",
                           role: "Officer-In-Charge",
                           borderColor: "brown",
                           employmentType: "Plantilla",
-                          employeeId: "RMBGH-HIM-002",
-                          image: `https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png`,
+                          aligned: true,
+                          employeeId: "RMBGH-00010",
+                          image:
+                            "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
                         },
                         children: [
                           {
                             type: "person",
                             expanded: true,
                             data: {
-                              motherUnit: "Admitting Section",
-                              name: "Julina N. De Asis",
-                              role: "Officer-In-Charge",
+                              motherUnit: "Vacant",
+                              name: "Vacant",
+                              role: "Vacant",
                               borderColor: "brown",
                               employmentType: "Plantilla",
-                              employeeId: "RMBGH-HIM-003",
-                              image: `https://cdn2.iconfinder.com/data/icons/business-finance-ii-flat/2048/Business_Woman-4096.png`,
+                              aligned: true,
+                              employeeId: "RMBGH-00010",
+                              image:
+                                "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
                             },
-                            children: [],
+                            children: [
+                              {
+                                type: "person",
+                                expanded: true,
+                                data: {
+                                  motherUnit: "Data Protection",
+                                  name: "Cristela V. Veñegas, MD",
+                                  role: "Officer",
+                                  borderColor: "brown",
+                                  employmentType: "Plantilla",
+                                  aligned: true,
+                                  employeeId: "RMBGH-00010",
+                                  image:
+                                    "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
+                                },
+                                children: [
+                                  {
+                                    type: "person",
+                                    expanded: true,
+                                    data: {
+                                      motherUnit:
+                                        "Customer Relations Management",
+                                      name: "Sharon Grace V. Meneses, MD",
+                                      role: "Head",
+                                      borderColor: "brown",
+                                      employmentType: "Plantilla",
+                                      aligned: true,
+                                      employeeId: "RMBGH-00010",
+                                      image:
+                                        "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
+                                    },
+                                    children: [],
+                                  },
+                                ],
+                              },
+                            ],
                           },
                         ],
                       },
@@ -583,6 +661,7 @@ export const orgChartData = [
                 ],
               },
 
+              // ================= RIGHT (UZIEL) =================
               {
                 type: "person",
                 expanded: true,
@@ -593,8 +672,9 @@ export const orgChartData = [
                   borderColor: "purple",
                   employmentType: "Plantilla",
                   aligned: true,
-                  employeeId: "RMBGH-00009",
-                  image: `https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png`,
+                  employeeId: "RMBGH-00010",
+                  image:
+                    "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png",
                 },
                 children: [
                   {
@@ -606,24 +686,11 @@ export const orgChartData = [
                       role: "Officer-In-Charge",
                       borderColor: "brown",
                       employmentType: "Plantilla",
-                      employeeId: "RMBGH-HIM-001",
-                      image: `https://cdn2.iconfinder.com/data/icons/business-finance-ii-flat/2048/Business_Woman-4096.png`,
+                      employeeId: "RMBGH-MSS-001",
+                      image:
+                        "https://cdn2.iconfinder.com/data/icons/business-finance-ii-flat/2048/Business_Woman-4096.png",
                     },
-                    children: [
-                      {
-                        type: "person",
-                        expanded: true,
-                        data: {
-                          motherUnit: "Dietary",
-                          name: "Teresita P. Abrico, RND",
-                          role: "Head",
-                          borderColor: "brown",
-                          employmentType: "Plantilla",
-                          employeeId: "RMBGH-HIM-002",
-                          image: `https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png`,
-                        },
-                      },
-                    ],
+                    children: [],
                   },
                 ],
               },
