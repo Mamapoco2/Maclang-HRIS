@@ -1,34 +1,30 @@
+import Picture from "./working.png";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 
-export default function PendingApprovalPage() {
-  const navigate = useNavigate();
-
+export default function ForbiddenPage() {
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
-      <Card className="max-w-md w-full shadow-lg border">
-        <CardHeader>
-          <CardTitle className="text-3xl text-red-600">
-            403 - Access Denied
-          </CardTitle>
-          <CardDescription className="mt-2 text-gray-700">
-            Your account is pending HR approval and cannot access this page yet.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="mt-4 flex flex-col gap-4">
+    <div className="flex flex-1 items-center justify-center p-4">
+      <Card className="w-full max-w-md border border-gray-200 shadow-sm">
+        <CardContent className="p-6 text-center space-y-4">
+          <img
+            src={Picture}
+            alt="Access restricted"
+            className="mx-auto max-h-108 w-auto object-contain"
+          />
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">403 – Forbidden</h1>
+            <p className="text-muted-foreground">
+              This page is under development or restricted.
+            </p>
+          </div>
+
           <Button
-            variant="default"
-            onClick={() => navigate("/")}
             className="w-full"
+            onClick={() => (window.location.href = "/dashboard")}
           >
-            Back to Home
+            Go back home
           </Button>
         </CardContent>
       </Card>

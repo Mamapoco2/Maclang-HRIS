@@ -69,7 +69,7 @@ export default function EmployeePage() {
       />
 
       <Dialog open={openForm} onOpenChange={setOpenForm}>
-        <DialogContent>
+        <DialogContent className="w-full max-w-[1400px] min-w-[1400px]">
           <DialogHeader>
             <DialogTitle>
               {editingEmployee ? "Edit Employee" : "Add Employee"}

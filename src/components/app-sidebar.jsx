@@ -73,11 +73,6 @@ const data = {
       icon: IconPlane,
     },
     {
-      title: "Recruitment",
-      url: "/recruitment",
-      icon: IconBriefcase,
-    },
-    {
       title: "Accounts",
       url: "/accounts",
       icon: IconUserCheck,
@@ -109,6 +104,11 @@ const data = {
           url: "/sent",
         },
       ],
+    },
+    {
+      title: "Manpower Mapping",
+      icon: IconUsersGroup,
+      url: "/manpower",
     },
   ],
   navClouds: [

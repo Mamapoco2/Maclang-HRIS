@@ -22,13 +22,16 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     contact: "",
     position: "",
     department: "",
+    designation: "",
     gender: "",
     status: "Active",
     address: "",
     birthdate: "",
-    salary: "",
+    annualSalary: "",
+    monthlySalary: "",
+    sgLevel: "",
     employeeType: "",
-    image: null,
+    avatar: "",
   });
 
   useEffect(() => {
@@ -44,13 +47,16 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         contact: "",
         position: "",
         department: "",
+        designation: "",
         gender: "",
         status: "Active",
         address: "",
         birthdate: "",
-        salary: "",
+        annualSalary: "",
+        monthlySalary: "",
+        sgLevel: "",
         employeeType: "",
-        image: "",
+        avatar: "",
       });
     }
   }, [employee]);
@@ -63,16 +69,23 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       "email",
       "position",
       "department",
-      "image",
+      "designation",
+      "annualSalary",
+      "sgLevel",
     ];
     const missing = required.find((key) => !formData[key]);
     if (missing) return toast.error("Please fill out all required fields.");
 
+    const dataToSubmit = {
+      ...formData,
+      monthlySalary: formData.annualSalary / 12,
+    };
+
     if (employee) {
-      await employeeService.updateEmployee(employee.id, formData);
+      await employeeService.updateEmployee(employee.id, dataToSubmit);
       toast.success("Employee updated successfully");
     } else {
-      await employeeService.addEmployee(formData);
+      await employeeService.addEmployee(dataToSubmit);
       toast.success("Employee added successfully");
     }
 
@@ -85,163 +98,303 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 max-h-[80vh] overflow-y-auto p-2"
-    >
-      <div className="grid grid-cols-4 gap-2">
-        <div>
-          <Label>First Name</Label>
-          <Input
-            value={formData.firstName}
-            onChange={(e) => handleChange("firstName", e.target.value)}
-          />
+    <div className="space-y-8 max-h-[80vh] overflow-y-auto p-8 bg-white w-full min-w-[1200px]">
+      {/* Header Section */}
+      <div className="border-b-2 border-black pb-4">
+        <h2 className="text-2xl font-bold text-black uppercase tracking-wide">
+          {employee ? "Edit Employee" : "New Employee"}
+        </h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Fields marked with <span className="text-black font-bold">*</span> are
+          required
+        </p>
+      </div>
+
+      {/* Name Fields */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+          Personal Information
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              First Name <span className="text-black">*</span>
+            </Label>
+            <Input
+              value={formData.firstName}
+              onChange={(e) => handleChange("firstName", e.target.value)}
+              placeholder="Juan"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Middle Name
+            </Label>
+            <Input
+              value={formData.middleName}
+              onChange={(e) => handleChange("middleName", e.target.value)}
+              placeholder="Dela"
+              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Last Name <span className="text-black">*</span>
+            </Label>
+            <Input
+              value={formData.lastName}
+              onChange={(e) => handleChange("lastName", e.target.value)}
+              placeholder="Cruz"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Suffix
+            </Label>
+            <Input
+              value={formData.suffix}
+              onChange={(e) => handleChange("suffix", e.target.value)}
+              placeholder="Jr., Sr., III"
+              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
         </div>
-        <div>
-          <Label>Middle Name</Label>
-          <Input
-            value={formData.middleName}
-            onChange={(e) => handleChange("middleName", e.target.value)}
-          />
+      </div>
+
+      {/* Contact Information */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+          Contact Details
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Email <span className="text-black">*</span>
+            </Label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange("email", e.target.value)}
+              placeholder="email@company.com"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Contact Number
+            </Label>
+            <Input
+              value={formData.contact}
+              onChange={(e) => handleChange("contact", e.target.value)}
+              placeholder="09XX XXX XXXX"
+              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
         </div>
-        <div>
-          <Label>Last Name</Label>
-          <Input
-            value={formData.lastName}
-            onChange={(e) => handleChange("lastName", e.target.value)}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Address
+            </Label>
+            <Input
+              value={formData.address}
+              onChange={(e) => handleChange("address", e.target.value)}
+              placeholder="City, Province"
+              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Birthdate
+            </Label>
+            <Input
+              type="date"
+              value={formData.birthdate}
+              onChange={(e) => handleChange("birthdate", e.target.value)}
+              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black"
+            />
+          </div>
         </div>
-        <div>
-          <Label>Suffix</Label>
-          <Input
-            value={formData.suffix}
-            onChange={(e) => handleChange("suffix", e.target.value)}
-          />
+      </div>
+
+      {/* Employment Details */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+          Employment Information
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Position <span className="text-black">*</span>
+            </Label>
+            <Input
+              value={formData.position}
+              onChange={(e) => handleChange("position", e.target.value)}
+              placeholder="e.g., Administrative Aide III"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Gender
+            </Label>
+            <Select
+              value={formData.gender}
+              onValueChange={(val) => handleChange("gender", val)}
+            >
+              <SelectTrigger className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-2 border-black">
+                <SelectItem value="Male" className="hover:bg-gray-100">
+                  Male
+                </SelectItem>
+                <SelectItem value="Female" className="hover:bg-gray-100">
+                  Female
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      <div>
-        <Label>Email</Label>
-        <Input
-          type="email"
-          value={formData.email}
-          onChange={(e) => handleChange("email", e.target.value)}
-        />
+      {/* Department Information */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+          Department Assignment
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Assigned Department <span className="text-black">*</span>
+            </Label>
+            <Input
+              value={formData.department}
+              onChange={(e) => handleChange("department", e.target.value)}
+              placeholder="Current department"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Original Department <span className="text-black">*</span>
+            </Label>
+            <Input
+              value={formData.designation}
+              onChange={(e) => handleChange("designation", e.target.value)}
+              placeholder="Home department"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+        </div>
       </div>
 
-      <div>
-        <Label>Contact</Label>
-        <Input
-          value={formData.contact}
-          onChange={(e) => handleChange("contact", e.target.value)}
-        />
+      {/* Salary and Employment Details */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+          Compensation & Type
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Annual Salary (₱) <span className="text-black">*</span>
+            </Label>
+            <Input
+              type="number"
+              value={formData.annualSalary}
+              onChange={(e) => handleChange("annualSalary", e.target.value)}
+              placeholder="222000"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Salary Grade <span className="text-black">*</span>
+            </Label>
+            <Input
+              type="number"
+              value={formData.sgLevel}
+              onChange={(e) => handleChange("sgLevel", e.target.value)}
+              placeholder="9"
+              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Employee Type
+            </Label>
+            <Select
+              value={formData.employeeType}
+              onValueChange={(val) => handleChange("employeeType", val)}
+            >
+              <SelectTrigger className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-2 border-black">
+                <SelectItem value="Plantilla" className="hover:bg-gray-100">
+                  Plantilla
+                </SelectItem>
+                <SelectItem value="Job Order" className="hover:bg-gray-100">
+                  Consultant
+                </SelectItem>
+                <SelectItem value="Contractual" className="hover:bg-gray-100">
+                  Contract of Service
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
-      <div>
-        <Label>Position</Label>
-        <Input
-          value={formData.position}
-          onChange={(e) => handleChange("position", e.target.value)}
-        />
+      {/* Status and Avatar */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+          Additional Settings
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Status
+            </Label>
+            <Select
+              value={formData.status}
+              onValueChange={(val) => handleChange("status", val)}
+            >
+              <SelectTrigger className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-2 border-black">
+                <SelectItem value="Active" className="hover:bg-gray-100">
+                  Active
+                </SelectItem>
+                <SelectItem value="Inactive" className="hover:bg-gray-100">
+                  Inactive
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-black uppercase">
+              Avatar URL
+            </Label>
+            <Input
+              value={formData.avatar}
+              onChange={(e) => handleChange("avatar", e.target.value)}
+              placeholder="https://example.com/avatar.jpg"
+              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+            />
+          </div>
+        </div>
       </div>
 
-      <div>
-        <Label>Department</Label>
-        <Input
-          value={formData.department}
-          onChange={(e) => handleChange("department", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Gender</Label>
-        <Select
-          value={formData.gender}
-          onValueChange={(val) => handleChange("gender", val)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select gender" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Male">Male</SelectItem>
-            <SelectItem value="Female">Female</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>Address</Label>
-        <Input
-          value={formData.address}
-          onChange={(e) => handleChange("address", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Birthdate</Label>
-        <Input
-          type="date"
-          value={formData.birthdate}
-          onChange={(e) => handleChange("birthdate", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Salary</Label>
-        <Input
-          type="number"
-          value={formData.salary}
-          onChange={(e) => handleChange("salary", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Employee Type</Label>
-        <Select
-          value={formData.employeeType}
-          onValueChange={(val) => handleChange("employeeType", val)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Full-time">Full-time</SelectItem>
-            <SelectItem value="Part-time">Part-time</SelectItem>
-            <SelectItem value="Contractual">Contractual</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>Status</Label>
-        <Select
-          value={formData.status}
-          onValueChange={(val) => handleChange("status", val)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>Profile Image</Label>
-        <Input
-          type="file"
-          accept="image/*"
-          onChange={(e) =>
-            handleChange("image", e.target.files ? e.target.files[0] : null)
-          }
-        />
-      </div>
-
-      <Button type="submit" className="w-full">
+      <Button
+        onClick={handleSubmit}
+        className="w-full mt-6 bg-black text-white hover:bg-gray-800 border-2 border-black font-bold uppercase tracking-wider py-6 text-base transition-all"
+      >
         {employee ? "Update Employee" : "Add Employee"}
       </Button>
-    </form>
+    </div>
   );
 }

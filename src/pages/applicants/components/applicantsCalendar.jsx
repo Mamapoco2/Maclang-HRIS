@@ -3,11 +3,8 @@ import Header from "./calendarHeader";
 import CreateEventDialog from "./createEventModal";
 import CalendarGrid from "./calendarGrid";
 import { Card } from "@/components/ui/card";
-import { useCalendar } from "../../../hooks/useCaldendar";
+import { useCalendar } from "../../../hooks/useCalendar";
 import { calendarService } from "../../../services/calendarService";
-import DayView from "./calendarDayView";
-import WeekView from "./calendarWeekView";
-import AgendaView from "./calendarAgendaView";
 
 export default function EventsCalendar() {
   const {
@@ -24,13 +21,9 @@ export default function EventsCalendar() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: "",
-    description: "",
     startDate: "",
-    startTime: "",
     endDate: "",
-    endTime: "10:00 AM",
-    allDay: false,
-    location: "",
+    startTime: "",
     color: "bg-cyan-500",
   });
 
@@ -44,10 +37,10 @@ export default function EventsCalendar() {
     currentDate.getMonth()
   );
 
+  // ✅ Add monthOffset for prev/next month cells
   const calendarDays = useMemo(() => {
     const days = [];
 
-    // Get previous month's details
     const prevMonthDays = calendarService.getDaysInMonth(
       currentDate.getMonth() === 0
         ? currentDate.getFullYear() - 1
@@ -55,31 +48,31 @@ export default function EventsCalendar() {
       currentDate.getMonth() === 0 ? 11 : currentDate.getMonth() - 1
     );
 
-    // Add days from previous month
+    // previous month
     for (let i = firstDayOfMonth - 1; i >= 0; i--) {
       days.push({
         day: prevMonthDays - i,
+        monthOffset: -1,
         isCurrentMonth: false,
-        isPrevMonth: true,
       });
     }
 
-    // Add days of current month
+    // current month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({
         day: i,
+        monthOffset: 0,
         isCurrentMonth: true,
-        isPrevMonth: false,
       });
     }
 
-    // Add days from next month to complete 6 weeks (42 cells)
+    // next month
     let nextMonthDay = 1;
     while (days.length < 42) {
       days.push({
         day: nextMonthDay++,
+        monthOffset: 1,
         isCurrentMonth: false,
-        isPrevMonth: false,
       });
     }
 
@@ -89,28 +82,22 @@ export default function EventsCalendar() {
   const handleAddEvent = () => {
     if (!newEvent.title || !newEvent.startDate) return;
 
-    const eventStartDate = new Date(newEvent.startDate);
-    const eventEndDate = newEvent.endDate
-      ? new Date(newEvent.endDate)
-      : eventStartDate;
+    const startDate = new Date(newEvent.startDate);
+    const endDate = newEvent.endDate ? new Date(newEvent.endDate) : startDate;
 
     addEvent({
+      id: crypto.randomUUID(),
       ...newEvent,
-      date: eventStartDate,
-      startDate: eventStartDate,
-      endDate: eventEndDate,
+      startDate,
+      endDate,
       color: newEvent.color.replace("-500", "-200"),
     });
 
     setNewEvent({
       title: "",
-      description: "",
       startDate: "",
-      startTime: "",
       endDate: "",
-      endTime: "10:00 AM",
-      allDay: false,
-      location: "",
+      startTime: "",
       color: "bg-cyan-500",
     });
     setIsDialogOpen(false);
@@ -118,58 +105,31 @@ export default function EventsCalendar() {
 
   return (
     <Card className="h-[900px] flex flex-col">
-      {" "}
-      {/* ADD THESE CLASSES */}
-      <div className="flex-1 flex flex-col min-h-0 bg-white">
-        {" "}
-        {/* ADD THESE CLASSES */}
-        <Header
+      <Header
+        currentDate={currentDate}
+        view={view}
+        setView={setView}
+        nextMonth={nextMonth}
+        prevMonth={prevMonth}
+        goToToday={goToToday}
+        onOpenDialog={() => setIsDialogOpen(true)}
+      />
+
+      <CreateEventDialog
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        newEvent={newEvent}
+        setNewEvent={setNewEvent}
+        onSave={handleAddEvent}
+      />
+
+      {view === "Month" && (
+        <CalendarGrid
           currentDate={currentDate}
-          view={view}
-          setView={setView}
-          goToToday={goToToday}
-          nextMonth={nextMonth}
-          prevMonth={prevMonth}
-          onOpenDialog={() => setIsDialogOpen(true)}
+          calendarDays={calendarDays}
+          getEventsForDay={getEventsForDay}
         />
-        <CreateEventDialog
-          isOpen={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          newEvent={newEvent}
-          setNewEvent={setNewEvent}
-          onSave={handleAddEvent}
-        />
-        <div className="flex-1 min-h-0">
-          {view === "Month" && (
-            <CalendarGrid
-              currentDate={currentDate}
-              calendarDays={calendarDays}
-              getEventsForDay={getEventsForDay}
-            />
-          )}
-
-          {view === "Week" && (
-            <WeekView
-              currentDate={currentDate}
-              getEventsForDay={getEventsForDay}
-            />
-          )}
-
-          {view === "Day" && (
-            <DayView
-              currentDate={currentDate}
-              getEventsForDay={getEventsForDay}
-            />
-          )}
-
-          {view === "Agenda" && (
-            <AgendaView
-              currentDate={currentDate}
-              getEventsForDay={getEventsForDay}
-            />
-          )}
-        </div>
-      </div>
+      )}
     </Card>
   );
 }

@@ -12,6 +12,7 @@ import Applications from "../pages/application/components/applicationsPage";
 import Leave from "../pages/leave/components/leavePage";
 import Applicants from "../pages/applicants/components/applicantsPage";
 import Accounts from "../pages/accounts/components/accountsPage";
+import ManPower from "../pages/manpower/manPowerPage";
 
 import Status from "../pages/status/403/403Status";
 
@@ -48,6 +49,7 @@ function App() {
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/forward" element={<Forward />} />
           <Route path="/sent" element={<Sent />} />
+          <Route path="/manpower" element={<ManPower />} />
         </Route>
       </Routes>
     </Router>

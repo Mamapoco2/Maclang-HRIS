@@ -91,11 +91,15 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
                 <TableCell>{emp.position}</TableCell>
                 <TableCell>{emp.department}</TableCell>
                 <TableCell className="text-center">
-                  <Badge
-                    variant={emp.status === "Active" ? "default" : "secondary"}
+                  <span
+                    className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                      emp.status === "Active"
+                        ? "bg-green-600 text-white"
+                        : "bg-red-500 text-white"
+                    }`}
                   >
                     {emp.status}
-                  </Badge>
+                  </span>
                 </TableCell>
                 <TableCell className="text-center space-x-2">
                   <Button
