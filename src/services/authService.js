@@ -1,14 +1,18 @@
 import { toast } from "sonner";
 import axios from "axios";
 
+const host = window.location.hostname; // detects the current IP/hostname
+
 const api = axios.create({
-  baseURL: "http://localhost:8000/api",
+  baseURL: `http://${host}:8000/api`, // uses LAN IP if accessed from another PC
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
+  withCredentials: true, // needed for cookies/Sanctum
 });
 
+// Add token automatically to requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -17,17 +21,13 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export const authService = {
   login: async (email, password) => {
     try {
-      console.log("Attempting login...");
       const response = await api.post("/login", { email, password });
-      console.log("Login successful:", response.data);
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
@@ -56,8 +56,8 @@ export const authService = {
         password: data.password,
         password_confirmation: data.password_confirmation,
       });
-      toast.success("Registration successful! Awaiting HR approval.");
 
+      toast.success("Registration successful! Awaiting HR approval.");
       return { success: true, user: response.data.user };
     } catch (error) {
       console.error("Registration error:", error.response || error);
