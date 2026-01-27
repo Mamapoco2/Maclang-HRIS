@@ -6,11 +6,38 @@ export default function ReportGeneration({ data }) {
 
     // Helper function to parse full name
     const parseName = (fullName) => {
-      if (!fullName) return { prefix: "", firstname: "", middlename: "", lastname: "", suffix: "", postTitle: "" };
+      if (!fullName)
+        return {
+          prefix: "",
+          firstname: "",
+          middlename: "",
+          lastname: "",
+          suffix: "",
+          postTitle: "",
+        };
 
       // Define common prefixes and suffixes
-      const prefixes = ["Mr", "Ms", "Mrs", "Dr", "Engr", "Prof", "Sir", "Madam"];
-      const suffixes = ["Jr", "Sr", "II", "III", "IV", "MD", "DMD", "PhD", "RN"];
+      const prefixes = [
+        "Mr",
+        "Ms",
+        "Mrs",
+        "Dr",
+        "Engr",
+        "Prof",
+        "Sir",
+        "Madam",
+      ];
+      const suffixes = [
+        "Jr",
+        "Sr",
+        "II",
+        "III",
+        "IV",
+        "MD",
+        "DMD",
+        "PhD",
+        "RN",
+      ];
 
       let nameParts = fullName.trim().split(/\s+/);
 
@@ -19,13 +46,21 @@ export default function ReportGeneration({ data }) {
       let postTitle = "";
 
       // Check for prefix
-      if (prefixes.some((p) => nameParts[0].replace(".", "").toLowerCase() === p.toLowerCase())) {
+      if (
+        prefixes.some(
+          (p) => nameParts[0].replace(".", "").toLowerCase() === p.toLowerCase()
+        )
+      ) {
         prefix = nameParts.shift();
       }
 
       // Check for suffix or postTitle at the end
       const lastPart = nameParts[nameParts.length - 1];
-      if (suffixes.some((s) => lastPart.replace(".", "").toUpperCase() === s.toUpperCase())) {
+      if (
+        suffixes.some(
+          (s) => lastPart.replace(".", "").toUpperCase() === s.toUpperCase()
+        )
+      ) {
         // Decide if it's a suffix or postTitle
         if (["MD", "DMD", "PhD", "RN"].includes(lastPart.toUpperCase())) {
           postTitle = lastPart;
@@ -149,7 +184,7 @@ export default function ReportGeneration({ data }) {
   return (
     <button
       onClick={generateExcel}
-      className="!bg-green-600 !text-white hover:!bg-green-700 px-4 py-2 rounded-md transition text-sm font-medium"
+      className="bg-green-600! text-white! hover:bg-green-700! px-4 py-2 rounded-md transition text-sm font-medium"
     >
       Generate Report
     </button>

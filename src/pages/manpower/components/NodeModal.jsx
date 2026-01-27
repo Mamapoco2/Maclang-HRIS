@@ -55,7 +55,7 @@ export default function NodeModal({ open, onClose, node }) {
                   text-center
                   font-extrabold
                   leading-tight
-                  break-words
+                  wrap-break-words
                   text-2xl
                   sm:text-3xl
                   line-clamp-2

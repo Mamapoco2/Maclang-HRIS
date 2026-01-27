@@ -30,7 +30,7 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
           {label}
         </p>
-        <p className="text-sm font-medium text-gray-900 break-words">
+        <p className="text-sm font-medium text-gray-900 wrap-break-words">
           {value || "N/A"}
         </p>
       </div>
@@ -46,7 +46,7 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20 ring-2 ring-gray-100">
               <AvatarImage src={employee.avatar} alt={employee.firstName} />
-              <AvatarFallback className="text-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+              <AvatarFallback className="text-lg bg-linear-to-br from-blue-500 to-purple-600 text-white">
                 {employee.firstName?.[0]}
                 {employee.lastName?.[0]}
               </AvatarFallback>

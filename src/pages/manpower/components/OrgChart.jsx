@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import { OrganizationChart } from "primereact/organizationchart";
 import NodeTemplate from "./NodeTemplate";
 import { orgChartData } from "../../../lib/orgchartData";

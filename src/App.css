@@ -1,4 +1,3 @@
-/* Organization Chart Lines - Black */
 .p-organizationchart .p-organizationchart-line-down {
   background-color: #000000 !important;
 }
@@ -15,7 +14,6 @@
   border-top: 2px solid #000000 !important;
 }
 
-/* For dark mode (optional) */
 .dark .p-organizationchart .p-organizationchart-line-down {
   background-color: #ffffff !important;
 }

@@ -49,7 +49,7 @@ const NodeTemplate = (node) => {
             <img
               src={node.data.image}
               alt={node.data?.name}
-              className="w-24 h-24 rounded-full object-cover flex-shrink-0"
+              className="w-24 h-24 rounded-full object-cover shrink-0"
             />
           )}
 
@@ -64,7 +64,7 @@ const NodeTemplate = (node) => {
               </div>
             )}
 
-            <div className="font-extrabold text-xl break-words">
+            <div className="font-extrabold text-xl wrap-break-words">
               {node.data?.name}
             </div>
 
