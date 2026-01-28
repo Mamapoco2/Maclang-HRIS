@@ -1,3 +1,5 @@
+import { useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/lib/validation";
@@ -6,12 +8,10 @@ import { CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useContext } from "react";
 import { Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 export default function LoginForm() {
-  const { login } = useContext(AuthContext);
+  const { login, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const {
@@ -23,14 +23,24 @@ export default function LoginForm() {
   });
 
   const onSubmit = async (data) => {
-    const res = await login(data.email, data.password);
-    if (res.success) navigate("/dashboard");
+    const result = await login(data.email, data.password);
+
+    // Optional: Show error message if login fails
+    if (!result.success) {
+      console.error("Login failed:", result.error);
+      // You could set an error state here to show to the user
+    }
   };
+
+  // Redirect automatically after successful login
+  useEffect(() => {
+    console.log("AuthContext user changed:", user);
+    if (user) navigate("/dashboard");
+  }, [user, navigate]);
 
   return (
     <CardContent>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* Email */}
         <div className="space-y-2">
           <Label>Email</Label>
           <Input {...register("email")} placeholder="Email address" />
@@ -39,7 +49,6 @@ export default function LoginForm() {
           )}
         </div>
 
-        {/* Password */}
         <div className="space-y-2">
           <Label>Password</Label>
           <Input
@@ -52,7 +61,6 @@ export default function LoginForm() {
           )}
         </div>
 
-        {/* Submit */}
         <Button
           type="submit"
           className="w-full bg-black text-white"

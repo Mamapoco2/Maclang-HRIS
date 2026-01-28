@@ -1,5 +1,5 @@
+import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -7,6 +7,8 @@ import {
   IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react";
+
+import { AuthContext } from "@/context/authContext";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -24,31 +26,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { authService } from "@/services/authService";
 
-export function NavUser({ user: propUser }) {
+export function NavUser() {
+  const { user, logout } = useContext(AuthContext);
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
-  const [user, setUser] = useState(propUser);
-
-  useEffect(() => {
-    // If user prop is not provided, get from localStorage
-    if (!propUser) {
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
-    } else {
-      setUser(propUser);
-    }
-  }, [propUser]);
 
   const handleLogout = async () => {
-    const result = await authService.logout();
-    if (result.success) {
-      navigate("/");
-    }
+    await logout();
+    navigate("/"); // redirect to login
   };
 
-  // Show loading or fallback if user is not loaded
   if (!user) {
     return (
       <SidebarMenu>
@@ -66,7 +54,6 @@ export function NavUser({ user: propUser }) {
     );
   }
 
-  // Get initials for fallback
   const getInitials = (name) => {
     if (!name) return "?";
     return name
@@ -87,14 +74,17 @@ export function NavUser({ user: propUser }) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar} alt={user.name || "User"} />
+                <AvatarImage
+                  src={user.avatar}
+                  alt={user.first_name || "User"}
+                />
                 <AvatarFallback className="rounded-lg">
-                  {getInitials(user.name)}
+                  {getInitials(user.first_name)}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {user.name || "Unknown User"}
+                  {user.first_name || "Unknown User"}
                 </span>
                 <span className="text-muted-foreground truncate text-xs">
                   {user.email || "No email"}
@@ -103,6 +93,7 @@ export function NavUser({ user: propUser }) {
               <IconDotsVertical className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
@@ -112,14 +103,17 @@ export function NavUser({ user: propUser }) {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name || "User"} />
+                  <AvatarImage
+                    src={user.avatar}
+                    alt={user.first_name || "User"}
+                  />
                   <AvatarFallback className="rounded-lg">
-                    {getInitials(user.name)}
+                    {getInitials(user.first_name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
-                    {user.name || "Unknown User"}
+                    {user.first_name || "Unknown User"}
                   </span>
                   <span className="text-muted-foreground truncate text-xs">
                     {user.email || "No email"}
@@ -127,14 +121,18 @@ export function NavUser({ user: propUser }) {
                 </div>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
             </DropdownMenuGroup>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuItem onClick={handleLogout}>
               <IconLogout />
               Log out

@@ -1,4 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -16,18 +24,29 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { IconEdit, IconTrash, IconEye } from "@tabler/icons-react";
 
-export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
+export default function EmployeeTable({
+  employees,
+  currentPage,
+  lastPage,
+  onPageChange,
+  onEdit,
+  onDelete,
+  onView,
+}) {
+  const safeEmployees = Array.isArray(employees)
+    ? employees
+    : employees?.data || [];
+
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
 
-  const filteredEmployees = employees.filter((emp) => {
-    const firstName = emp.firstName?.toLowerCase() || "";
-    const lastName = emp.lastName?.toLowerCase() || "";
+  const filteredEmployees = safeEmployees.filter((emp) => {
+    const firstName = emp.first_name?.toLowerCase() || "";
+    const lastName = emp.last_name?.toLowerCase() || "";
     const fullName = `${firstName} ${lastName}`;
-    const searchTerm = search?.toLowerCase() || "";
+    const searchTerm = search.toLowerCase();
 
     const matchesSearch = fullName.includes(searchTerm);
     const matchesDepartment =
@@ -39,6 +58,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
 
   return (
     <div className="rounded-lg border bg-card">
+      {/* Filters */}
       <div className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <Input
           placeholder="Search employee..."
@@ -48,7 +68,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
         />
 
         <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-          <SelectTrigger className="max-w-xs mb-4">
+          <SelectTrigger className="max-w-xs">
             <SelectValue placeholder="Filter by department" />
           </SelectTrigger>
           <SelectContent>
@@ -60,6 +80,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
         </Select>
       </div>
 
+      {/* Table */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -70,23 +91,24 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
             <TableHead>Email</TableHead>
             <TableHead>Position</TableHead>
             <TableHead>Department</TableHead>
-            <TableHead className="text-center">Status</TableHead>
+            <TableHead className="text-center">Account Status</TableHead>
             <TableHead className="text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {filteredEmployees.length > 0 ? (
             filteredEmployees.map((emp) => (
               <TableRow key={emp.id}>
-                <TableCell className="flex text-center items-center gap-3">
+                <TableCell>
                   <img
-                    src={emp.avatar}
-                    className="w-20 h-20 rounded-full object-cover"
+                    src={emp.avatar || "/avatar-placeholder.png"}
+                    className="w-12 h-12 rounded-full object-cover"
                   />
                 </TableCell>
-                <TableCell>{emp.firstName}</TableCell>
-                <TableCell>{emp.lastName}</TableCell>
-                <TableCell>{emp.middleName}</TableCell>
+                <TableCell>{emp.first_name}</TableCell>
+                <TableCell>{emp.last_name}</TableCell>
+                <TableCell>{emp.middle_name || "-"}</TableCell>
                 <TableCell>{emp.email}</TableCell>
                 <TableCell>{emp.position}</TableCell>
                 <TableCell>{emp.department}</TableCell>
@@ -98,7 +120,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
                         : "bg-red-500 text-white"
                     }`}
                   >
-                    {emp.status}
+                    {emp.status || "Inactive"}
                   </span>
                 </TableCell>
                 <TableCell className="text-center space-x-2">
@@ -108,11 +130,9 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
                     onClick={() => onView(emp)}
                   >
                     <IconEye size={16} />
-                    View
                   </Button>
                   <Button size="sm" onClick={() => onEdit(emp)}>
                     <IconEdit size={16} />
-                    Edit
                   </Button>
                   <Button
                     variant="destructive"
@@ -120,24 +140,67 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
                     onClick={() => onDelete(emp.id)}
                   >
                     <IconTrash size={16} />
-                    Delete
                   </Button>
                 </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell
-                colSpan={9}
-                className="text-center py-8"
-                style={{ textAlign: "center" }}
-              >
+              <TableCell colSpan={9} className="text-center py-8">
                 No employees found
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
+
+      {/* Pagination */}
+      {lastPage > 1 && (
+        <div className="flex justify-end p-4 border-t">
+          <div className="flex">
+            {" "}
+            {/* extra wrapper ensures correct alignment */}
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+                    className={
+                      currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                    }
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: lastPage }, (_, i) => i + 1).map(
+                  (page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        isActive={currentPage === page}
+                        onClick={() => onPageChange(page)}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() =>
+                      onPageChange(Math.min(currentPage + 1, lastPage))
+                    }
+                    className={
+                      currentPage === lastPage
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

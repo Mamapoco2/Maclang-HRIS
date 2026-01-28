@@ -47,15 +47,16 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
             <Avatar className="h-20 w-20 ring-2 ring-gray-100">
               <AvatarImage src={employee.avatar} alt={employee.firstName} />
               <AvatarFallback className="text-lg bg-linear-to-br from-blue-500 to-purple-600 text-white">
-                {employee.firstName?.[0]}
-                {employee.lastName?.[0]}
+                {employee.first_name?.[0]}
+                {employee.last_name?.[0]}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-gray-900">
-                {employee.firstName} {employee.middleName} {employee.lastName}{" "}
-                {employee.suffix}
+                {employee.first_name} {employee.middle_name}{" "}
+                {employee.last_name} {employee.suffix}
               </h2>
+              <p className="text-m font-medium">{employee.emp_number}</p>
               <p className="text-base text-gray-600 mt-1">
                 {employee.position}
               </p>
@@ -148,7 +149,7 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
           <InfoItem
             icon={Briefcase}
             label="Employee Type"
-            value={employee.employeeType}
+            value={employee.employment_status}
           />
         </div>
       </DialogContent>

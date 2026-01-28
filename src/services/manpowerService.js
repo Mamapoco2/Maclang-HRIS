@@ -14,45 +14,40 @@ api.interceptors.request.use(
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
-export const getPlantillaCount = async () => {
+export const getEmploymentSummary = async () => {
   try {
-    const res = await api.get("/manpower/plantilla/count");
-    return res.data.count;
+    const res = await api.get("employees/employment-status/summary");
+    return {
+      Plantilla: res.data.Plantilla,
+      COS: res.data["Contract Of Service"],
+      Consultant: res.data.Consultant,
+    };
   } catch (error) {
-    console.error("Get plantilla count error:", error);
+    console.error("Get employment summary error:", error);
     throw error;
   }
 };
 
-export const getCOSCount = async () => {
-  try {
-    const res = await api.get("/manpower/cos/count");
-    return res.data.count;
-  } catch (error) {
-    console.error("Get COS count error:", error);
-    throw error;
-  }
-};
-
-export const getConsultantCount = async () => {
-  try {
-    const res = await api.get("/manpower/consultant/count");
-    return res.data.count;
-  } catch (error) {
-    console.error("Get consultant count error:", error);
-    throw error;
-  }
-};
-
+// Vacant count (still separate)
 export const getVacantCount = async () => {
   try {
     const res = await api.get("/manpower/vacant/count");
     return res.data.count;
   } catch (error) {
     console.error("Get vacant count error:", error);
+    throw error;
+  }
+};
+
+export const getManPowerData = async () => {
+  try {
+    const res = await api.get("/org-chart/department");
+    return res.data.count;
+  } catch (error) {
+    console.error("Couldnt get the Man Power Data");
     throw error;
   }
 };

@@ -1,6 +1,5 @@
 import axios from "axios";
 
-/* Axios instance */
 export const api = axios.create({
   baseURL: "http://localhost:8000/api",
   headers: {
@@ -9,28 +8,33 @@ export const api = axios.create({
   },
 });
 
-/* Bearer token interceptor */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  },
 );
 
-/* API functions */
-export const getEmployees = async () => {
-  try {
-    const res = await api.get("/employees");
-    console.log("Employees response:", res);
-    return res.data;
-  } catch (error) {
-    console.error("Get employees error:", error.response || error);
-    throw error;
-  }
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
+
+export const getEmployees = async (page = 1, perPage = 50) => {
+  const res = await api.get(`/employees?page=${page}&per_page=${perPage}`);
+  return res.data; // includes data, meta, links
 };
 
 export const addEmployee = async (data) => {

@@ -121,8 +121,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
               First Name <span className="text-black">*</span>
             </Label>
             <Input
-              value={formData.firstName}
-              onChange={(e) => handleChange("firstName", e.target.value)}
+              value={formData.first_name}
+              onChange={(e) => handleChange("first_name", e.target.value)}
               placeholder="Juan"
               className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
             />
@@ -132,8 +132,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
               Middle Name
             </Label>
             <Input
-              value={formData.middleName}
-              onChange={(e) => handleChange("middleName", e.target.value)}
+              value={formData.middle_name}
+              onChange={(e) => handleChange("middle_name", e.target.value)}
               placeholder="Dela"
               className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
             />
@@ -143,8 +143,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
               Last Name <span className="text-black">*</span>
             </Label>
             <Input
-              value={formData.lastName}
-              onChange={(e) => handleChange("lastName", e.target.value)}
+              value={formData.last_name}
+              onChange={(e) => handleChange("last_name", e.target.value)}
               placeholder="Cruz"
               className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
             />

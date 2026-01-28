@@ -13,27 +13,32 @@ const api = axios.create({
 });
 
 // Add token automatically to requests
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  console.log("Attaching token to request:", token);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export const authService = {
   login: async (email, password) => {
     try {
+      // 1️⃣ Login
       const response = await api.post("/login", { email, password });
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      // 2️⃣ Store access token
+      localStorage.setItem("token", response.data.access_token);
+
+      // 3️⃣ Fetch user from /me
+      const userResponse = await api.get("/me");
+      const actualUser = userResponse.data.data; // 👈 grab the nested user object
+
+      localStorage.setItem("user", JSON.stringify(actualUser));
 
       toast.success("Login successful!");
-      return { success: true, user: response.data.user };
+      return { success: true, user: actualUser };
     } catch (error) {
       console.error("Login error:", error.response || error);
       const message =
@@ -77,10 +82,12 @@ export const authService = {
 
   logout: async () => {
     try {
+      // Send logout request with token
       await api.post("/logout");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
+      // Always clear local storage so user can't stay "logged in"
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       toast.success("Logged out successfully!");
