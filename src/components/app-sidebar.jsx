@@ -78,14 +78,18 @@ const data = {
       icon: IconUserCheck,
     },
     {
-      title: "Applications",
-      url: "/applications",
-      icon: IconClipboardList,
-    },
-    {
-      title: "Applicants",
-      url: "/applicants",
-      icon: IconUsers,
+      title: "Hiring",
+      icon: IconBriefcase,
+      items: [
+        {
+          title: "Applications",
+          url: "/applications",
+        },
+        {
+          title: "Applicants",
+          url: "/applicants",
+        },
+      ],
     },
     {
       title: "Announcement",

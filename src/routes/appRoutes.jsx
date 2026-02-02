@@ -8,9 +8,9 @@ import Register from "../pages/register/components/registerAccount";
 import Team from "../pages/team/components/teamPage";
 import Analytics from "../pages/analytics/components/analyticsPage";
 import Trainings from "../pages/trainings/components/trainingPage";
-import Applications from "../pages/application/components/applicationsPage";
+import Applications from "../pages/hiring/application/components/applicationPage";
 import Leave from "../pages/leave/components/leavePage";
-import Applicants from "../pages/applicants/components/applicantsPage";
+import Applicants from "../pages/hiring/applicants/components/applicantsPage";
 import Accounts from "../pages/accounts/components/accountsPage";
 import ManPower from "../pages/manpower/manPowerPage";
 

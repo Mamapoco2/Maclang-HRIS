@@ -1,121 +1,55 @@
 import { useState } from "react";
-import StaffSection from "./StaffSection";
 import { resolveBorderColor } from "../../../services/utils";
-import { FaPlus, FaMinus } from "react-icons/fa";
+import { buildFullName } from "./useFormat";
 import NodeModal from "./NodeModal";
 
 const NodeTemplate = (node) => {
   const [open, setOpen] = useState(false);
-  const [showStaff, setShowStaff] = useState(false);
-
-  const staff = node.data?.staff || [];
   const borderColor = resolveBorderColor(node.data);
+  const fullName = buildFullName(node.data) || "Vacant";
 
   return (
     <>
-      <style jsx global>{`
-        .p-organizationchart .p-organizationchart-line-down {
-          background-color: #000000 !important;
-        }
-        .p-organizationchart .p-organizationchart-line-left {
-          border-right: 2px solid #000000 !important;
-        }
-        .p-organizationchart .p-organizationchart-line-right {
-          border-left: 2px solid #000000 !important;
-        }
-        .p-organizationchart .p-organizationchart-line-top {
-          border-top: 2px solid #000000 !important;
-        }
-      `}</style>
+      <div
+        onClick={() => setOpen(true)}
+        className="relative rounded-xl cursor-pointer flex items-center gap-6 p-6 bg-card border hover:shadow-lg transition"
+        style={{
+          borderColor,
+          width: "550px", // mas compact
+          minHeight: "150px",
+        }}
+      >
+        {/* Profile Image */}
+        {node.data?.image && (
+          <img
+            src={node.data.image}
+            alt={fullName}
+            className="w-20 h-20 rounded-full object-cover"
+          />
+        )}
 
-      <div className="flex flex-col items-center relative">
-        <div
-          onClick={() => setOpen(true)}
-          className="
-    relative rounded-xl cursor-pointer
-    flex flex-row items-center gap-6 p-6
-    bg-card text-card-foreground
-    border border-border
-    hover:shadow-lg transition
-  "
-          style={{
-            borderColor,
-            width: "650px", // FIXED width
-            height: "200px", // FIXED height (adjust as needed)
-          }}
-        >
-          {/* Avatar */}
-          {node.data?.image && (
-            <img
-              src={node.data.image}
-              alt={node.data?.name}
-              className="w-24 h-24 rounded-full object-cover shrink-0"
-            />
-          )}
-
-          {/* Text */}
-          <div className="flex flex-col flex-1">
-            {node.data?.motherUnit && (
-              <div
-                className="text-base font-semibold uppercase tracking-wide mb-2"
-                style={{ color: borderColor }}
-              >
-                {node.data.label}
-              </div>
-            )}
-
-            <div className="font-extrabold text-xl wrap-break-words">
-              {node.data?.name}
-            </div>
-
-            {/* Role (bolded) */}
-            {node.data?.role && (
-              <div className="text-lg font-semibold text-muted-foreground mt-1">
-                {node.data.role}
-              </div>
-            )}
-
-            {/* Employee ID */}
-            {node.data?.employeeId && (
-              <div className="text-lg text-muted-foreground mt-1">
-                {node.data.employeeId}
-              </div>
-            )}
+        {/* Text Info */}
+        <div className="flex flex-col flex-1 items-center">
+          {/* Deployment Badge - laging visible */}
+          <div className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-0.5 rounded-full w-max select-none mb-1">
+            {node.data?.deployment || "No Deployment"}
           </div>
 
-          {/* STAFF TOGGLE */}
-          {staff.length > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowStaff(!showStaff);
-              }}
-              className="
-                absolute top-1/2 -right-4 -translate-y-1/2
-                w-6 h-6 rounded-full
-                flex items-center justify-center
-                bg-background border border-border
-                hover:bg-accent transition
-              "
-            >
-              {showStaff ? (
-                <FaMinus className="text-[14px]" />
-              ) : (
-                <FaPlus className="text-[14px]" />
-              )}
-            </button>
+          {/* Name */}
+          <div className="font-extrabold text-lg leading-tight text-center">
+            {fullName}
+          </div>
+
+          {/* Employment Type */}
+          {node.data?.employmentType && (
+            <div className="text-sm text-muted-foreground mt-1 text-center">
+              {node.data.employmentType}
+            </div>
           )}
         </div>
-
-        {/* STAFF SECTION */}
-        {showStaff && staff.length > 0 && (
-          <div className="mt-5 w-full flex justify-center">
-            <StaffSection staff={staff} />
-          </div>
-        )}
       </div>
 
-      {/* MODAL */}
+      {/* Modal */}
       <NodeModal open={open} onClose={() => setOpen(false)} node={node} />
     </>
   );

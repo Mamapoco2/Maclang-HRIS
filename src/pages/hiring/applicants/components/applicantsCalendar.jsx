@@ -3,8 +3,8 @@ import Header from "./calendarHeader";
 import CreateEventDialog from "./createEventModal";
 import CalendarGrid from "./calendarGrid";
 import { Card } from "@/components/ui/card";
-import { useCalendar } from "../../../hooks/useCalendar";
-import { calendarService } from "../../../services/calendarService";
+import { useCalendar } from "../../../../hooks/useCalendar";
+import { calendarService } from "../../../../services/calendarService";
 
 export default function EventsCalendar() {
   const {
@@ -29,12 +29,12 @@ export default function EventsCalendar() {
 
   const daysInMonth = calendarService.getDaysInMonth(
     currentDate.getFullYear(),
-    currentDate.getMonth()
+    currentDate.getMonth(),
   );
 
   const firstDayOfMonth = calendarService.getFirstDayOfMonth(
     currentDate.getFullYear(),
-    currentDate.getMonth()
+    currentDate.getMonth(),
   );
 
   // ✅ Add monthOffset for prev/next month cells
@@ -45,7 +45,7 @@ export default function EventsCalendar() {
       currentDate.getMonth() === 0
         ? currentDate.getFullYear() - 1
         : currentDate.getFullYear(),
-      currentDate.getMonth() === 0 ? 11 : currentDate.getMonth() - 1
+      currentDate.getMonth() === 0 ? 11 : currentDate.getMonth() - 1,
     );
 
     // previous month

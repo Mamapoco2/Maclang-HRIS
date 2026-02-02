@@ -1,10 +1,13 @@
 import { useState, useMemo, useRef } from "react";
 import { OrganizationChart } from "primereact/organizationchart";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+
 import NodeTemplate from "./NodeTemplate";
+import OrgChartSummary from "./OrgChartSummary";
+import OrgChartControls from "./OrgChartControls";
 import { orgChartData } from "../../../lib/orgchartData";
 import { filterTreeByDepartment } from "../../../services/filterTree";
-import OrgChartControls from "./OrgChartControls";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { countEmployees } from "../../../services/countEmployees";
 
 function extractDepartments(nodes, acc = new Set()) {
   nodes.forEach((node) => {
@@ -24,10 +27,16 @@ export default function OrgChart({ darkMode, setDarkMode }) {
     [department]
   );
 
+  // Calculate totals for the filtered data
+  const totals = useMemo(() => countEmployees(filteredData), [filteredData]);
+
   const departmentList = useMemo(
     () => Array.from(extractDepartments(orgChartData)),
     []
   );
+
+  // Total staff count
+  const staffCount = useMemo(() => orgChartData.length, []);
 
   return (
     <div
@@ -35,6 +44,9 @@ export default function OrgChart({ darkMode, setDarkMode }) {
         darkMode ? "bg-gray-900" : "bg-gray-50"
       }`}
     >
+      {/* Legend / Summary */}
+      <OrgChartSummary totals={totals} staffCount={staffCount} />
+
       <TransformWrapper
         ref={transformRef}
         initialScale={0.4}
@@ -45,7 +57,7 @@ export default function OrgChart({ darkMode, setDarkMode }) {
         onTransformed={({ state }) => setScale(state.scale)}
         centerOnInit={true}
         limitToBounds={false}
-        initialPositionX={100} // Shift content to the right
+        initialPositionX={100}
       >
         {({ zoomIn, zoomOut, resetTransform, centerView }) => {
           const handleReset = () => {
@@ -70,7 +82,7 @@ export default function OrgChart({ darkMode, setDarkMode }) {
               />
 
               {/* Chart Area */}
-              <div className="flex-1 relative overflow-hidden">
+              <div className="flex-1 relative overflow-hidden ">
                 {/* Background logo */}
                 <img
                   src="https://qcwebsite.sparksoft-demo.com/wp-content/uploads/2020/09/rmbgh-logo-sm.png"
@@ -84,7 +96,7 @@ export default function OrgChart({ darkMode, setDarkMode }) {
                   contentClass="w-full h-full flex items-start justify-center pt-8 pl-24"
                   wrapperStyle={{ width: "100%", height: "100%" }}
                 >
-                  <div className="inline-block px-8 py-4 ml-12">
+                  <div className="inline-block px-8 py-4 ml-12 mt-150">
                     <OrganizationChart
                       value={filteredData}
                       nodeTemplate={NodeTemplate}

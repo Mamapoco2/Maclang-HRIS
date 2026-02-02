@@ -10,17 +10,10 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableRow,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
 
 import TrainingForm from "./trainingForm";
 import TrainingDetails from "./trainingDetails";
+import TrainingTable from "./trainingTable";
 
 export default function TrainingPage({
   trainings = [],
@@ -35,16 +28,18 @@ export default function TrainingPage({
       (sum, t) => sum + (t.participants?.length || 0),
       0
     );
+
     return {
       activePrograms: trainings.length,
       totalEnrolled,
-      certificatesIssued: Math.floor(totalEnrolled * 0.5), // mock
+      certificatesIssued: Math.floor(totalEnrolled * 0.5),
       completed: trainings.filter((t) => t.progress === 100).length,
     };
   }, [trainings]);
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Training Management</h1>
         <p className="text-sm text-muted-foreground">
@@ -53,6 +48,7 @@ export default function TrainingPage({
         </p>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard title="Active Programs" value={stats.activePrograms} />
         <StatCard title="Total Enrolled" value={stats.totalEnrolled} />
@@ -63,6 +59,7 @@ export default function TrainingPage({
         <StatCard title="Completed" value={stats.completed} />
       </div>
 
+      {/* Table Card */}
       <Card className="rounded-2xl">
         <CardContent className="p-4 space-y-4">
           <div className="flex items-center justify-between">
@@ -88,51 +85,22 @@ export default function TrainingPage({
             </Dialog>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Program</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Instructor</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Enrollment</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trainings.map((t) => (
-                <TableRow
-                  key={t.id}
-                  className="cursor-pointer hover:bg-muted"
-                  onClick={() => setSelected(t)}
-                >
-                  <TableCell className="font-medium">{t.title}</TableCell>
-                  <TableCell>{t.category || "All Departments"}</TableCell>
-                  <TableCell>Instructor</TableCell>
-                  <TableCell>{t.duration} hrs</TableCell>
-                  <TableCell>{t.participants?.length || 0}/30</TableCell>
-                  <TableCell className="capitalize">{t.status}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <TrainingTable trainings={trainings} onSelect={setSelected} />
         </CardContent>
       </Card>
 
+      {/* Details Panel */}
       <TrainingDetails training={selected} onAssign={assignPeople} />
     </div>
   );
 }
 
-function StatCard({ title, value, color }) {
+function StatCard({ title, value }) {
   return (
     <Card className="rounded-2xl">
-      <CardContent className="p-5 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-        </div>
-        <div className={`h-10 w-10 rounded-lg ${color}`} />
+      <CardContent className="p-5">
+        <p className="text-sm text-muted-foreground">{title}</p>
+        <p className="text-2xl font-bold">{value}</p>
       </CardContent>
     </Card>
   );

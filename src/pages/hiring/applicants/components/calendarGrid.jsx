@@ -1,4 +1,4 @@
-import { calendarService } from "../../../services/calendarService";
+import { calendarService } from "../../../../services/calendarService";
 import { useState } from "react";
 import {
   Dialog,
@@ -28,7 +28,7 @@ export default function CalendarGrid({
     const cellDate = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth() + (dayObj.monthOffset || 0),
-      dayObj.day
+      dayObj.day,
     );
     return calendarService.isSameDay(cellDate, today);
   };
@@ -42,7 +42,7 @@ export default function CalendarGrid({
     const date = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth() + (dayObj.monthOffset || 0),
-      dayObj.day
+      dayObj.day,
     );
     return date.toLocaleDateString("en-US", {
       weekday: "long",
@@ -62,7 +62,7 @@ export default function CalendarGrid({
                 const cellDate = new Date(
                   currentDate.getFullYear(),
                   currentDate.getMonth() + (dayObj.monthOffset || 0),
-                  dayObj.day
+                  dayObj.day,
                 );
 
                 const singleDayEvents = getEventsForDay(dayObj).filter(
@@ -70,7 +70,7 @@ export default function CalendarGrid({
                     const start = new Date(event.startDate);
                     const end = new Date(event.endDate || event.startDate);
                     return calendarService.isSameDay(start, end);
-                  }
+                  },
                 );
 
                 return (
@@ -90,8 +90,8 @@ export default function CalendarGrid({
                           isToday(dayObj)
                             ? "bg-blue-600 text-white"
                             : dayObj.isCurrentMonth
-                            ? "text-gray-900"
-                            : "text-gray-400"
+                              ? "text-gray-900"
+                              : "text-gray-400"
                         }`}
                       >
                         {dayObj.day}
@@ -155,24 +155,24 @@ export default function CalendarGrid({
                     const checkDate = new Date(
                       currentDate.getFullYear(),
                       currentDate.getMonth() + (dayObj.monthOffset || 0),
-                      dayObj.day
+                      dayObj.day,
                     );
 
                     // Normalize dates to midnight for proper comparison
                     const checkDateNormalized = new Date(
                       checkDate.getFullYear(),
                       checkDate.getMonth(),
-                      checkDate.getDate()
+                      checkDate.getDate(),
                     );
                     const startNormalized = new Date(
                       start.getFullYear(),
                       start.getMonth(),
-                      start.getDate()
+                      start.getDate(),
                     );
                     const endNormalized = new Date(
                       end.getFullYear(),
                       end.getMonth(),
-                      end.getDate()
+                      end.getDate(),
                     );
 
                     if (
