@@ -1,4 +1,4 @@
-import { TrendingUp } from "lucide-react";
+import { IconTrendingUp } from "@tabler/icons-react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
 import {
@@ -50,6 +50,7 @@ export function ChartBarMultiple() {
         <CardTitle>Applications per Month</CardTitle>
         <CardDescription>January - June 2024</CardDescription>
       </CardHeader>
+
       <CardContent>
         <ChartContainer config={chartConfig}>
           <BarChart accessibilityLayer data={chartData}>
@@ -61,25 +62,35 @@ export function ChartBarMultiple() {
               axisLine={false}
               tickFormatter={(value) => value.slice(0, 3)}
             />
+
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent indicator="dashed" />}
             />
+
             <Bar
               dataKey="desktop"
               fill="var(--color-desktop)"
-              opacity="0.5"
+              opacity={0.5}
               radius={4}
             />
             <Bar
               dataKey="mobile"
               fill="var(--color-mobile)"
-              opacity="0.5"
+              opacity={0.5}
               radius={4}
             />
           </BarChart>
         </ChartContainer>
       </CardContent>
+
+      {/* Optional footer if you want to show trend */}
+      {/* 
+      <CardFooter className="flex items-center gap-2 text-sm text-muted-foreground">
+        <IconTrendingUp size={16} stroke={1.5} />
+        +12% compared to last month
+      </CardFooter>
+      */}
     </Card>
   );
 }

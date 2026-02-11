@@ -4,46 +4,38 @@ import { authService } from "../services/authService";
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const savedUser = authService.getCurrentUser();
-    if (savedUser) {
-      setUser(savedUser);
-    }
-    setLoading(false);
+    // Optional: background refresh (DO NOT block UI)
+    const refreshUser = async () => {
+      try {
+        const freshUser = await authService.getCurrentUser();
+        if (freshUser) setUser(freshUser);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    refreshUser();
   }, []);
 
   const login = async (email, password) => {
-    try {
-      const res = await authService.login(email, password);
-      if (res.success) {
-        setUser(res.user);
-      }
-      return res;
-    } catch (error) {
-      console.error("Login error in context:", error);
-      return { success: false, error: "Login failed" };
-    }
+    const res = await authService.login(email, password);
+    if (res.success) setUser(res.user);
+    return res;
   };
 
   const register = async (name, email, password, password_confirmation) => {
-    try {
-      const res = await authService.register(
-        name,
-        email,
-        password,
-        password_confirmation
-      );
-      if (res.success) {
-        setUser(res.user);
-      }
-      return res;
-    } catch (error) {
-      console.error("Register error in context:", error);
-      return { success: false, error: "Registration failed" };
-    }
+    const res = await authService.register(
+      name,
+      email,
+      password,
+      password_confirmation,
+    );
+    if (res.success) setUser(res.user);
+    return res;
   };
 
   const logout = async () => {

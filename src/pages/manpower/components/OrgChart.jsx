@@ -24,7 +24,7 @@ export default function OrgChart({ darkMode, setDarkMode }) {
 
   const filteredData = useMemo(
     () => filterTreeByDepartment(orgChartData, department),
-    [department]
+    [department],
   );
 
   // Calculate totals for the filtered data
@@ -32,7 +32,7 @@ export default function OrgChart({ darkMode, setDarkMode }) {
 
   const departmentList = useMemo(
     () => Array.from(extractDepartments(orgChartData)),
-    []
+    [],
   );
 
   // Total staff count

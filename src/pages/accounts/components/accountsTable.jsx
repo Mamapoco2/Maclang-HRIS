@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getUsers, activateUser } from "@/services/accountsService";
-import { Loader2, Eye, Edit2, Trash2 } from "lucide-react"; // icons for actions
+import { IconLoader2 } from "@tabler/icons-react";
 import {
   Table,
   TableBody,
@@ -41,7 +41,11 @@ export default function UsersTable() {
   if (loading)
     return (
       <div className="flex justify-center items-center p-6">
-        <Loader2 className="animate-spin w-8 h-8 text-gray-500" />
+        <IconLoader2
+          size={32}
+          stroke={1.5}
+          className="animate-spin text-gray-500"
+        />
       </div>
     );
 
@@ -56,7 +60,6 @@ export default function UsersTable() {
             <TableHead className="text-center px-4 py-2">Last Name</TableHead>
             <TableHead className="text-center px-4 py-2">Middle Name</TableHead>
             <TableHead className="text-center px-4 py-2">Email</TableHead>
-
             <TableHead className="text-center px-4 py-2">Status</TableHead>
             <TableHead className="text-center px-4 py-2">Actions</TableHead>
           </TableRow>
@@ -65,7 +68,7 @@ export default function UsersTable() {
         <TableBody>
           {users.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+              <TableCell colSpan={6} className="text-center py-6 text-gray-500">
                 No pending users found.
               </TableCell>
             </TableRow>
@@ -96,16 +99,22 @@ export default function UsersTable() {
                 </span>
               </TableCell>
 
-              <TableCell className="text-center px-4 py-3 space-x-2">
+              <TableCell className="text-center px-4 py-3">
                 {u.status === "Inactive" && (
                   <button
-                    className="inline-flex items-center px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded
+                               bg-green-600 text-white hover:bg-green-700
+                               disabled:opacity-50"
                     onClick={() => handleActivate(u.id)}
                     disabled={activatingId === u.id}
                   >
-                    {activatingId === u.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : null}
+                    {activatingId === u.id && (
+                      <IconLoader2
+                        size={16}
+                        stroke={1.5}
+                        className="animate-spin"
+                      />
+                    )}
                     Activate
                   </button>
                 )}

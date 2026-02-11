@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { IconEdit, IconTrash, IconEye } from "@tabler/icons-react";
 
+import EmployeeEmpty from "./employeeEmpty";
+
 export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -132,7 +134,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
                 className="text-center py-8"
                 style={{ textAlign: "center" }}
               >
-                No employees found
+                <EmployeeEmpty />
               </TableCell>
             </TableRow>
           )}

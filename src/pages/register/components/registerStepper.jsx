@@ -1,24 +1,24 @@
 import { cn } from "@/lib/utils";
-import { User, CreditCard, Home } from "lucide-react";
+import { IconUser, IconCreditCard, IconHome } from "@tabler/icons-react";
 
 const steps = [
   {
     id: 1,
     title: "Account Details",
     subtitle: "Setup Account Details",
-    icon: Home,
+    icon: IconHome,
   },
   {
     id: 2,
     title: "Personal Information",
     subtitle: "Add Personal Info",
-    icon: User,
+    icon: IconUser,
   },
   {
     id: 3,
     title: "Billing",
     subtitle: "Payment Details",
-    icon: CreditCard,
+    icon: IconCreditCard,
   },
 ];
 
@@ -35,12 +35,11 @@ export function RegisterStepper({ currentStep }) {
             <div
               className={cn(
                 "h-10 w-10 flex items-center justify-center rounded-full border",
-                active && "bg-black text-white",
-                completed && "bg-black text-white",
-                !active && !completed && "bg-gray-100 text-gray-400"
+                (active || completed) && "bg-black text-white",
+                !active && !completed && "bg-gray-100 text-gray-400",
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon size={20} stroke={1.5} />
             </div>
 
             <div className="hidden md:block">

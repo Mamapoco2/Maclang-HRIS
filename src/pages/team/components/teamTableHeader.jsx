@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 
 export default function TeamTableHeader({
   searchQuery,
@@ -20,7 +20,7 @@ export default function TeamTableHeader({
         />
 
         <Button className="flex items-center gap-2" onClick={onAddMember}>
-          <Plus className="w-4 h-4" />
+          <IconPlus size={16} stroke={2} />
           Add Member
         </Button>
       </div>

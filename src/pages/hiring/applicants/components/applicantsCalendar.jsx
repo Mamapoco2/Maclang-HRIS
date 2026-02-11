@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import Header from "./calendarHeader";
 import CreateEventDialog from "./createEventModal";
 import CalendarGrid from "./calendarGrid";
+import WeekView from "./calendarWeekView";
 import { Card } from "@/components/ui/card";
 import { useCalendar } from "../../../../hooks/useCalendar";
 import { calendarService } from "../../../../services/calendarService";
@@ -90,7 +91,8 @@ export default function EventsCalendar() {
       ...newEvent,
       startDate,
       endDate,
-      color: newEvent.color.replace("-500", "-200"),
+      // Don't modify the color - keep it as is
+      color: newEvent.color,
     });
 
     setNewEvent({
@@ -129,6 +131,22 @@ export default function EventsCalendar() {
           calendarDays={calendarDays}
           getEventsForDay={getEventsForDay}
         />
+      )}
+
+      {view === "Week" && (
+        <WeekView currentDate={currentDate} getEventsForDay={getEventsForDay} />
+      )}
+
+      {view === "Day" && (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500">Day view - Coming soon</p>
+        </div>
+      )}
+
+      {view === "Agenda" && (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500">Agenda view - Coming soon</p>
+        </div>
       )}
     </Card>
   );

@@ -1,10 +1,50 @@
-export const Training = {
-  id: "TRN-001",
-  title: "Introduction to JavaScript",
-  description:
-    "A beginner-friendly course covering the basics of JavaScript, including variables, functions, loops, and DOM manipulation.",
-  category: "Programming",
-  duration: 120,
-  status: "published",
-  progress: 75,
-};
+// Sample training data
+export const trainingsSample = [
+  {
+    id: "TRN-001",
+    title: "Introduction to JavaScript",
+    description:
+      "A beginner-friendly course covering the basics of JavaScript, including variables, functions, loops, and DOM manipulation.",
+    department: "IT",
+    instructor: "John Doe",
+    category: "Programming",
+    eventAddress: "Room 101",
+    startDate: new Date("2026-02-05T09:00"),
+    endDate: new Date("2026-02-05T11:00"),
+    trainingMode: "online",
+    duration: "2h",
+    status: "published",
+    progress: 75,
+  },
+  {
+    id: "TRN-002",
+    title: "Advanced React",
+    description:
+      "Learn advanced React concepts like hooks, context, and performance optimization.",
+    department: "IT",
+    instructor: "Jane Smith",
+    category: "Programming",
+    eventAddress: "Room 102",
+    startDate: new Date("2026-02-06T13:00"),
+    endDate: new Date("2026-02-06T16:00"),
+    trainingMode: "face-to-face",
+    duration: "3h",
+    status: "cancelled",
+    progress: 0,
+  },
+  {
+    id: "TRN-003",
+    title: "Workplace Safety",
+    description: "Health and safety training for all employees.",
+    department: "HR",
+    instructor: "Alice Johnson",
+    category: "Compliance",
+    eventAddress: "Room 201",
+    startDate: new Date("2026-01-28T10:00"),
+    endDate: new Date("2026-01-28T12:00"),
+    trainingMode: "face-to-face",
+    duration: "2h",
+    status: "published",
+    progress: 100,
+  },
+];

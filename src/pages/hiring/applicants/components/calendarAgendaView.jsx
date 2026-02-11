@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock, MapPin } from "lucide-react";
+import { IconClock, IconMapPin } from "@tabler/icons-react";
 
 export default function AgendaView({ currentDate, getEventsForDay }) {
   const getDates = () => {
@@ -35,21 +35,28 @@ export default function AgendaView({ currentDate, getEventsForDay }) {
                 day: "numeric",
               })}
             </div>
+
             <div className="space-y-3">
               {day.events.map((event) => (
                 <div
                   key={event.id}
                   className="bg-white p-4 rounded-lg shadow-sm border-l-4 flex flex-col"
-                  style={{ borderLeftColor: event.color.replace("bg-", "") }}
+                  style={{
+                    borderLeftColor: event.color.replace("bg-", ""),
+                  }}
                 >
                   <h4 className="font-bold text-gray-900">{event.title}</h4>
+
                   <div className="flex gap-4 mt-2 text-sm text-gray-500">
                     <span className="flex items-center gap-1">
-                      <Clock size={14} /> {event.startTime}
+                      <IconClock size={14} stroke={1.5} />
+                      {event.startTime}
                     </span>
+
                     {event.location && (
                       <span className="flex items-center gap-1">
-                        <MapPin size={14} /> {event.location}
+                        <IconMapPin size={14} stroke={1.5} />
+                        {event.location}
                       </span>
                     )}
                   </div>

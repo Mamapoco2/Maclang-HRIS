@@ -41,12 +41,6 @@ export default function LoginPage() {
       >
         <LoginHeader logo={logo} />
         <LoginForm />
-        <Link
-          to="/register"
-          className="text-sm text-blue-600 hover:underline mt-4 block text-center"
-        >
-          Don't have an account? Register here.
-        </Link>
       </motion.div>
 
       <LoginFooter />

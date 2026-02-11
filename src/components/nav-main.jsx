@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -48,7 +48,13 @@ export function NavMain({ items }) {
                       <SidebarMenuButton tooltip={item.title}>
                         {item.icon && <item.icon />}
                         <span>{item.title}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+
+                        <IconChevronRight
+                          size={16}
+                          stroke={1.5}
+                          className="ml-auto transition-transform duration-200
+                                     group-data-[state=open]/collapsible:rotate-90"
+                        />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
 
@@ -76,7 +82,11 @@ export function NavMain({ items }) {
                       <span>{item.title}</span>
 
                       {notificationCount > 0 && (
-                        <span className="absolute right-0 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs font-semibold rounded-full px-2 py-0.5 min-w-5 text-center">
+                        <span
+                          className="absolute right-0 top-1/2 -translate-y-1/2
+                                     bg-red-600 text-white text-xs font-semibold
+                                     rounded-full px-2 py-0.5 min-w-5 text-center"
+                        >
                           {notificationCount}
                         </span>
                       )}

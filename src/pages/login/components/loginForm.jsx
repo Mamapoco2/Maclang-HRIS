@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useContext } from "react";
-import { Loader2 } from "lucide-react";
+import { IconLoader2 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 
 export default function LoginForm() {
@@ -60,7 +60,7 @@ export default function LoginForm() {
         >
           {isSubmitting ? (
             <div className="flex items-center gap-2">
-              <Loader2 className="animate-spin h-5 w-5" />
+              <IconLoader2 size={20} stroke={1.5} className="animate-spin" />
               Signing In...
             </div>
           ) : (

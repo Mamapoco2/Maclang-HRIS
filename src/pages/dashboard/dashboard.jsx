@@ -8,9 +8,6 @@ import { ChartBarMultiple } from "@/components/chart-bar-multiple";
 
 import Teams from "../../components/teams";
 import LeaveOverview from "./components/leaveOverview";
-
-import data from "./components/data.json";
-
 export default function Page() {
   return (
     <SidebarProvider

@@ -8,15 +8,15 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Briefcase,
-  Users,
-  User,
-} from "lucide-react";
+  IconMail,
+  IconPhone,
+  IconMapPin,
+  IconCalendar,
+  IconCurrencyPeso,
+  IconBriefcase,
+  IconUsers,
+  IconUser,
+} from "@tabler/icons-react";
 
 export default function EmployeeViewDialog({ open, onClose, employee }) {
   if (!employee) return null;
@@ -24,13 +24,13 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
   const InfoItem = ({ icon: Icon, label, value }) => (
     <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
       <div className="mt-0.5 text-gray-500">
-        <Icon className="h-4 w-4" />
+        <Icon size={16} stroke={1.5} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
           {label}
         </p>
-        <p className="text-sm font-medium text-gray-900 wrap-break-words">
+        <p className="text-sm font-medium text-gray-900 break-words">
           {value || "N/A"}
         </p>
       </div>
@@ -51,14 +51,17 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
                 {employee.lastName?.[0]}
               </AvatarFallback>
             </Avatar>
+
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-gray-900">
                 {employee.firstName} {employee.middleName} {employee.lastName}{" "}
                 {employee.suffix}
               </h2>
+
               <p className="text-base text-gray-600 mt-1">
                 {employee.position}
               </p>
+
               <div className="mt-2">
                 <Badge
                   variant={
@@ -78,32 +81,40 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
-          <InfoItem icon={Mail} label="Email Address" value={employee.email} />
+          <InfoItem
+            icon={IconMail}
+            label="Email Address"
+            value={employee.email}
+          />
 
           <InfoItem
-            icon={Phone}
+            icon={IconPhone}
             label="Contact Number"
             value={employee.contact}
           />
 
           <InfoItem
-            icon={Users}
+            icon={IconUsers}
             label="Assigned Department"
             value={employee.department}
           />
 
           <InfoItem
-            icon={Users}
+            icon={IconUsers}
             label="Original Department"
             value={employee.designation}
           />
 
-          <InfoItem icon={User} label="Gender" value={employee.gender} />
-
-          <InfoItem icon={MapPin} label="Address" value={employee.address} />
+          <InfoItem icon={IconUser} label="Gender" value={employee.gender} />
 
           <InfoItem
-            icon={Calendar}
+            icon={IconMapPin}
+            label="Address"
+            value={employee.address}
+          />
+
+          <InfoItem
+            icon={IconCalendar}
             label="Date of Birth"
             value={
               employee.birthdate
@@ -117,7 +128,7 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
           />
 
           <InfoItem
-            icon={DollarSign}
+            icon={IconCurrencyPeso}
             label="Annual Salary"
             value={
               employee.annualSalary
@@ -127,7 +138,7 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
           />
 
           <InfoItem
-            icon={DollarSign}
+            icon={IconCurrencyPeso}
             label="Monthly Salary"
             value={
               employee.monthlySalary
@@ -140,13 +151,13 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
           />
 
           <InfoItem
-            icon={Briefcase}
+            icon={IconBriefcase}
             label="Salary Grade Level"
             value={employee.sgLevel ? `SG ${employee.sgLevel}` : null}
           />
 
           <InfoItem
-            icon={Briefcase}
+            icon={IconBriefcase}
             label="Employee Type"
             value={employee.employeeType}
           />

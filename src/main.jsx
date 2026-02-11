@@ -4,12 +4,15 @@ import App from "./App";
 import { AuthProvider } from "./context/authContext";
 import { Toaster } from "sonner";
 import "./index.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AuthProvider>
-      <App />
-      <Toaster position="top-right" richColors />
-    </AuthProvider>
-  </React.StrictMode>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <AuthProvider>
+        <App />
+        <Toaster position="top-right" richColors />
+      </AuthProvider>
+    </ThemeProvider>
+  </React.StrictMode>,
 );

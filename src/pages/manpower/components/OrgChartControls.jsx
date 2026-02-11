@@ -1,5 +1,10 @@
 import React from "react";
-import { Plus, Minus, RefreshCcw, Search, Sun, Moon } from "lucide-react";
+import {
+  IconPlus,
+  IconMinus,
+  IconRefresh,
+  IconSearch,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import ReportGeneration from "./ReportGeneration";
@@ -13,8 +18,6 @@ export default function OrgChartControls({
   resetTransform,
   scale = 1,
   reportData,
-  darkMode,
-  setDarkMode,
 }) {
   return (
     <div className="relative z-10 p-3">
@@ -26,7 +29,12 @@ export default function OrgChartControls({
       >
         {/* 🔍 Department */}
         <div className="flex items-center gap-2">
-          <Search className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+          <IconSearch
+            size={16}
+            stroke={1.5}
+            className="text-gray-500 dark:text-gray-300"
+          />
+
           <Label className="text-xs font-bold uppercase whitespace-nowrap">
             Department
           </Label>
@@ -49,7 +57,7 @@ export default function OrgChartControls({
         {/* ➖➕ Zoom */}
         <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full px-2 py-1 gap-1">
           <Button onClick={zoomOut} size="icon" variant="ghost">
-            <Minus className="w-4 h-4" />
+            <IconMinus size={16} stroke={1.5} />
           </Button>
 
           <span className="px-3 text-sm font-semibold min-w-14 text-center">
@@ -57,26 +65,13 @@ export default function OrgChartControls({
           </span>
 
           <Button onClick={zoomIn} size="icon" variant="ghost">
-            <Plus className="w-4 h-4" />
+            <IconPlus size={16} stroke={1.5} />
           </Button>
         </div>
 
         {/* 🔄 RESET */}
         <Button onClick={resetTransform} variant="outline" size="icon">
-          <RefreshCcw className="w-4 h-4" />
-        </Button>
-
-        {/* 🌙 Dark mode */}
-        <Button
-          onClick={() => setDarkMode(!darkMode)}
-          variant="outline"
-          size="icon"
-        >
-          {darkMode ? (
-            <Sun className="w-4 h-4" />
-          ) : (
-            <Moon className="w-4 h-4" />
-          )}
+          <IconRefresh size={16} stroke={1.5} />
         </Button>
 
         {/* 📄 Report */}

@@ -122,3 +122,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+.p-organizationchart .p-organizationchart-line-down {
+  background-color: #000000 !important;
+}
+
+.p-organizationchart .p-organizationchart-line-left {
+  border-right: 2px solid #000000 !important;
+}
+
+.p-organizationchart .p-organizationchart-line-right {
+  border-left: 2px solid #000000 !important;
+}
+
+.p-organizationchart .p-organizationchart-line-top {
+  border-top: 2px solid #000000 !important;
+}
+
+.dark .p-organizationchart .p-organizationchart-line-down {
+  background-color: #ffffff !important;
+}
+
+.dark .p-organizationchart .p-organizationchart-line-left {
+  border-right: 2px solid #ffffff !important;
+}
+
+.dark .p-organizationchart .p-organizationchart-line-right {
+  border-left: 2px solid #ffffff !important;
+}
+
+.dark .p-organizationchart .p-organizationchart-line-top {
+  border-top: 2px solid #ffffff !important;
+}

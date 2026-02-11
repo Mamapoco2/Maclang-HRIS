@@ -1,5 +1,10 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { CalendarCheck, CalendarX2, Clock, CalendarPlus } from "lucide-react";
+import {
+  IconCalendarPlus,
+  IconCalendarCheck,
+  IconClock,
+  IconCalendarX,
+} from "@tabler/icons-react";
 
 export default function LeaveCardKpi() {
   return (
@@ -10,7 +15,7 @@ export default function LeaveCardKpi() {
           <CardTitle className="text-xs font-medium text-muted-foreground">
             Total Leave Requests
           </CardTitle>
-          <CalendarPlus className="h-4 w-4 text-blue-600" />
+          <IconCalendarPlus size={16} stroke={1.5} className="text-blue-600" />
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-semibold">128</p>
@@ -24,7 +29,11 @@ export default function LeaveCardKpi() {
           <CardTitle className="text-xs font-medium text-muted-foreground">
             Approved Leaves
           </CardTitle>
-          <CalendarCheck className="h-4 w-4 text-green-600" />
+          <IconCalendarCheck
+            size={16}
+            stroke={1.5}
+            className="text-green-600"
+          />
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-semibold">89</p>
@@ -32,12 +41,13 @@ export default function LeaveCardKpi() {
         </CardContent>
       </Card>
 
+      {/* Pending Approvals */}
       <Card className="border border-gray-200 shadow-sm">
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-xs font-medium text-muted-foreground">
             Pending Approvals
           </CardTitle>
-          <Clock className="h-4 w-4 text-yellow-600" />
+          <IconClock size={16} stroke={1.5} className="text-yellow-600" />
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-semibold">22</p>
@@ -51,7 +61,7 @@ export default function LeaveCardKpi() {
           <CardTitle className="text-xs font-medium text-muted-foreground">
             Rejected Requests
           </CardTitle>
-          <CalendarX2 className="h-4 w-4 text-red-600" />
+          <IconCalendarX size={16} stroke={1.5} className="text-red-600" />
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-semibold">17</p>

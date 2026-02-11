@@ -35,31 +35,12 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   });
 
   useEffect(() => {
-    if (employee) {
-      setFormData(employee);
-    } else {
-      setFormData({
-        firstName: "",
-        middleName: "",
-        lastName: "",
-        suffix: "",
-        email: "",
-        contact: "",
-        position: "",
-        department: "",
-        designation: "",
-        gender: "",
-        status: "Active",
-        address: "",
-        birthdate: "",
-        annualSalary: "",
-        monthlySalary: "",
-        sgLevel: "",
-        employeeType: "",
-        avatar: "",
-      });
-    }
+    if (employee) setFormData(employee);
   }, [employee]);
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,308 +74,211 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     onClose();
   };
 
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
   return (
-    <div className="space-y-8 max-h-[80vh] overflow-y-auto p-8 bg-white w-full min-w-[1200px]">
-      {/* Header Section */}
-      <div className="border-b-2 border-black pb-4">
-        <h2 className="text-2xl font-bold text-black uppercase tracking-wide">
+    <form className="max-h-[80vh] overflow-y-auto p-8 bg-white w-full min-w-[1000px] space-y-6">
+      {/* Header */}
+      <div className="pb-4 border-b border-gray-200">
+        <h2 className="text-2xl font-bold uppercase">
           {employee ? "Edit Employee" : "New Employee"}
         </h2>
-        <p className="text-sm text-gray-600 mt-1">
-          Fields marked with <span className="text-black font-bold">*</span> are
-          required
+        <p className="text-gray-500 text-sm mt-1">
+          <span className="font-bold">*</span> Required fields
         </p>
       </div>
 
-      {/* Name Fields */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+      {/* Personal Info */}
+      <section className="p-4 rounded-md space-y-4">
+        <h3 className="text-sm font-semibold uppercase border-b border-gray-300 pb-2">
           Personal Information
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              First Name <span className="text-black">*</span>
-            </Label>
-            <Input
-              value={formData.firstName}
-              onChange={(e) => handleChange("firstName", e.target.value)}
-              placeholder="Juan"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Middle Name
-            </Label>
-            <Input
-              value={formData.middleName}
-              onChange={(e) => handleChange("middleName", e.target.value)}
-              placeholder="Dela"
-              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Last Name <span className="text-black">*</span>
-            </Label>
-            <Input
-              value={formData.lastName}
-              onChange={(e) => handleChange("lastName", e.target.value)}
-              placeholder="Cruz"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Suffix
-            </Label>
-            <Input
-              value={formData.suffix}
-              onChange={(e) => handleChange("suffix", e.target.value)}
-              placeholder="Jr., Sr., III"
-              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <InputField
+            label="First Name"
+            required
+            value={formData.firstName}
+            onChange={(v) => handleChange("firstName", v)}
+            placeholder="Juan"
+          />
+          <InputField
+            label="Middle Name"
+            value={formData.middleName}
+            onChange={(v) => handleChange("middleName", v)}
+            placeholder="Dela"
+          />
+          <InputField
+            label="Last Name"
+            required
+            value={formData.lastName}
+            onChange={(v) => handleChange("lastName", v)}
+            placeholder="Cruz"
+          />
+          <InputField
+            label="Suffix"
+            value={formData.suffix}
+            onChange={(v) => handleChange("suffix", v)}
+            placeholder="Jr., Sr., III"
+          />
         </div>
-      </div>
+      </section>
 
-      {/* Contact Information */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+      {/* Contact Info */}
+      <section className="p-4 rounded-md space-y-4">
+        <h3 className="text-sm font-semibold uppercase border-b border-gray-300 pb-2">
           Contact Details
         </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Email <span className="text-black">*</span>
-            </Label>
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              placeholder="email@company.com"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Contact Number
-            </Label>
-            <Input
-              value={formData.contact}
-              onChange={(e) => handleChange("contact", e.target.value)}
-              placeholder="09XX XXX XXXX"
-              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InputField
+            label="Email"
+            required
+            type="email"
+            value={formData.email}
+            onChange={(v) => handleChange("email", v)}
+            placeholder="email@company.com"
+          />
+          <InputField
+            label="Contact Number"
+            value={formData.contact}
+            onChange={(v) => handleChange("contact", v)}
+            placeholder="09XX XXX XXXX"
+          />
+          <InputField
+            label="Address"
+            value={formData.address}
+            onChange={(v) => handleChange("address", v)}
+            placeholder="City, Province"
+          />
+          <InputField
+            label="Birthdate"
+            type="date"
+            value={formData.birthdate}
+            onChange={(v) => handleChange("birthdate", v)}
+          />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Address
-            </Label>
-            <Input
-              value={formData.address}
-              onChange={(e) => handleChange("address", e.target.value)}
-              placeholder="City, Province"
-              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Birthdate
-            </Label>
-            <Input
-              type="date"
-              value={formData.birthdate}
-              onChange={(e) => handleChange("birthdate", e.target.value)}
-              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black"
-            />
-          </div>
-        </div>
-      </div>
+      </section>
 
-      {/* Employment Details */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
+      {/* Employment Info */}
+      <section className="p-4 rounded-md space-y-4">
+        <h3 className="text-sm font-semibold uppercase border-b border-gray-300 pb-2">
           Employment Information
         </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Position <span className="text-black">*</span>
-            </Label>
-            <Input
-              value={formData.position}
-              onChange={(e) => handleChange("position", e.target.value)}
-              placeholder="e.g., Administrative Aide III"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Gender
-            </Label>
-            <Select
-              value={formData.gender}
-              onValueChange={(val) => handleChange("gender", val)}
-            >
-              <SelectTrigger className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black">
-                <SelectValue placeholder="Select gender" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-2 border-black">
-                <SelectItem value="Male" className="hover:bg-gray-100">
-                  Male
-                </SelectItem>
-                <SelectItem value="Female" className="hover:bg-gray-100">
-                  Female
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <InputField
+            label="Position"
+            required
+            value={formData.position}
+            onChange={(v) => handleChange("position", v)}
+            placeholder="e.g., Administrative Aide III"
+          />
+          <SelectField
+            label="Gender"
+            options={["Male", "Female"]}
+            value={formData.gender}
+            onChange={(v) => handleChange("gender", v)}
+          />
+          <InputField
+            label="Department"
+            required
+            value={formData.department}
+            onChange={(v) => handleChange("department", v)}
+            placeholder="Current department"
+          />
+          <InputField
+            label="Designation"
+            required
+            value={formData.designation}
+            onChange={(v) => handleChange("designation", v)}
+            placeholder="Home department"
+          />
+          <InputField
+            label="Annual Salary (₱)"
+            required
+            type="number"
+            value={formData.annualSalary}
+            onChange={(v) => handleChange("annualSalary", v)}
+            placeholder="222000"
+          />
+          <InputField
+            label="Salary Grade"
+            required
+            type="number"
+            value={formData.sgLevel}
+            onChange={(v) => handleChange("sgLevel", v)}
+            placeholder="9"
+          />
+          <SelectField
+            label="Employee Type"
+            options={["Plantilla", "Job Order", "Contractual"]}
+            value={formData.employeeType}
+            onChange={(v) => handleChange("employeeType", v)}
+          />
+          <SelectField
+            label="Status"
+            options={["Active", "Inactive"]}
+            value={formData.status}
+            onChange={(v) => handleChange("status", v)}
+          />
+          <InputField
+            label="Avatar URL"
+            value={formData.avatar}
+            onChange={(v) => handleChange("avatar", v)}
+            placeholder="https://example.com/avatar.jpg"
+          />
         </div>
-      </div>
-
-      {/* Department Information */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
-          Department Assignment
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Assigned Department <span className="text-black">*</span>
-            </Label>
-            <Input
-              value={formData.department}
-              onChange={(e) => handleChange("department", e.target.value)}
-              placeholder="Current department"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Original Department <span className="text-black">*</span>
-            </Label>
-            <Input
-              value={formData.designation}
-              onChange={(e) => handleChange("designation", e.target.value)}
-              placeholder="Home department"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Salary and Employment Details */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
-          Compensation & Type
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Annual Salary (₱) <span className="text-black">*</span>
-            </Label>
-            <Input
-              type="number"
-              value={formData.annualSalary}
-              onChange={(e) => handleChange("annualSalary", e.target.value)}
-              placeholder="222000"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Salary Grade <span className="text-black">*</span>
-            </Label>
-            <Input
-              type="number"
-              value={formData.sgLevel}
-              onChange={(e) => handleChange("sgLevel", e.target.value)}
-              placeholder="9"
-              className="border-2 border-black focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Employee Type
-            </Label>
-            <Select
-              value={formData.employeeType}
-              onValueChange={(val) => handleChange("employeeType", val)}
-            >
-              <SelectTrigger className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-2 border-black">
-                <SelectItem value="Plantilla" className="hover:bg-gray-100">
-                  Plantilla
-                </SelectItem>
-                <SelectItem value="Job Order" className="hover:bg-gray-100">
-                  Consultant
-                </SelectItem>
-                <SelectItem value="Contractual" className="hover:bg-gray-100">
-                  Contract of Service
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {/* Status and Avatar */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold text-black uppercase tracking-wider border-b border-gray-300 pb-1">
-          Additional Settings
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Status
-            </Label>
-            <Select
-              value={formData.status}
-              onValueChange={(val) => handleChange("status", val)}
-            >
-              <SelectTrigger className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-2 border-black">
-                <SelectItem value="Active" className="hover:bg-gray-100">
-                  Active
-                </SelectItem>
-                <SelectItem value="Inactive" className="hover:bg-gray-100">
-                  Inactive
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs font-bold text-black uppercase">
-              Avatar URL
-            </Label>
-            <Input
-              value={formData.avatar}
-              onChange={(e) => handleChange("avatar", e.target.value)}
-              placeholder="https://example.com/avatar.jpg"
-              className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
-            />
-          </div>
-        </div>
-      </div>
+      </section>
 
       <Button
+        type="submit"
         onClick={handleSubmit}
-        className="w-full mt-6 bg-black text-white hover:bg-gray-800 border-2 border-black font-bold uppercase tracking-wider py-6 text-base transition-all"
+        className="w-full bg-black text-white hover:bg-gray-800 py-4 font-bold uppercase"
       >
         {employee ? "Update Employee" : "Add Employee"}
       </Button>
+    </form>
+  );
+}
+
+// Reusable input component
+function InputField({
+  label,
+  required,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+}) {
+  return (
+    <div className="flex flex-col">
+      <Label className="text-xs font-semibold uppercase flex items-center gap-1">
+        {label} {required && <span className="text-red-600">*</span>}
+      </Label>
+      <Input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder:text-gray-400"
+      />
+    </div>
+  );
+}
+
+// Reusable select component
+function SelectField({ label, options, value, onChange }) {
+  return (
+    <div className="flex flex-col">
+      <Label className="text-xs font-semibold uppercase">{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="border-2 border-gray-300 focus:border-black focus:ring-black bg-white text-black">
+          <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent className="bg-white border-2 border-black">
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
