@@ -20,14 +20,10 @@ export default function EmployeeDeleteDialog({ open, onClose, onConfirm }) {
             undone and will permanently remove their record.
           </AlertDialogDescription>
         </AlertDialogHeader>
-
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
+            onClick={onConfirm}
             className="bg-red-600 hover:bg-red-700"
           >
             Delete

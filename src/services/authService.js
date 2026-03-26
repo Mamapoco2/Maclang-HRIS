@@ -1,106 +1,99 @@
-import { toast } from "sonner";
-import axios from "axios";
+import api from "@/api/api";
+import {
+  setToken,
+  setUser,
+  getUser,
+  clearAuth,
+  getToken,
+} from "@/lib/tokenStorage";
 
-const host = window.location.hostname; // detects the current IP/hostname
-
-const api = axios.create({
-  baseURL: `http://${host}:8000/api`, // uses LAN IP if accessed from another PC
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-  withCredentials: true, // needed for cookies/Sanctum
+const normalizeUser = (user) => ({
+  id: user.id,
+  email: user.email,
+  is_active: user.is_active,
+  approval_status: user.approval_status,
+  roles: user.roles ?? [],
+  permissions: user.permissions ?? [],
+  first_name: user.first_name ?? null,
+  last_name: user.last_name ?? null,
+  avatar_url: user.avatar_url ?? null,
+  employee_id: user.employee_id ?? null,
+  department_ids: user.department_ids ?? [],
+  departments: user.departments ?? [],
+  division: user.division ?? null,
+  position: user.position ?? null,
 });
 
-// Add token automatically to requests
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-export const authService = {
-  login: async (email, password) => {
-    try {
-      const response = await api.post("/login", { email, password });
-
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-
-      toast.success("Login successful!");
-      return { success: true, user: response.data.user };
-    } catch (error) {
-      console.error("Login error:", error.response || error);
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.errors?.email?.[0] ||
-        "Invalid email or password";
-      toast.error(message);
-      return { success: false, error: message };
-    }
-  },
-
-  register: async (data) => {
-    try {
-      const response = await api.post("/register", {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        middleName: data.middleName,
-        suffix: data.suffix,
-        email: data.email,
-        password: data.password,
-        password_confirmation: data.password_confirmation,
-      });
-
-      toast.success("Registration successful! Awaiting HR approval.");
-      return { success: true, user: response.data.user };
-    } catch (error) {
-      console.error("Registration error:", error.response || error);
-
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const firstError = Object.values(errors)[0][0];
-        toast.error(firstError);
-        return { success: false, error: firstError, errors };
-      }
-
-      const message = error.response?.data?.message || "Registration failed";
-      toast.error(message);
-      return { success: false, error: message };
-    }
-  },
-
-  logout: async () => {
-    try {
-      await api.post("/logout");
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      toast.success("Logged out successfully!");
-    }
-    return { success: true };
-  },
-
-  getCurrentUser: () => {
-    try {
-      const user = localStorage.getItem("user");
-      return user ? JSON.parse(user) : null;
-    } catch (error) {
-      console.error("Error getting current user:", error);
-      return null;
-    }
-  },
-
-  isAuthenticated: () => {
-    return !!localStorage.getItem("token");
-  },
+const login = async (email, password) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await api.post(
+      "/login",
+      { email, password },
+      { signal: controller.signal },
+    );
+    const { token, user } = res.data;
+    const normalized = normalizeUser(user);
+    setToken(token);
+    setUser(normalized);
+    return { success: true, user: normalized };
+  } catch (err) {
+    if (err.name === "AbortError")
+      return { success: false, error: "Request timed out. Please try again." };
+    return {
+      success: false,
+      error: err.response?.data?.message ?? "Login failed. Please try again.",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
-export { api };
+const register = async (email, password, password_confirmation) => {
+  try {
+    const res = await api.post("/register", {
+      email,
+      password,
+      password_confirmation,
+    });
+    return { success: true, data: res.data };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.message ?? "Registration failed.",
+    };
+  }
+};
+
+const logout = async () => {
+  try {
+    await api.post("/logout");
+  } finally {
+    clearAuth();
+  }
+};
+
+const me = async () => {
+  try {
+    const res = await api.get("/me");
+    const raw = res.data?.user ?? res.data;
+    const user = normalizeUser(raw);
+    setUser(user);
+    return { success: true, user };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.message ?? "Failed to fetch user.",
+    };
+  }
+};
+
+export default {
+  login,
+  register,
+  logout,
+  me,
+  getCurrentUser: getUser,
+  getToken,
+};

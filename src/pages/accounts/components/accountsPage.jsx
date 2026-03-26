@@ -1,5 +1,7 @@
-import AccountsTable from "./accountsTable";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import UsersTable from "./UsersTable";
+import ApprovedAccountsTab from "./ApprovedAccountsTab";
 
 export default function AccountsPage() {
   return (
@@ -9,11 +11,24 @@ export default function AccountsPage() {
         <p className="text-gray-600 mt-2">Manage all your accounts below.</p>
       </header>
 
-      <Card>
-        <CardContent>
-          <AccountsTable />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="all">
+        <TabsList className="mb-4">
+          <TabsTrigger value="all">All Users</TabsTrigger>
+          <TabsTrigger value="approved">Approved Accounts</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all">
+          <Card>
+            <CardContent className="pt-4">
+              <UsersTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="approved">
+          <ApprovedAccountsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

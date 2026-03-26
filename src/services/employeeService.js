@@ -1,56 +1,72 @@
-import axios from "axios";
-
-/* Axios instance */
-export const api = axios.create({
-  baseURL: "http://localhost:8000/api",
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
-
-/* Bearer token interceptor */
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-/* API functions */
-export const getEmployees = async () => {
-  try {
-    const res = await api.get("/employees");
-    console.log("Employees response:", res);
-    return res.data;
-  } catch (error) {
-    console.error("Get employees error:", error.response || error);
-    throw error;
-  }
-};
-
-export const addEmployee = async (data) => {
-  const res = await api.post("/employees", data);
-  return res.data;
-};
-
-export const updateEmployee = async (id, data) => {
-  const res = await api.put(`/employees/${id}`, data);
-  return res.data;
-};
-
-export const deleteEmployee = async (id) => {
-  await api.delete(`/employees/${id}`);
-  return true;
-};
+import api from "@/api/api";
 
 export const employeeService = {
-  getEmployees,
-  addEmployee,
-  updateEmployee,
-  deleteEmployee,
+  async getEmployees(params = {}) {
+    const res = await api.get("/employees", { params });
+    return res.data;
+  },
+
+  async getAllEmployees() {
+    const res = await api.get("/employees", { params: { per_page: 9999 } });
+    return { data: res.data?.data ?? res.data };
+  },
+
+  async addEmployee(payload) {
+    const res = await api.post("/employees", payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
+  },
+
+  async updateEmployee(id, payload) {
+    if (payload instanceof FormData) {
+      const cleaned = new FormData();
+      for (const [key, value] of payload.entries()) {
+        if (value === "") continue;
+        cleaned.append(key, value);
+      }
+      if (!cleaned.has("_method")) cleaned.append("_method", "PUT");
+
+      const res = await api.post(`/employees/${id}`, cleaned, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data;
+    }
+
+    const res = await api.post(`/employees/${id}?_method=PUT`, payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
+  },
+
+  async deleteEmployee(id) {
+    const res = await api.delete(`/employees/${id}`);
+    return res.data;
+  },
+
+  async getPlantillaItems(employeeId = null) {
+    const res = await api.get("/plantilla-items", {
+      params: { employee_id: employeeId },
+    });
+    return res.data;
+  },
+
+  async getDivisions() {
+    const res = await api.get("/divisions");
+    return Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+  },
+
+  async getDepartments() {
+    const res = await api.get("/departments");
+    return res.data;
+  },
+
+  async getGenderCount() {
+    const res = await api.get("/employees/gender-count");
+    return res.data;
+  },
+
+  getStepsByPlantilla(id) {
+    return api.get(`/plantilla-items/${id}/steps`);
+  },
 };

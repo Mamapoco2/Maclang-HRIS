@@ -1,153 +1,168 @@
-import * as XLSX from "xlsx-js-style";
+import { useState } from "react";
+import { IconFileExport, IconLoader2 } from "@tabler/icons-react";
+import XLSXStyle from "xlsx-js-style"; // ← must use xlsx-js-style, not xlsx
+import api from "../../../api/api";
 
-export default function ReportGeneration({ data }) {
-  const generateExcel = () => {
-    if (!data || data.length === 0) return;
+// ── Employment type row colors ────────────────────────────────────────────────
+const ROW_FILLS = {
+  PLANTILLA: { fgColor: { rgb: "DBEAFE" } },
+  "CONTRACT OF SERVICE": { fgColor: { rgb: "FEF3C7" } },
+  COS: { fgColor: { rgb: "FEF3C7" } },
+  CONTRACT: { fgColor: { rgb: "FEF3C7" } },
+  CONSULTANT: { fgColor: { rgb: "EDE9FE" } },
+};
 
-    /* ---------------- NAME RESOLVER ---------------- */
-    const resolveNameFields = (d = {}) => {
-      return {
-        prefix: d.prefix || "",
-        firstname: d.firstName || "",
-        middlename: d.middleName || "",
-        middleinitial: d.middleInitial || "",
-        lastname: d.lastName || "",
-        suffix: d.suffix || "", // <-- included suffix
-        postTitle: d.postTitle || "",
-      };
-    };
+function resolveRowFill(empType = "") {
+  const upper = empType.toUpperCase();
+  for (const [key, fill] of Object.entries(ROW_FILLS)) {
+    if (upper.includes(key)) return fill;
+  }
+  return { fgColor: { rgb: "F9FAFB" } };
+}
 
-    /* ---------------- FLATTEN TREE ---------------- */
-    const flattenTree = (nodes) => {
-      let rows = [];
+const COL_WIDTHS = {
+  "EMPLOYEE NUMBER": 18,
+  PREFIX: 8,
+  "FIRST NAME": 18,
+  "MIDDLE NAME": 18,
+  "LAST NAME": 18,
+  TITLE: 12,
+  "ROLE POSITION": 24,
+  DEPARTMENT: 28,
+  DIVISION: 22,
+  "POSITION TITLE": 26,
+  "SALARY GRADE": 14,
+  STEP: 8,
+  "EMPLOYMENT TYPE": 20,
+  "EMPLOYMENT STATUS": 20,
+};
 
-      nodes.forEach((node) => {
-        const d = node.data || {};
-        const name = resolveNameFields(d);
+// ── Reusable style builders ───────────────────────────────────────────────────
+const titleStyle = {
+  font: { bold: true, sz: 20, color: { rgb: "1E3A5F" }, name: "Arial" },
+  alignment: { horizontal: "center", vertical: "center" },
+  fill: { patternType: "solid", fgColor: { rgb: "DBEAFE" } },
+  border: {
+    top: { style: "medium", color: { rgb: "1E3A5F" } },
+    bottom: { style: "medium", color: { rgb: "1E3A5F" } },
+    left: { style: "medium", color: { rgb: "1E3A5F" } },
+    right: { style: "medium", color: { rgb: "1E3A5F" } },
+  },
+};
 
-        const isVacant =
-          !name.firstname &&
-          !name.lastname &&
-          (!d.name || d.name.toLowerCase() === "vacant");
+const headerStyle = {
+  font: { bold: true, sz: 10, color: { rgb: "FFFFFF" }, name: "Arial" },
+  fill: { patternType: "solid", fgColor: { rgb: "1E3A5F" } },
+  alignment: { horizontal: "center", vertical: "center", wrapText: true },
+  border: {
+    top: { style: "thin", color: { rgb: "93C5FD" } },
+    bottom: { style: "thin", color: { rgb: "93C5FD" } },
+    left: { style: "thin", color: { rgb: "93C5FD" } },
+    right: { style: "thin", color: { rgb: "93C5FD" } },
+  },
+};
 
-        rows.push({
-          department: d.department || "",
-          deployment: d.deployment || "",
-          plantillaItem: d.plantillaItem || "",
-          prefix: name.prefix,
-          firstname: name.firstname,
-          middlename: name.middlename,
-          middleinitial: name.middleinitial,
-          lastname: name.lastname,
-          suffix: name.suffix, // <-- added suffix
-          postTitle: name.postTitle,
-          role: d.role || "",
-          employeeId: d.employeeId || "",
-          employmentType: d.employmentType || "",
-          status: isVacant ? "Vacant" : "Filled",
-        });
+const dataStyle = (fgColor) => ({
+  font: { sz: 9, color: { rgb: "111827" }, name: "Arial" },
+  fill: { patternType: "solid", fgColor },
+  alignment: { horizontal: "center", vertical: "center", wrapText: false },
+  border: {
+    top: { style: "hair", color: { rgb: "E5E7EB" } },
+    bottom: { style: "hair", color: { rgb: "E5E7EB" } },
+    left: { style: "hair", color: { rgb: "E5E7EB" } },
+    right: { style: "hair", color: { rgb: "E5E7EB" } },
+  },
+});
 
-        if (node.children?.length) {
-          rows = rows.concat(flattenTree(node.children));
-        }
+export default function ReportGeneration({ department, division }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+
+      const res = await api.get("/manpower/report", {
+        params: {
+          department_id: department || "All",
+          division_id: division || "All",
+        },
       });
 
-      return rows;
-    };
+      const { title, report } = res.data;
 
-    const rows = flattenTree(data);
-
-    /* ---------------- HEADERS ---------------- */
-    const headers = [
-      "DEPARTMENT",
-      "DEPLOYMENT",
-      "PLANTILLA ITEM",
-      "PREFIX",
-      "FIRST NAME",
-      "MIDDLE NAME",
-      "MIDDLE INITIAL",
-      "LAST NAME",
-      "SUFFIX", // <-- suffix column
-      "POST TITLE",
-      "ROLE",
-      "EMPLOYEE ID",
-      "EMPLOYMENT TYPE",
-      "STATUS",
-    ];
-
-    /* ---------------- CALCULATE PLANTILLA COUNT ---------------- */
-    const plantillaCount = {};
-    headers.forEach((header) => {
-      if (header === "PLANTILLA ITEM" || header === "EMPLOYMENT TYPE") {
-        plantillaCount[header] = rows.filter(
-          (r) => r.employmentType?.toLowerCase() === "plantilla",
-        ).length;
-      } else {
-        plantillaCount[header] = rows.length;
+      if (!report || report.length === 0) {
+        alert("No data to export.");
+        return;
       }
-    });
 
-    /* ---------------- WORKSHEET DATA ---------------- */
-    const worksheetData = [
-      headers.map((h) => `${h} (Plantilla: ${plantillaCount[h] || 0})`),
-      ...rows.map((r) => [
-        r.department,
-        r.deployment,
-        r.plantillaItem,
-        r.prefix,
-        r.firstname,
-        r.middlename,
-        r.middleinitial,
-        r.lastname,
-        r.suffix, // <-- include suffix in data row
-        r.postTitle,
-        r.role,
-        r.employeeId,
-        r.employmentType,
-        r.status,
-      ]),
-    ];
+      const headers = Object.keys(report[0]);
+      const wb = XLSXStyle.utils.book_new();
+      const ws = {};
 
-    /* ---------------- CREATE WORKSHEET ---------------- */
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+      // ── Merge title across all columns ───────────────────────────────────
+      ws["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+      ];
 
-    /* ---------------- HEADER STYLE ---------------- */
-    headers.forEach((_, colIndex) => {
-      const cell = XLSX.utils.encode_cell({ r: 0, c: colIndex });
-      if (worksheet[cell]) {
-        worksheet[cell].s = {
-          font: { bold: true, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "4CAF50" } },
-          alignment: { horizontal: "center", vertical: "center" },
-        };
-      }
-    });
+      // ── Title row — style ALL cells in the merged range ──────────────────
+      headers.forEach((_, ci) => {
+        const addr = XLSXStyle.utils.encode_cell({ r: 0, c: ci });
+        ws[addr] = { v: ci === 0 ? title : "", t: "s", s: titleStyle };
+      });
 
-    /* ---------------- AUTO WIDTH ---------------- */
-    worksheet["!cols"] = headers.map((_, colIndex) => {
-      const maxLength = Math.max(
-        headers[colIndex].length +
-          ` (Plantilla: ${plantillaCount[headers[colIndex]] || 0})`.length,
-        ...worksheetData
-          .slice(1)
-          .map((row) => (row[colIndex] ? row[colIndex].toString().length : 0)),
-      );
+      // ── Header row ───────────────────────────────────────────────────────
+      headers.forEach((h, ci) => {
+        const addr = XLSXStyle.utils.encode_cell({ r: 1, c: ci });
+        ws[addr] = { v: h, t: "s", s: headerStyle };
+      });
 
-      return { wch: Math.min(maxLength + 2, 50) };
-    });
+      // ── Data rows ────────────────────────────────────────────────────────
+      report.forEach((row, ri) => {
+        const fill = resolveRowFill(row["EMPLOYMENT TYPE"] || "");
+        headers.forEach((h, ci) => {
+          const addr = XLSXStyle.utils.encode_cell({ r: ri + 2, c: ci });
+          ws[addr] = { v: row[h] ?? "", t: "s", s: dataStyle(fill.fgColor) };
+        });
+      });
 
-    /* ---------------- EXPORT ---------------- */
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Manpower");
-    XLSX.writeFile(workbook, "manpower-report.xlsx");
+      // ── Sheet metadata ───────────────────────────────────────────────────
+      ws["!ref"] = XLSXStyle.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: report.length + 1, c: headers.length - 1 },
+      });
+
+      ws["!cols"] = headers.map((h) => ({ wch: COL_WIDTHS[h] || 16 }));
+
+      ws["!rows"] = [
+        { hpt: 48 }, // title
+        { hpt: 28 }, // header
+        ...report.map(() => ({ hpt: 18 })),
+      ];
+
+      ws["!freeze"] = { xSplit: 0, ySplit: 2 };
+
+      XLSXStyle.utils.book_append_sheet(wb, ws, "Employee Mapping");
+      XLSXStyle.writeFile(wb, `${title}.xlsx`);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Export failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <button
-      onClick={generateExcel}
-      className="bg-green-600! text-white! hover:bg-green-700! px-4 py-2 rounded-md transition text-sm font-medium"
+      onClick={handleExport}
+      disabled={loading}
+      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-md text-xs font-medium transition-colors"
     >
-      Generate Report
+      {loading ? (
+        <IconLoader2 size={14} className="animate-spin" />
+      ) : (
+        <IconFileExport size={14} />
+      )}
+      {loading ? "Exporting..." : "Export Report"}
     </button>
   );
 }

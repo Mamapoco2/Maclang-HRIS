@@ -1,28 +1,19 @@
-import { Button } from "@/components/ui/button";
-import { IconPlus } from "@tabler/icons-react";
-
-export default function TeamTableHeader({
-  searchQuery,
-  setSearchQuery,
-  onAddMember,
-}) {
+function formatTeamName(name = "") {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <h2 className="text-2xl font-semibold">HR Team</h2>
+    name
+      .replace(/\b(department|dept\.?|office|unit|division)\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim() + " Team"
+  );
+}
 
-      <div className="flex items-center gap-3">
-        <input
-          type="text"
-          placeholder="Search team member..."
-          className="border rounded-xl px-4 py-2 w-64"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+export default function TeamTableHeader({ departmentName = "" }) {
+  const teamTitle = departmentName ? formatTeamName(departmentName) : "Team";
 
-        <Button className="flex items-center gap-2" onClick={onAddMember}>
-          <IconPlus size={16} stroke={2} />
-          Add Member
-        </Button>
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h2 className="text-xl font-semibold uppercase">{teamTitle}</h2>
       </div>
     </div>
   );

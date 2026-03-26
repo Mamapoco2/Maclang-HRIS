@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { IconSun, IconMoon } from "@tabler/icons-react";
 import { useTheme } from "@/components/theme-provider";
+import { NotificationBell } from "@/components/Notification-bell";
 
 export function SiteHeader() {
   const { theme, setTheme } = useTheme();
@@ -19,7 +20,7 @@ export function SiteHeader() {
 
         <h1 className="text-base font-medium"></h1>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
@@ -40,6 +41,8 @@ export function SiteHeader() {
 
             <span className="sr-only">Toggle theme</span>
           </Button>
+
+          <NotificationBell />
         </div>
       </div>
     </header>

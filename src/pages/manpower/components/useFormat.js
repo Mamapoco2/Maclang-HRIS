@@ -7,35 +7,16 @@ export const buildFullName = (d = {}) => {
     return d.name;
   }
 
-  const {
-    prefix,
-    firstName,
-    middleName,
-    middleInitial,
-    lastName,
-    suffix,
-    postTitle,
-  } = d;
+  const { prefix, firstName, middleName, middleInitial, lastName, suffix } = d;
 
-  // If no structured parts, fallback
+  // Vacant fallback
   if (!firstName && !lastName) return "Vacant";
 
-  const mid =
-    middleInitial
-      ? `${middleInitial}.`
-      : middleName
+  const mid = middleInitial
+    ? `${middleInitial}.`
+    : middleName
       ? `${middleName.charAt(0)}.`
       : "";
 
-  const baseParts = [
-    prefix,
-    firstName,
-    mid,
-    lastName,
-    suffix,
-  ].filter(Boolean);
-
-  const baseName = baseParts.join(" ");
-
-  return postTitle ? `${baseName}, ${postTitle}` : baseName;
+  return [prefix, firstName, mid, lastName, suffix].filter(Boolean).join(" ");
 };

@@ -1,48 +1,79 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TableRow, TableCell } from "@/components/ui/table";
-import { IconEdit, IconTrash, IconEye } from "@tabler/icons-react";
-
+import { Badge } from "@/components/ui/badge";
+import { IconEye } from "@tabler/icons-react";
 import { ViewMemberModal } from "./viewTeamModal";
-import { EditMemberModal } from "./editTeamModal";
-import { DeleteMemberModal } from "./deleteTeamModal";
 
-export default function TeamTableRow({ member, onUpdate, onDelete }) {
+const STATUS_STYLES = {
+  ACTIVE: "bg-green-100 text-green-700 border-green-200",
+  INACTIVE: "bg-gray-100 text-gray-600 border-gray-200",
+  RESIGN: "bg-red-100 text-red-600 border-red-200",
+};
+
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/147/147144.png";
+
+export default function TeamTableRow({ member }) {
   const [showView, setShowView] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
+
+  const fullName =
+    [member.last_name, member.first_name].filter(Boolean).join(", ") || "—";
+
+  const roles = Array.isArray(member.role_position)
+    ? member.role_position.join(", ")
+    : member.role_position || "—";
+
+  const statusKey = member.employment_status?.toUpperCase() ?? "INACTIVE";
 
   return (
     <>
-      <TableRow>
-        <TableCell className="flex items-center gap-3">
-          <img
-            src={member.avatar}
-            alt={`${member.firstName} ${member.lastName}`}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          {member.firstName} {member.lastName}
+      <TableRow className="hover:bg-muted/40 transition-colors">
+        {/* Name */}
+        <TableCell className="py-2">
+          <div className="flex items-center">
+            <img
+              src={member.avatar_url || DEFAULT_AVATAR}
+              alt={fullName}
+              className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-100 shrink-0"
+              onError={(e) => {
+                e.target.src = DEFAULT_AVATAR;
+              }}
+            />
+            <span className="font-medium text-xs flex-1 text-center">
+              {fullName}
+            </span>
+          </div>
         </TableCell>
 
-        <TableCell>{member.role}</TableCell>
-        <TableCell>{member.email}</TableCell>
+        {/* Role */}
+        <TableCell className="py-2 text-xs text-center">{roles}</TableCell>
 
-        <TableCell className="text-right space-x-2">
-          <Button variant="outline" size="sm" onClick={() => setShowView(true)}>
-            <IconEye size={16} />
-            View
-          </Button>
-          <Button size="sm" onClick={() => setShowEdit(true)}>
-            <IconEdit size={16} />
-            Edit
-          </Button>
+        {/* Division */}
+        <TableCell className="py-2 text-xs text-center">
+          {member.division?.name ?? "—"}
+        </TableCell>
+
+        {/* Status */}
+        <TableCell className="py-2 text-center">
+          <div className="flex justify-center">
+            <Badge
+              variant="outline"
+              className={`text-[10px] font-semibold capitalize px-2 py-0 ${STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500"}`}
+            >
+              {member.employment_status ?? "—"}
+            </Badge>
+          </div>
+        </TableCell>
+
+        {/* Actions */}
+        <TableCell className="py-2 text-center">
           <Button
-            variant="destructive"
+            variant="outline"
             size="sm"
-            onClick={() => setShowDelete(true)}
+            className="h-6 px-2 text-xs"
+            onClick={() => setShowView(true)}
           >
-            <IconTrash size={16} />
-            Delete
+            <IconEye size={12} className="mr-1" /> View
           </Button>
         </TableCell>
       </TableRow>
@@ -51,20 +82,6 @@ export default function TeamTableRow({ member, onUpdate, onDelete }) {
         member={member}
         open={showView}
         onOpenChange={setShowView}
-      />
-
-      <EditMemberModal
-        member={member}
-        open={showEdit}
-        onOpenChange={setShowEdit}
-        onUpdate={onUpdate}
-      />
-
-      <DeleteMemberModal
-        member={member}
-        open={showDelete}
-        onOpenChange={setShowDelete}
-        onDelete={onDelete}
       />
     </>
   );

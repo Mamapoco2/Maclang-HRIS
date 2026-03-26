@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+// src/components/NavUser.jsx
+import { useContext, useState } from "react";
 import {
   IconDotsVertical,
   IconLogout,
@@ -22,51 +22,71 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { authService } from "@/services/authService";
-import LogoutConfirmDialog from "@/components/logoutConfirmModal";
-import ProfileModal from "@/components/profile-Modal"; // Ensure ProfileModal is correctly imported
-import SettingsProfile1 from "@/components/profile-modal"; // Correct default import for SettingsProfile1
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
-export function NavUser({ user: propUser }) {
+import { AuthContext } from "@/context/authContext";
+
+export function NavUser() {
   const { isMobile } = useSidebar();
-  const navigate = useNavigate();
-
-  const [user, setUser] = useState(propUser);
-  const [logoutOpen, setLogoutOpen] = useState(false);
+  const { user, logout } = useContext(AuthContext);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [isProfileModalOpen, setProfileModalOpen] = useState(false); // Modal state
 
-  useEffect(() => {
-    if (!propUser) {
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
-    } else {
-      setUser(propUser);
-    }
-  }, [propUser]);
-
-  const handleConfirmLogout = async () => {
+  const handleLogout = async () => {
     setLoggingOut(true);
-
-    const result = await authService.logout();
-
+    await logout();
     setLoggingOut(false);
-    setLogoutOpen(false);
-
-    if (result.success) {
-      navigate("/");
-    }
+    setShowLogoutModal(false);
   };
 
-  const getInitials = (name) => {
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const getInitials = (first, last) => {
+    const f = first?.[0] ?? "";
+    const l = last?.[0] ?? "";
+    if (f || l) return `${f}${l}`.toUpperCase();
+    return "?";
   };
+
+  if (!user) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg">
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">?</AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium">Loading...</span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  const firstName = user?.employee?.first_name ?? user?.first_name ?? null;
+  const lastName = user?.employee?.last_name ?? user?.last_name ?? null;
+  const avatarUrl = user?.avatar_url ?? user?.employee?.avatar_url ?? null;
+  const email = user?.email ?? "No email";
+
+  const displayName =
+    lastName && firstName
+      ? `${lastName}, ${firstName}`
+      : lastName
+        ? lastName
+        : firstName
+          ? firstName
+          : user?.name
+            ? user.name
+            : "Unknown User";
 
   return (
     <>
@@ -78,23 +98,16 @@ export function NavUser({ user: propUser }) {
                 size="lg"
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
-                {/* Ensure user is defined before trying to access its properties */}
-                <Avatar className="h-8 w-8 rounded-lg grayscale">
-                  <AvatarImage
-                    src={user?.avatar || "default-avatar.png"} // Use fallback image or default avatar
-                    alt={user?.name || "User"} // Use fallback name
-                  />
+                <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarImage src={avatarUrl} alt={displayName} />
                   <AvatarFallback className="rounded-lg">
-                    {getInitials(user?.name)}{" "}
-                    {/* Display initials only if name exists */}
+                    {getInitials(firstName, lastName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">
-                    {user?.name || "Unknown User"}
-                  </span>
+                  <span className="truncate font-medium">{displayName}</span>
                   <span className="text-muted-foreground truncate text-xs">
-                    {user?.email || "No email"}
+                    {email}
                   </span>
                 </div>
                 <IconDotsVertical className="ml-auto size-4" />
@@ -110,20 +123,15 @@ export function NavUser({ user: propUser }) {
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage
-                      src={user?.avatar || "default-avatar.png"} // Use fallback image or default avatar
-                      alt={user?.name || "User"}
-                    />
+                    <AvatarImage src={avatarUrl} alt={displayName} />
                     <AvatarFallback className="rounded-lg">
-                      {getInitials(user?.name)}
+                      {getInitials(firstName, lastName)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">
-                      {user?.name || "Unknown User"}
-                    </span>
+                    <span className="truncate font-medium">{displayName}</span>
                     <span className="text-muted-foreground truncate text-xs">
-                      {user?.email || "No email"}
+                      {email}
                     </span>
                   </div>
                 </div>
@@ -132,16 +140,16 @@ export function NavUser({ user: propUser }) {
               <DropdownMenuSeparator />
 
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setProfileModalOpen(true)}>
-                  <IconUserCircle className="mr-2 h-4 w-4" />
+                <DropdownMenuItem>
+                  <IconUserCircle />
                   Account
                 </DropdownMenuItem>
               </DropdownMenuGroup>
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem onClick={() => setLogoutOpen(true)}>
-                <IconLogout className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={() => setShowLogoutModal(true)}>
+                <IconLogout />
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -149,34 +157,26 @@ export function NavUser({ user: propUser }) {
         </SidebarMenuItem>
       </SidebarMenu>
 
-      <LogoutConfirmDialog
-        open={logoutOpen}
-        onClose={() => setLogoutOpen(false)}
-        onConfirm={handleConfirmLogout}
-        loading={loggingOut}
-      />
-
-      {/* Profile Modal */}
-      {isProfileModalOpen && (
-        <ProfileModal
-          open={isProfileModalOpen}
-          onClose={() => setProfileModalOpen(false)}
-        >
-          <SettingsProfile1
-            defaultValues={{
-              name: user?.name,
-              email: user?.email,
-              username: user?.username,
-              avatar: user?.avatar,
-              bio: user?.bio,
-            }}
-            onSave={(data) => {
-              setUser({ ...user, ...data });
-              setProfileModalOpen(false);
-            }}
-          />
-        </ProfileModal>
-      )}
+      <AlertDialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out of the system?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {loggingOut ? "Logging out..." : "Log out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -1,56 +1,118 @@
-import { createContext, useState, useEffect } from "react";
-import { authService } from "../services/authService";
+import { createContext, useState, useEffect, useCallback } from "react";
+import authService from "@/services/authService";
+import { getUser, clearAuth, setUser } from "@/lib/tokenStorage";
+import { getEcho } from "@/lib/echo";
 
-export const AuthContext = createContext();
+export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => authService.getCurrentUser());
-  const [loading, setLoading] = useState(false);
+  const [user, setUserState] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await authService.me();
+      if (res?.success && res.user) {
+        setUser(res.user);
+        setUserState(res.user);
+      }
+    } catch (err) {
+      console.error("refreshUser error:", err);
+    }
+  }, []);
+
+  // ── Initial user sync ─────────────────────────────────────────────────────
   useEffect(() => {
-    // Optional: background refresh (DO NOT block UI)
-    const refreshUser = async () => {
+    const syncUser = async () => {
+      const stored = getUser();
+      if (!stored) {
+        setLoading(false);
+        return;
+      }
       try {
-        const freshUser = await authService.getCurrentUser();
-        if (freshUser) setUser(freshUser);
+        const res = await authService.me();
+        if (res?.success && res.user) {
+          setUser(res.user);
+          setUserState(res.user);
+        } else {
+          clearAuth();
+          setUserState(null);
+        }
+      } catch (err) {
+        console.error("Failed to sync user:", err);
+        setUserState(stored);
       } finally {
         setLoading(false);
       }
     };
-
-    refreshUser();
+    syncUser();
   }, []);
 
+  // ── Realtime permission updates ───────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const echo = getEcho();
+    if (!echo) return;
+
+    const channel = echo.channel(`user.${user.id}`);
+
+    channel.listen(".permissions.updated", () => {
+      refreshUser();
+    });
+
+    return () => {
+      echo.leaveChannel(`user.${user.id}`);
+    };
+  }, [user?.id, refreshUser]);
+
   const login = async (email, password) => {
-    const res = await authService.login(email, password);
-    if (res.success) setUser(res.user);
-    return res;
+    try {
+      const res = await authService.login(email, password);
+      if (res?.success) {
+        setUserState(res.user);
+      }
+      return res;
+    } catch (err) {
+      console.error("Login error:", err);
+      return { success: false };
+    }
   };
 
-  const register = async (name, email, password, password_confirmation) => {
-    const res = await authService.register(
-      name,
-      email,
-      password,
-      password_confirmation,
-    );
-    if (res.success) setUser(res.user);
-    return res;
+  const register = async (email, password, password_confirmation) => {
+    try {
+      const res = await authService.register(
+        email,
+        password,
+        password_confirmation,
+      );
+      return res;
+    } catch (err) {
+      console.error("Register error:", err);
+      return { success: false };
+    }
   };
 
   const logout = async () => {
-    await authService.logout();
-    setUser(null);
+    try {
+      await authService.logout();
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      clearAuth();
+      setUserState(null);
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        loading,
         login,
         register,
         logout,
-        loading,
+        refreshUser,
         isAuthenticated: !!user,
       }}
     >

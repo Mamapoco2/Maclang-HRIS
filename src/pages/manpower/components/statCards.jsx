@@ -8,7 +8,9 @@ export default function SummaryCard({ title, value = "--", trend, status }) {
       <CardContent className="p-4 space-y-2">
         <div className="text-sm font-medium text-gray-600">{title}</div>
 
-        <div className="text-3xl font-semibold text-gray-900">{value}</div>
+        <div className="text-3xl font-semibold text-gray-900">
+          {value !== null && value !== undefined ? value : "--"}
+        </div>
 
         {trend && (
           <div className={`text-xs font-medium ${trendColor}`}>

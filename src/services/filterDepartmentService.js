@@ -1,26 +1,26 @@
 export function filterTreeByDepartment(nodes, department) {
-  // Show all if "All"
+  if (!Array.isArray(nodes)) return [];
+
   if (department === "All") return nodes;
 
   function filterNode(node) {
-    // If this node belongs to the department,
-    // return the entire subtree untouched
-    if (node.data?.department === department) {
-      return node;
-    }
+    if (!node || typeof node !== "object") return null;
 
-    // Otherwise, check children
-    if (node.children) {
-      const filteredChildren = node.children
-        .map(filterNode)
-        .filter(Boolean);
+    const children = Array.isArray(node.children)
+      ? node.children
+          .map(filterNode)
+          .filter(Boolean)
+      : [];
 
-      if (filteredChildren.length > 0) {
-        return {
-          ...node,
-          children: filteredChildren,
-        };
-      }
+    const matches =
+      node?.data?.department === department;
+
+    if (matches || children.length > 0) {
+      return {
+        ...node,
+        expanded: node?.expanded ?? true,
+        children,
+      };
     }
 
     return null;

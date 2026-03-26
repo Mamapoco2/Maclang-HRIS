@@ -1,82 +1,88 @@
-import React from "react";
-import {
-  IconPlus,
-  IconMinus,
-  IconRefresh,
-  IconSearch,
-} from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import ReportGeneration from "./ReportGeneration";
+import { useState, useMemo } from "react";
+import { OrganizationChart } from "primereact/organizationchart";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import NodeTemplate from "./NodeTemplate";
+import OrgChartControls from "./OrgChartControls";
 
-export default function OrgChartControls({
+/* Safe Tree Builder */
+function buildSafeTree(nodes) {
+  if (!Array.isArray(nodes)) return [];
+
+  return nodes.filter(Boolean).map((n, index) => ({
+    ...n,
+    key: n.key ?? `node-${index}`,
+    expanded: true,
+    children: buildSafeTree(n.children ?? []),
+  }));
+}
+
+export default function OrgChart({
+  orgData = [],
   department,
   setDepartment,
-  departmentList,
-  zoomIn,
-  zoomOut,
-  resetTransform,
-  scale = 1,
+  departmentList = [],
   reportData,
 }) {
+  const [scale, setScale] = useState(0.8);
+
+  const safeTree = useMemo(() => buildSafeTree(orgData), [orgData]);
+
   return (
-    <div className="relative z-10 p-3">
-      <div
-        className="flex flex-wrap items-center justify-center gap-3 p-3 mx-auto max-w-fit
-        bg-white/90 dark:bg-gray-800/90 backdrop-blur-md
-        border border-gray-200 dark:border-gray-700
-        shadow-lg rounded-xl"
+    <div className="w-full h-screen bg-gray-50 flex flex-col overflow-hidden">
+      <TransformWrapper
+        initialScale={0.8}
+        minScale={0.2}
+        maxScale={3}
+        wheel={{ step: 0.15 }}
+        doubleClick={{ disabled: true }}
+        limitToBounds={false}
+        centerOnInit
+        centerZoomedOut
+        alignmentAnimation={{ disabled: true }}
+        panning={{ velocityDisabled: true }}
+        onZoom={({ state }) => setScale(state.scale)}
       >
-        {/* 🔍 Department */}
-        <div className="flex items-center gap-2">
-          <IconSearch
-            size={16}
-            stroke={1.5}
-            className="text-gray-500 dark:text-gray-300"
-          />
+        {({ zoomIn, zoomOut, resetTransform }) => (
+          <>
+            {/* Controls */}
+            <OrgChartControls
+              department={department}
+              setDepartment={setDepartment}
+              departmentList={departmentList}
+              zoomIn={() => zoomIn(0.3)}
+              zoomOut={() => zoomOut(0.3)}
+              resetTransform={() => {
+                resetTransform();
+                setScale(0.8);
+              }}
+              scale={scale}
+              reportData={reportData}
+            />
 
-          <Label className="text-xs font-bold uppercase whitespace-nowrap">
-            Department
-          </Label>
-
-          <select
-            className="px-3 py-2 border rounded-md text-sm
-              bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-          >
-            <option value="All">All Departments</option>
-            {departmentList.map((dept, i) => (
-              <option key={i} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* ➖➕ Zoom */}
-        <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full px-2 py-1 gap-1">
-          <Button onClick={zoomOut} size="icon" variant="ghost">
-            <IconMinus size={16} stroke={1.5} />
-          </Button>
-
-          <span className="px-3 text-sm font-semibold min-w-14 text-center">
-            {Math.round(scale * 100)}%
-          </span>
-
-          <Button onClick={zoomIn} size="icon" variant="ghost">
-            <IconPlus size={16} stroke={1.5} />
-          </Button>
-        </div>
-
-        {/* 🔄 RESET */}
-        <Button onClick={resetTransform} variant="outline" size="icon">
-          <IconRefresh size={16} stroke={1.5} />
-        </Button>
-
-        {/* 📄 Report */}
-        <ReportGeneration data={reportData} />
-      </div>
+            {/* Chart Canvas */}
+            <TransformComponent
+              wrapperStyle={{
+                width: "100%",
+                height: "calc(100vh - 70px)",
+                overflow: "hidden",
+              }}
+            >
+              <div className="flex items-center justify-center w-full h-full">
+                {safeTree.length > 0 ? (
+                  <OrganizationChart
+                    value={safeTree}
+                    nodeTemplate={NodeTemplate}
+                  />
+                ) : (
+                  <div className="text-center text-gray-400 py-10">
+                    No employee hierarchy found.
+                  </div>
+                )}
+              </div>
+            </TransformComponent>
+          </>
+        )}
+      </TransformWrapper>
     </div>
   );
 }

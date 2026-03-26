@@ -1,145 +1,214 @@
-import React, { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { IconEdit, IconTrash, IconEye } from "@tabler/icons-react";
 
-import EmployeeEmpty from "./employeeEmpty";
+const formatRole = (role) =>
+  (Array.isArray(role) ? role : [role].filter(Boolean))
+    .filter(Boolean)
+    .join(", ")
+    .toUpperCase() || "-";
 
-export default function EmployeeTable({ employees, onEdit, onDelete, onView }) {
-  const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
+const getDeptNames = (emp) => {
+  if (Array.isArray(emp.departments) && emp.departments.length > 0)
+    return emp.departments.map((d) => d.name).filter(Boolean);
+  if (emp.department?.name) return [emp.department.name];
+  if (Array.isArray(emp.department_ids) && emp.department_ids.length > 0)
+    return emp.department_ids.map((id) => `Dept #${id}`);
+  return [];
+};
 
-  const filteredEmployees = employees.filter((emp) => {
-    const firstName = emp.firstName?.toLowerCase() || "";
-    const lastName = emp.lastName?.toLowerCase() || "";
-    const fullName = `${firstName} ${lastName}`;
-    const searchTerm = search?.toLowerCase() || "";
+const getStatusFromInfo = (emp) => {
+  const manual = emp.employment_status?.toUpperCase();
 
-    const matchesSearch = fullName.includes(searchTerm);
-    const matchesDepartment =
-      departmentFilter === "all" ||
-      emp.department?.toLowerCase() === departmentFilter.toLowerCase();
+  if (manual === "RESIGN") return "Resign";
+  if (manual === "INACTIVE") return "Inactive";
+  if (manual === "ACTIVE") return "Active";
 
-    return matchesSearch && matchesDepartment;
-  });
+  const infoStatus = emp.info?.status;
+  if (!infoStatus || infoStatus === "EMPTY") return "Inactive";
+  return "Active";
+};
+
+const STATUS_STYLES = {
+  Active: "bg-green-100 text-green-700 ring-1 ring-green-200",
+  Inactive: "bg-gray-100 text-gray-700 ring-1 ring-gray-200",
+  Resign: "bg-red-100 text-red-700 ring-1 ring-red-200",
+};
+
+export default function EmployeeTable({
+  employees = [],
+  loading = false,
+  onEdit,
+  onDelete,
+  onView,
+}) {
+  const rows = Array.isArray(employees) ? employees : [];
+
+  const getAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ?? "http://localhost:8000"}/storage/${url}`;
+  };
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <Input
-          placeholder="Search employee..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
+    <div className="rounded-lg border bg-card w-full">
+      <table className="w-full text-sm">
+        <colgroup>
+          <col className="w-14" />
+          <col className="w-32" />
+          <col className="w-32" />
+          <col className="w-32" />
+          <col className="w-40" />
+          <col className="w-48" />
+          <col className="w-64" />
+          <col className="w-24" />
+          <col className="w-52" />
+        </colgroup>
 
-        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-          <SelectTrigger className="max-w-xs mb-4">
-            <SelectValue placeholder="Filter by department" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            <SelectItem value="Human Resources">Human Resources</SelectItem>
-            <SelectItem value="IT">IT</SelectItem>
-            <SelectItem value="Finance">Finance</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <thead>
+          <tr className="border-b uppercase text-xs text-muted-foreground">
+            <th className="py-3 px-4"></th>
+            <th className="py-3 px-4 text-center font-medium">First Name</th>
+            <th className="py-3 px-4 text-center font-medium">Last Name</th>
+            <th className="py-3 px-4 text-center font-medium">Middle Name</th>
+            <th className="py-3 px-4 text-center font-medium">
+              Position Classification
+            </th>
+            <th className="py-3 px-4 text-center font-medium">Division</th>
+            <th className="py-3 px-4 text-center font-medium">Department</th>
+            <th className="py-3 px-4 text-center font-medium">Status</th>
+            <th className="py-3 px-4 text-center font-medium">Actions</th>
+          </tr>
+        </thead>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead></TableHead>
-            <TableHead>First Name</TableHead>
-            <TableHead>Last Name</TableHead>
-            <TableHead>Middle Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Position</TableHead>
-            <TableHead>Department</TableHead>
-            <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-center">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredEmployees.length > 0 ? (
-            filteredEmployees.map((emp) => (
-              <TableRow key={emp.id}>
-                <TableCell className="flex text-center items-center gap-3">
-                  <img
-                    src={emp.avatar}
-                    className="w-20 h-20 rounded-full object-cover"
-                  />
-                </TableCell>
-                <TableCell>{emp.firstName}</TableCell>
-                <TableCell>{emp.lastName}</TableCell>
-                <TableCell>{emp.middleName}</TableCell>
-                <TableCell>{emp.email}</TableCell>
-                <TableCell>{emp.position}</TableCell>
-                <TableCell>{emp.department}</TableCell>
-                <TableCell className="text-center">
-                  <span
-                    className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                      emp.status === "Active"
-                        ? "bg-green-600 text-white"
-                        : "bg-red-500 text-white"
-                    }`}
-                  >
-                    {emp.status}
-                  </span>
-                </TableCell>
-                <TableCell className="text-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onView(emp)}
-                  >
-                    <IconEye size={16} />
-                    View
-                  </Button>
-                  <Button size="sm" onClick={() => onEdit(emp)}>
-                    <IconEdit size={16} />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => onDelete(emp.id)}
-                  >
-                    <IconTrash size={16} />
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell
+        <tbody>
+          {loading ? (
+            <tr>
+              <td
                 colSpan={9}
-                className="text-center py-8"
-                style={{ textAlign: "center" }}
+                className="text-center py-8 text-muted-foreground"
               >
-                <EmployeeEmpty />
-              </TableCell>
-            </TableRow>
+                LOADING...
+              </td>
+            </tr>
+          ) : rows.length > 0 ? (
+            rows.map((emp) => {
+              const deptNames = getDeptNames(emp);
+              const status = getStatusFromInfo(emp);
+              const avatarSrc = getAvatarUrl(emp.avatar_url);
+
+              return (
+                <tr
+                  key={emp.id}
+                  className="border-b uppercase hover:bg-muted/40 transition-colors"
+                >
+                  <td className="py-3 px-4">
+                    <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-gray-100 bg-gray-200 flex items-center justify-center">
+                      {avatarSrc ? (
+                        <img
+                          src={avatarSrc}
+                          className="w-full h-full object-cover"
+                          alt="avatar"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.parentElement.querySelector(
+                              ".fallback-initials",
+                            ).style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className="fallback-initials text-gray-600 text-sm font-bold items-center justify-center w-full h-full"
+                        style={{ display: avatarSrc ? "none" : "flex" }}
+                      >
+                        {emp.first_name?.[0]}
+                        {emp.last_name?.[0]}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="py-3 px-4 text-center truncate max-w-0">
+                    <span className="block truncate">
+                      {emp.first_name?.toUpperCase() || "-"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center truncate max-w-0">
+                    <span className="block truncate">
+                      {emp.last_name?.toUpperCase() || "-"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center max-w-0">
+                    <span className="block truncate">
+                      {emp.middle_name?.toUpperCase() || "-"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center max-w-0">
+                    <span className="block truncate">
+                      {formatRole(emp.role_position)}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <span className="block whitespace-normal break-words">
+                      {emp.division?.name?.toUpperCase() || "-"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <span className="block whitespace-normal break-words">
+                      {deptNames.length > 0
+                        ? deptNames.map((n) => n.toUpperCase()).join(", ")
+                        : "-"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[status]}`}
+                    >
+                      {status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-blue-500 bg-blue-500 text-white hover:bg-blue-600 hover:border-blue-600 hover:text-white h-7 px-2 text-xs"
+                        onClick={() => onView(emp)}
+                      >
+                        <IconEye size={13} className="mr-1" /> VIEW
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-amber-500 border-amber-500 text-white hover:bg-amber-600 hover:border-amber-600 hover:text-white h-7 px-2 text-xs"
+                        onClick={() => onEdit(emp)}
+                      >
+                        <IconEdit size={13} className="mr-1" /> EDIT
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-red-500 border-red-500 text-white hover:bg-red-600 hover:border-red-600 hover:text-white h-7 px-2 text-xs"
+                        onClick={() => onDelete(emp.id)}
+                      >
+                        <IconTrash size={13} className="mr-1" /> DELETE
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td
+                colSpan={9}
+                className="text-center py-8 text-muted-foreground"
+              >
+                NO EMPLOYEES FOUND
+              </td>
+            </tr>
           )}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   );
 }

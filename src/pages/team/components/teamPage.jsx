@@ -1,99 +1,121 @@
-import { useState } from "react";
-import { Members } from "../../../services/teamMemberServices";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-
+import { useState, useEffect, useCallback, useMemo, useContext } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { employeeService } from "../../../services/employeeService";
+import { AuthContext } from "@/context/authContext";
 import TeamTableHeader from "./TeamTableHeader";
-import TeamTableRow from "./TeamTableRow";
+import DepartmentTeamCard from "./departmentTeamCard";
 
 export default function TeamTable() {
-  const [members, setMembers] = useState(Members);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useContext(AuthContext);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleUpdate = (id, updatedData) => {
-    setMembers(
-      members.map((m) => (m.id === id ? { ...m, ...updatedData } : m))
-    );
-  };
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await employeeService.getAllEmployees();
+      setMembers(Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
+    } catch {
+      toast.error("Failed to load team members.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleDelete = (id) => {
-    setMembers(members.filter((m) => m.id !== id));
-  };
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
-  const handleAddMember = () => {
-    console.log("Add member clicked");
-  };
+  const userDepartmentIds = useMemo(() => {
+    if (!user?.department_ids) return [];
+    return user.department_ids.map((id) => String(id));
+  }, [user]);
 
-  // Filter members based on search query
-  const filteredMembers = members.filter((member) => {
-    if (!searchQuery) return true;
+  const primaryDepartmentName = useMemo(() => {
+    if (!user?.departments?.length) return "";
+    return user.departments[0]?.name ?? "";
+  }, [user]);
 
-    const query = searchQuery.toLowerCase().trim();
-    const firstName = member.firstName.toLowerCase();
-    const lastName = member.lastName.toLowerCase();
-    const fullName = `${firstName} ${lastName}`;
-    const role = member.role.toLowerCase();
-    const email = member.email.toLowerCase();
+  const myDepartmentMembers = useMemo(() => {
+    if (userDepartmentIds.length === 0) return [];
+    return members.filter((member) => {
+      const memberDeptIds = Array.isArray(member.departments)
+        ? member.departments.map((d) => String(d.id))
+        : [];
+      return memberDeptIds.some((id) => userDepartmentIds.includes(id));
+    });
+  }, [members, userDepartmentIds]);
 
-    return (
-      firstName.includes(query) ||
-      lastName.includes(query) ||
-      fullName.includes(query) ||
-      role.includes(query) ||
-      email.includes(query)
-    );
-  });
+  const groupedByDepartment = useMemo(() => {
+    const map = new Map();
+
+    myDepartmentMembers.forEach((member) => {
+      const depts =
+        Array.isArray(member.departments) && member.departments.length > 0
+          ? member.departments.filter((d) =>
+              userDepartmentIds.includes(String(d.id)),
+            )
+          : [{ id: "none", name: "No Department" }];
+
+      depts.forEach((dept) => {
+        if (!map.has(dept.id)) {
+          map.set(dept.id, { name: dept.name, members: [] });
+        }
+        map.get(dept.id).members.push(member);
+      });
+    });
+
+    return Array.from(map.entries())
+      .sort(([aId, a], [bId, b]) => {
+        if (aId === "none") return 1;
+        if (bId === "none") return -1;
+        return a.name.localeCompare(b.name);
+      })
+      .map(([id, group]) => ({ id, ...group }));
+  }, [myDepartmentMembers, userDepartmentIds]);
 
   return (
-    <div className="w-full flex py-10 px-4">
-      <Card className="w-full shadow-md rounded-2xl">
-        <CardHeader>
-          <TeamTableHeader
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onAddMember={handleAddMember}
-          />
-        </CardHeader>
+    <div className="w-full py-6 px-4">
+      <div className="max-w-full mx-auto space-y-4">
+        <TeamTableHeader
+          totalGroups={groupedByDepartment.length}
+          departmentName={primaryDepartmentName}
+        />
 
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+        {loading && (
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-6 w-40 rounded" />
+                <div className="rounded-xl border overflow-hidden">
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <div key={j} className="flex gap-3 px-4 py-2.5 border-b">
+                      <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                      {Array.from({ length: 4 }).map((_, k) => (
+                        <Skeleton key={k} className="h-3.5 flex-1 rounded" />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-            <TableBody>
-              {filteredMembers.length > 0 ? (
-                filteredMembers.map((member) => (
-                  <TeamTableRow
-                    key={member.id}
-                    member={member}
-                    onUpdate={handleUpdate}
-                    onDelete={handleDelete}
-                  />
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
-                    No team members found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        {!loading && groupedByDepartment.length === 0 && (
+          <div className="text-center py-16 text-muted-foreground text-sm">
+            {userDepartmentIds.length === 0
+              ? "No department assigned to your account."
+              : "No team members found."}
+          </div>
+        )}
+
+        {!loading &&
+          groupedByDepartment.map((group) => (
+            <DepartmentTeamCard key={group.id} group={group} />
+          ))}
+      </div>
     </div>
   );
 }

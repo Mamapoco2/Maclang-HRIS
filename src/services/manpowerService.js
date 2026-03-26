@@ -1,58 +1,23 @@
-import axios from "axios";
+import api from "../api/api";
 
-const api = axios.create({
-  baseURL: "http://localhost:8000/api",
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
-
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-export const getPlantillaCount = async () => {
+// Get count of plantilla employees
+export const getManpowerSummary = async () => {
   try {
-    const res = await api.get("/manpower/plantilla/count");
-    return res.data.count;
+    const res = await api.get("/manpower/summary");
+    return res.data;
   } catch (error) {
-    console.error("Get plantilla count error:", error);
+    console.error("Error fetching manpower summary:", error);
     throw error;
   }
 };
 
-export const getCOSCount = async () => {
-  try {
-    const res = await api.get("/manpower/cos/count");
-    return res.data.count;
-  } catch (error) {
-    console.error("Get COS count error:", error);
-    throw error;
-  }
+// Get organizational chart data
+const getManPowertData = async () => {
+  const res = await api.get("/manpower/tree");
+  return res.data.nodes;
 };
 
-export const getConsultantCount = async () => {
-  try {
-    const res = await api.get("/manpower/consultant/count");
-    return res.data.count;
-  } catch (error) {
-    console.error("Get consultant count error:", error);
-    throw error;
-  }
-};
-
-export const getVacantCount = async () => {
-  try {
-    const res = await api.get("/manpower/vacant/count");
-    return res.data.count;
-  } catch (error) {
-    console.error("Get vacant count error:", error);
-    throw error;
-  }
+export default {
+  getManpowerSummary,
+  getManPowertData,
 };

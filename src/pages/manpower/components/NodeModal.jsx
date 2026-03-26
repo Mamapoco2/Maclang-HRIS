@@ -6,24 +6,59 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { resolveBorderColor } from "../../../services/utils";
-import { buildFullName } from "./useFormat";
 import { FaIdBadge, FaChevronDown, FaChevronUp } from "react-icons/fa";
 
+const DEFAULT_IMG =
+  "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png";
+
 export default function NodeModal({ open, onClose, node }) {
-  const borderColor = resolveBorderColor(node?.data);
+  const data = node?.data || {};
+  const borderColor = resolveBorderColor(data);
+  const staffRaw = data?.staff || [];
 
-  const staffRaw = node?.data?.staff || [];
+  // =============================
+  // Build Full Name Properly
+  // =============================
+  const cleanPrefix = data.prefix ? data.prefix.replace(/\.$/, "") : null;
 
-  // Normalize employmentType for filtering and handle new/ENW positions
-  const staff = staffRaw.map((s) => ({
-    ...s,
-    // If name exists, use it; otherwise use position title
-    name: s.firstName || s.lastName ? buildFullName(s) : s.position || "Vacant",
-    // If employmentType exists, normalize it; otherwise mark as 'new' (vices)
-    employmentTypeNormalized: s.employmentType
+  const fullName =
+    [
+      cleanPrefix ? cleanPrefix + "." : null,
+      data.first_name,
+      data.middle_name ? data.middle_name.charAt(0) + "." : null,
+      data.last_name,
+    ]
+      .filter(Boolean)
+      .join(" ") +
+    (data.suffix ? ", " + data.suffix : "") +
+    (data.title ? ", " + data.title : "");
+
+  // =============================
+  // Normalize Staff
+  // =============================
+  const staff = staffRaw.map((s) => {
+    const normalized = s.employmentType
       ? s.employmentType.toLowerCase()
-      : "new", // treat empty/new positions as Vices
-  }));
+      : "vacant";
+
+    const staffName =
+      [
+        s?.prefix,
+        s?.first_name,
+        s?.middle_name ? s.middle_name.charAt(0) + "." : null,
+        s?.last_name,
+      ]
+        .filter(Boolean)
+        .join(" ") +
+      (s?.suffix ? ", " + s.suffix : "") +
+      (s?.title ? ", " + s.title : "");
+
+    return {
+      ...s,
+      name: s.employeeId && staffName ? staffName : "Vacant",
+      employmentTypeNormalized: normalized,
+    };
+  });
 
   const [showStaff, setShowStaff] = useState(false);
   const [filterType, setFilterType] = useState("All");
@@ -36,22 +71,22 @@ export default function NodeModal({ open, onClose, node }) {
     }
   };
 
-  // Compute counts for badges
   const staffCounts = useMemo(() => {
     const counts = {
       Plantilla: 0,
       "Contract of Service": 0,
       Consultant: 0,
-      Vacant: 0, // include ENW/new positions here
+      Vacant: 0,
     };
 
     staff.forEach((s) => {
       const type = s.employmentTypeNormalized;
+
       if (type.includes("plantilla")) counts.Plantilla++;
       else if (type.includes("cos") || type.includes("contract"))
         counts["Contract of Service"]++;
       else if (type.includes("consultant")) counts.Consultant++;
-      else counts.Vacant++; // ENW / new positions counted here
+      else counts.Vacant++;
     });
 
     return counts;
@@ -64,79 +99,76 @@ export default function NodeModal({ open, onClose, node }) {
     Vacant: "bg-gray-500 text-white",
   };
 
-  const fullName = buildFullName(node?.data);
-
-  // Filter staff based on selected type
   const filteredStaff = useMemo(() => {
     if (filterType === "All") return staff;
 
     return staff.filter((s) => {
       const type = s.employmentTypeNormalized;
-      switch (filterType) {
-        case "Plantilla":
-          return type.includes("plantilla");
-        case "Contract of Service":
-          return (
-            type.includes("cos") ||
-            type.includes("contract") ||
-            type.includes("new")
-          );
-        case "Consultant":
-          return type.includes("consultant");
-        case "Vacant":
-          return (
-            !type.includes("plantilla") &&
-            !type.includes("cos") &&
-            !type.includes("contract") &&
-            !type.includes("consultant") &&
-            !type.includes("new")
-          );
-        default:
-          return true;
-      }
+
+      if (filterType === "Plantilla") return type.includes("plantilla");
+
+      if (filterType === "Contract of Service")
+        return type.includes("cos") || type.includes("contract");
+
+      if (filterType === "Consultant") return type.includes("consultant");
+
+      if (filterType === "Vacant")
+        return (
+          !type.includes("plantilla") &&
+          !type.includes("cos") &&
+          !type.includes("contract") &&
+          !type.includes("consultant")
+        );
+
+      return true;
     });
   }, [staff, filterType]);
+
+  // Resolve avatar — prefer data.image, fall back to DEFAULT_IMG
+  const avatar = data.image || DEFAULT_IMG;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-full max-w-[90vw] md:max-w-xl p-6 bg-white rounded-2xl shadow-xl">
         <div className="mx-auto w-full max-w-6xl">
           <DialogHeader className="flex flex-col items-center text-center space-y-3">
-            {node?.data?.image && (
-              <div
-                className="rounded-full p-1 shadow-lg"
-                style={{ backgroundColor: borderColor }}
-              >
-                <img
-                  src={node.data.image}
-                  alt={fullName}
-                  className="w-28 h-28 rounded-full object-cover"
-                />
-              </div>
-            )}
+            {/* Avatar — always shown, falls back to default */}
+            <div
+              className="rounded-full p-1 shadow-lg"
+              style={{ backgroundColor: borderColor }}
+            >
+              <img
+                src={avatar}
+                alt={fullName}
+                className="w-28 h-28 rounded-full object-cover"
+                onError={(e) => {
+                  e.target.src = DEFAULT_IMG;
+                }}
+              />
+            </div>
 
             <DialogTitle className="text-2xl font-extrabold">
               {fullName}
             </DialogTitle>
 
-            {node?.data?.role && (
-              <div className="text-sm text-muted-foreground">
-                {node.data.role}
+            {data.role && (
+              <div className="text-sm font-semibold text-gray-700">
+                {data.role}
+                {data.department ? `, ${data.department}` : ""}
               </div>
             )}
 
-            {node?.data?.employmentType && (
+            {data.employmentType && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FaIdBadge />
-                {node.data.employmentType}
+                {data.employmentType}
               </div>
             )}
           </DialogHeader>
 
           {staff.length > 0 && (
             <>
-              {/* Badge container */}
-              <div className="flex justify-center gap-2 whitespace-nowrap overflow-x-auto py-2">
+              <div className="flex justify-center gap-2 overflow-x-auto py-2">
                 {[
                   "All",
                   "Plantilla",
@@ -147,15 +179,12 @@ export default function NodeModal({ open, onClose, node }) {
                   <button
                     key={type}
                     onClick={() => setFilterType(type)}
-                    className={`text-[10px] px-3 py-1 rounded-full font-semibold transition whitespace-nowrap
-                        ${
-                          type === filterType
-                            ? "ring-2 ring-blue-500 " +
-                              (legendColors[type] ||
-                                "bg-gray-100 text-gray-800")
-                            : legendColors[type] || "bg-gray-100 text-gray-800"
-                        }`}
-                    style={{ minWidth: "max-content" }}
+                    className={`text-[10px] px-3 py-1 rounded-full font-semibold transition ${
+                      type === filterType
+                        ? "ring-2 ring-blue-500 " +
+                          (legendColors[type] || "bg-gray-100 text-gray-800")
+                        : legendColors[type] || "bg-gray-100 text-gray-800"
+                    }`}
                   >
                     {type === "All"
                       ? `All (${staff.length})`
@@ -164,7 +193,6 @@ export default function NodeModal({ open, onClose, node }) {
                 ))}
               </div>
 
-              {/* Staff list toggle */}
               <div className="rounded-xl overflow-hidden shadow-sm">
                 <button
                   onClick={() => setShowStaff((p) => !p)}
@@ -182,32 +210,34 @@ export default function NodeModal({ open, onClose, node }) {
                   >
                     {filteredStaff.map((s, idx) => {
                       let typeKey = "Vacant";
-                      const empType = s.employmentTypeNormalized;
+                      const type = s.employmentTypeNormalized;
 
-                      if (empType.includes("plantilla")) typeKey = "Plantilla";
+                      if (type.includes("plantilla")) typeKey = "Plantilla";
                       else if (
-                        empType.includes("cos") ||
-                        empType.includes("contract") ||
-                        empType.includes("new")
+                        type.includes("cos") ||
+                        type.includes("contract")
                       )
                         typeKey = "Contract of Service";
-                      else if (empType.includes("consultant"))
+                      else if (type.includes("consultant"))
                         typeKey = "Consultant";
+
+                      const staffAvatar = s.image || DEFAULT_IMG;
 
                       return (
                         <div
                           key={idx}
-                          className="flex items-center justify-between px-2 py-1 hover:bg-gray-50"
+                          className="flex items-center justify-between px-2 py-2 hover:bg-gray-50"
                         >
                           <div className="flex items-center gap-2">
-                            {s.image && (
-                              <img
-                                src={s.image}
-                                alt={s.name}
-                                className="w-8 h-8 rounded-full object-cover"
-                              />
-                            )}
-                            <div className="flex gap-2">
+                            <img
+                              src={staffAvatar}
+                              alt={s.name}
+                              className="w-8 h-8 rounded-full object-cover"
+                              onError={(e) => {
+                                e.target.src = DEFAULT_IMG;
+                              }}
+                            />
+                            <div className="flex flex-col">
                               <span className="text-sm font-medium">
                                 {s.name}
                               </span>

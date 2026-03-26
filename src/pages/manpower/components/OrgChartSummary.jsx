@@ -9,20 +9,39 @@ const colorMap = {
   vices: "bg-yellow-500 text-black",
 };
 
-const OrgChartSummary = ({ totals }) => {
-  return (
-    <div className="flex gap-1 justify-start mb-2 mt-1 px-5">
+const defaultTotals = {
+  total: 0,
+  plantilla: 0,
+  cos: 0,
+  consultant: 0,
+  vacant: 0,
+};
+
+const OrgChartSummary = ({ totals = defaultTotals }) => {
+
+  if (!totals || typeof totals !== "object") {
+    return null;
+  }
+
+return (
+  <div className="w-full flex justify-center">
+    <div className="flex gap-2 flex-wrap justify-center mb-3 mt-2">
       {Object.entries(totals).map(([key, value]) => (
         <div
           key={key}
-          className={`flex items-center gap-0.5 px-2.5 py-0.5 rounded text-[15px] font-medium shadow ${colorMap[key]}`}
+          className={`flex items-center gap-1 px-3 py-1 rounded text-sm font-medium shadow ${
+            colorMap[key] || "bg-gray-400 text-white"
+          }`}
         >
-          <span className="capitalize">{key.replace(/_/g, " ")}:</span>
-          <span>{value}</span>
+          <span className="capitalize">
+            {key.replace(/_/g, " ")}:
+          </span>
+          <span>{value ?? 0}</span>
         </div>
       ))}
     </div>
-  );
+  </div>
+);
 };
 
 export default OrgChartSummary;

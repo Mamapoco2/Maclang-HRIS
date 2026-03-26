@@ -1,53 +1,56 @@
-import axios from "axios";
-import { toast } from "sonner";
+import api from "@/api/api";
 
-const api = axios.create({
-  baseURL: "http://localhost:8000/api",
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
+// ── Pending users ─────────────────────────────────────────────────────────────
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-export const getUsers = async () => {
+export async function getUsers() {
   try {
     const res = await api.get("/pending-users");
     return res.data;
-  } catch (error) {
-    console.error("Get users error:", error);
-    toast.error("Failed to load users");
-    throw error;
+  } catch (err) {
+    console.error("getUsers:", err);
+    return [];
   }
-};
+}
 
-export const activateUser = async (id) => {
-  try {
-    const res = await api.patch(`/users/${id}/activate`);
-    toast.success(res.data.message);
-    return res.data.user;
-  } catch (error) {
-    console.error("Activate user error:", error);
-    toast.error("Failed to activate user");
-    throw error;
-  }
-};
-
-export const getPendingUserCount = async () => {
+export async function getPendingCount() {
   try {
     const res = await api.get("/pending-users/count");
-    return res.data.count;
-  } catch (error) {
-    console.error("Get pending user count error:", error);
-    toast.error("Failed to load pending user count");
-    throw error;
+    return res.data.count ?? 0;
+  } catch (err) {
+    console.error("getPendingCount:", err);
+    return 0;
   }
-};
+}
+
+export async function activateUser(id) {
+  const res = await api.patch(`/users/${id}/activate`);
+  return res.data;
+}
+
+export async function bulkActivateUsers(ids) {
+  const res = await api.post("/users/bulk-activate", { ids });
+  return res.data;
+}
+
+// ── Approved users ────────────────────────────────────────────────────────────
+
+export async function getApprovedUsers() {
+  try {
+    const res = await api.get("/approved-users");
+    return (res.data ?? []).map((u) => ({
+      ...u,
+      permissions: Array.isArray(u.permissions) ? u.permissions : [],
+      role_position: Array.isArray(u.role_position) ? u.role_position : [],
+    }));
+  } catch (err) {
+    console.error("getApprovedUsers:", err);
+    return [];
+  }
+}
+
+// ── Permissions ───────────────────────────────────────────────────────────────
+
+export async function updateUserPermissions(userId, permissions) {
+  const res = await api.put(`/users/${userId}/permissions`, { permissions });
+  return res.data;
+}

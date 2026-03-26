@@ -1,6 +1,11 @@
 import { Dialog } from "primereact/dialog";
 
-export default function DepartmentModal({ open, onClose, department, employees }) {
+export default function DepartmentModal({
+  open,
+  onClose,
+  department,
+  employees,
+}) {
   return (
     <Dialog
       header={department ? `Department: ${department}` : "Department"}
