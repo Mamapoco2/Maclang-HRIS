@@ -4,7 +4,7 @@ import OrgChartTab from "./orgChart";
 
 export default function ManPowerPage() {
   return (
-    <Tabs defaultValue="overview" className="w-full">
+    <Tabs defaultValue="overview" className="w-full p-4">
       <TabsList variant="line">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="analytics">Organization Chart</TabsTrigger>

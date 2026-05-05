@@ -13,6 +13,42 @@ import {
 } from "@/components/ui/card";
 import { employeeService } from "@/services/employeeService";
 
+// ─── department name sets (matched against e.departments[].name) ──────────────
+
+const MEDICAL_DEPT_NAMES = new Set([
+  "ANATOMIC AND CLINICAL LABORATORY",
+  "BLOOD BANK",
+  "CLINICAL DEPARTMENTS",
+  "CLINICAL NURSING",
+  "DELIVERY ROOM",
+  "DENTAL SERVICES",
+  "DEPARTMENT OF PATHOLOGY",
+  "DEPARTMENT OF RADIOLOGY",
+  "EMERGENCY MEDICINE DEPARTMENT",
+  "HEALTH INFORMATION MANAGEMENT",
+  "HUMAN MILK BANK",
+  "INTENSIVE CARE",
+  "MEDICAL SERVICE",
+  "CENTRAL SUPPLY AND STERILIZATION",
+  "MEDICAL CENTER CHIEF",
+]);
+
+const ADMIN_DEPT_NAMES = new Set([
+  "ACCOUNTING",
+  "ADMITTING",
+  "BILLING AND CLAIMS",
+  "BUDGET",
+  "CASH MANAGEMENT",
+  "FACILITIES MANAGEMENT",
+  "ENGINEERING",
+  "HOUSEKEEPING/LAUNDRY",
+  "HUMAN RESOURCE MANAGEMENT",
+  "MATERIALS MANAGEMENT",
+]);
+
+const isInDeptSet = (employee, nameSet) =>
+  employee.departments?.some((d) => nameSet.has(d.name?.toUpperCase()));
+
 // ─── animated counter hook ────────────────────────────────────────────────────
 function useCountUp(target, duration = 1200) {
   const [display, setDisplay] = useState(0);
@@ -21,14 +57,12 @@ function useCountUp(target, duration = 1200) {
   useEffect(() => {
     if (target === null || target === undefined) return;
     const start = performance.now();
-    const from = 0;
 
     const tick = (now) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(from + (target - from) * eased));
+      setDisplay(Math.round(target * eased));
       if (progress < 1) raf.current = requestAnimationFrame(tick);
     };
 
@@ -42,7 +76,6 @@ function useCountUp(target, duration = 1200) {
 // ─── stats hook ───────────────────────────────────────────────────────────────
 function useDashboardStats() {
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -53,22 +86,10 @@ function useDashboardStats() {
 
         const total = list.length;
         const medical = list.filter((e) =>
-          [
-            "Doctor",
-            "Nurse",
-            "Medical Officer",
-            "Midwife",
-            "Dentist",
-            "Pharmacist",
-            "Radiologist",
-          ].some((t) =>
-            e.role_position?.some?.((r) =>
-              r?.toLowerCase().includes(t.toLowerCase()),
-            ),
-          ),
+          isInDeptSet(e, MEDICAL_DEPT_NAMES),
         ).length;
         const admin = list.filter((e) =>
-          e.role_position?.some?.((r) => r?.toLowerCase().includes("admin")),
+          isInDeptSet(e, ADMIN_DEPT_NAMES),
         ).length;
         const plantilla = list.filter(
           (e) => e.employment_type === "Plantilla",
@@ -77,28 +98,18 @@ function useDashboardStats() {
         setStats({ total, medical, admin, plantilla });
       } catch (err) {
         setError(err);
-      } finally {
-        setLoading(false);
       }
     };
     load();
   }, []);
 
-  return { stats, loading, error };
+  return { stats, error };
 }
 
 // ─── stat card ────────────────────────────────────────────────────────────────
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  trend,
-  trendLabel,
-  sub,
-  loading,
-}) {
+function StatCard({ label, value, icon: Icon, trend, trendLabel, sub }) {
   const isUp = trend >= 0;
-  const animated = useCountUp(loading ? null : value);
+  const animated = useCountUp(value);
 
   return (
     <Card className="@container/card">
@@ -109,11 +120,7 @@ function StatCard({
         </CardDescription>
 
         <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-          {loading ? (
-            <span className="inline-block h-8 w-16 animate-pulse rounded bg-muted" />
-          ) : (
-            <span key={value}>{animated.toLocaleString()}</span>
-          )}
+          <span key={value}>{animated.toLocaleString()}</span>
         </CardTitle>
 
         <CardAction>
@@ -146,7 +153,7 @@ function StatCard({
 
 // ─── main export ──────────────────────────────────────────────────────────────
 export function SectionCards() {
-  const { stats, loading } = useDashboardStats();
+  const { stats } = useDashboardStats();
 
   const cards = [
     {
@@ -186,7 +193,7 @@ export function SectionCards() {
   return (
     <div className="*:data-[slot=card]:from-primary/5 grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       {cards.map((card) => (
-        <StatCard key={card.label} {...card} loading={loading} />
+        <StatCard key={card.label} {...card} />
       ))}
     </div>
   );

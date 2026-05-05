@@ -6,7 +6,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   Mail,
   Phone,
@@ -18,6 +17,7 @@ import {
   User,
   Building2,
   TrendingUp,
+  BadgeCheck,
 } from "lucide-react";
 
 const formatRole = (role) =>
@@ -26,9 +26,8 @@ const formatRole = (role) =>
     .join(", ") || null;
 
 const getDeptNames = (employee) => {
-  if (Array.isArray(employee.departments) && employee.departments.length > 0) {
+  if (Array.isArray(employee.departments) && employee.departments.length > 0)
     return employee.departments.map((d) => d.name).filter(Boolean);
-  }
   if (employee.department?.name) return [employee.department.name];
   return [];
 };
@@ -41,14 +40,57 @@ const getAvatarUrl = (url) => {
 
 const getStatusFromInfo = (employee, info) => {
   const manual = employee.employment_status?.toUpperCase();
-
   if (manual === "RESIGN") return "Resign";
   if (manual === "INACTIVE") return "Inactive";
   if (manual === "ACTIVE") return "Active";
-
   if (!info?.status || info.status === "EMPTY") return "Inactive";
   return "Active";
 };
+
+const STATUS_CONFIG = {
+  Active: {
+    dot: "bg-teal-500",
+    pill: "text-teal-700 bg-teal-50 ring-1 ring-teal-200",
+  },
+  Inactive: {
+    dot: "bg-gray-300",
+    pill: "text-gray-500 bg-gray-100 ring-1 ring-gray-200",
+  },
+  Resign: {
+    dot: "bg-red-400",
+    pill: "text-red-600 bg-red-50 ring-1 ring-red-200",
+  },
+};
+
+// ── Build: "DR. JUAN SANTOS DELA CRUZ JR., MD, RN" ────────────────────────
+function buildDisplayName(employee) {
+  const up = (v) => (v ? String(v).trim().toUpperCase() : "");
+
+  const rawPrefix = up(employee.prefix);
+  const prefix =
+    rawPrefix && !rawPrefix.endsWith(".") ? `${rawPrefix}.` : rawPrefix;
+  const first = up(employee.first_name);
+  const middle = up(employee.middle_name);
+  const last = up(employee.last_name);
+  const rawSuffix = up(employee.suffix);
+  const suffix =
+    rawSuffix && !rawSuffix.endsWith(".") ? `${rawSuffix}.` : rawSuffix;
+
+  const titleArr = Array.isArray(employee.title)
+    ? employee.title.map(up).filter(Boolean)
+    : employee.title
+      ? [up(employee.title)]
+      : [];
+  const titleStr = titleArr.join(", ");
+
+  const nameParts = [first, middle, last].filter(Boolean).join(" ");
+
+  const withAffixes = [prefix, nameParts, suffix].filter(Boolean).join(" ");
+
+  const full = titleStr ? `${withAffixes}, ${titleStr}` : withAffixes;
+
+  return { full, withAffixes, titleStr, prefix, nameParts, suffix };
+}
 
 export default function EmployeeViewDialog({ open, onClose, employee }) {
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -68,91 +110,92 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
   const avatarSrc = getAvatarUrl(employee.avatar_url);
   const email = employee.user?.email ?? info.email ?? null;
   const status = getStatusFromInfo(employee, info);
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.Inactive;
 
-  const InfoItem = ({ icon: Icon, label, value }) => (
-    <div className="flex items-start gap-3 py-3 border-b last:border-none">
-      <Icon className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+  const { full, withAffixes, titleStr, prefix } = buildDisplayName(employee);
+
+  const InfoRow = ({ icon: Icon, label, value }) => (
+    <div className="flex items-start gap-3 py-2.5 border-b border-gray-100 last:border-none">
+      <Icon className="h-3.5 w-3.5 text-gray-300 mt-1 flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-        <p className="text-sm text-gray-900 mt-1 uppercase break-words break-all">
-          {value || "N/A"}
+        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
+          {label}
+        </p>
+        <p className="text-[13px] text-gray-800 mt-0.5 font-medium uppercase break-words">
+          {value || <span className="text-gray-300 font-normal">—</span>}
         </p>
       </div>
     </div>
   );
 
-  const statusStyles = {
-    Active: "border-green-500 text-green-600",
-    Inactive: "border-gray-400 text-gray-500",
-    Resign: "border-red-500 text-red-600",
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl p-6 uppercase">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg font-semibold text-gray-800 normal-case">
+        <DialogContent className="max-w-2xl overflow-hidden rounded-xl border-gray-200 gap-0 p-0">
+          {/* Header bar */}
+          <div className="px-6 py-4 border-b border-gray-100">
+            <DialogTitle className="text-base font-semibold text-gray-800">
               Employee Profile
             </DialogTitle>
-          </DialogHeader>
+          </div>
 
-          <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
+          {/* Profile strip */}
+          <div className="flex items-center gap-4 px-6 py-5 border-b border-gray-100 bg-gray-50/50">
             <div
-              className="cursor-pointer transition hover:scale-105"
+              className="cursor-pointer flex-shrink-0"
               onClick={() => avatarSrc && setPreviewOpen(true)}
             >
-              <Avatar className="h-20 w-20 ring-2 ring-white shadow-md">
+              <Avatar className="h-16 w-16 ring-2 ring-white shadow-sm hover:opacity-90 transition-opacity">
                 <AvatarImage src={avatarSrc} />
-                <AvatarFallback className="bg-blue-100 text-blue-700 text-xl font-bold">
+                <AvatarFallback className="bg-gray-200 text-gray-600 text-lg font-semibold">
                   {employee.first_name?.[0]}
                   {employee.last_name?.[0]}
                 </AvatarFallback>
               </Avatar>
             </div>
 
-            <div className="flex-1">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                {employee.employee_number || ""}
-              </p>
-              <h2 className="text-xl font-semibold text-gray-900 leading-tight">
-                {employee.full_name ||
-                  `${employee.first_name} ${employee.last_name}`}
+            <div className="flex-1 min-w-0">
+              {employee.employee_number && (
+                <p className="text-[10px] text-gray-400 font-mono mb-1 uppercase tracking-widest">
+                  {employee.employee_number}
+                </p>
+              )}
+
+              <h2 className="text-base font-semibold text-gray-900 uppercase leading-snug">
+                {full || "—"}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">
+
+              <p className="text-xs text-gray-400 mt-0.5 truncate uppercase">
                 {formatRole(employee.role_position) ||
                   employee.position_designation ||
                   "No position assigned"}
               </p>
-              <div className="mt-2 flex gap-2 flex-wrap">
-                <Badge
-                  variant="outline"
-                  className={statusStyles[status] || statusStyles.Inactive}
+
+              <div className="mt-2 flex gap-1.5 flex-wrap">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${cfg.pill}`}
                 >
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                   {status}
-                </Badge>
+                </span>
                 {employee.employment_type && (
-                  <Badge
-                    variant="outline"
-                    className="border-blue-300 text-blue-600"
-                  >
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border border-gray-200 bg-white text-gray-500 uppercase">
                     {employee.employment_type}
-                  </Badge>
+                  </span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+          {/* Two-column info grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+            {/* Personal */}
+            <div className="px-6 py-5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
                 Personal Information
               </p>
-              <InfoItem icon={Mail} label="Email" value={email} />
-              <InfoItem icon={Phone} label="Contact" value={info.contact} />
-              <InfoItem icon={MapPin} label="Address" value={info.address} />
-              <InfoItem icon={User} label="Gender" value={info.gender} />
-              <InfoItem
+              <InfoRow icon={Mail} label="Email" value={email} />
+              <InfoRow
                 icon={Calendar}
                 label="Birthdate"
                 value={
@@ -165,28 +208,32 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
                     : null
                 }
               />
+              <InfoRow icon={User} label="Gender" value={info.gender} />
+              <InfoRow icon={Phone} label="Contact" value={info.contact} />
+              <InfoRow icon={MapPin} label="Address" value={info.address} />
             </div>
 
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+            {/* Employment */}
+            <div className="px-6 py-5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
                 Employment Information
               </p>
-              <InfoItem
+              <InfoRow
                 icon={Building2}
                 label="Division"
                 value={employee.division?.name}
               />
-              <InfoItem
+              <InfoRow
                 icon={Users}
                 label="Department"
                 value={deptNames.length > 0 ? deptNames.join(", ") : null}
               />
-              <InfoItem
+              <InfoRow
                 icon={Briefcase}
                 label="Position Title (Plantilla)"
                 value={plantillaItem.title}
               />
-              <InfoItem
+              <InfoRow
                 icon={TrendingUp}
                 label="Salary Grade"
                 value={
@@ -195,22 +242,17 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
                     : null
                 }
               />
-              <InfoItem
+              <InfoRow
                 icon={TrendingUp}
                 label="Step"
                 value={stepIncrement.step ? `Step ${stepIncrement.step}` : null}
               />
-              <InfoItem
+              <InfoRow
                 icon={DollarSign}
                 label="Monthly Salary"
                 value={
                   salaryGrade.monthly_salary
-                    ? `₱${Number(salaryGrade.monthly_salary).toLocaleString(
-                        "en-PH",
-                        {
-                          minimumFractionDigits: 2,
-                        },
-                      )}`
+                    ? `₱${Number(salaryGrade.monthly_salary).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
                     : null
                 }
               />
@@ -219,13 +261,14 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
         </DialogContent>
       </Dialog>
 
+      {/* Avatar full-size preview */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-xl p-2 border-none">
+        <DialogContent className="max-w-sm p-2 border-none">
           <div className="flex justify-center items-center">
             <img
               src={avatarSrc}
               alt="Employee"
-              className="max-h-[80vh] rounded-lg shadow-2xl"
+              className="max-h-[80vh] rounded-lg shadow-xl"
             />
           </div>
         </DialogContent>

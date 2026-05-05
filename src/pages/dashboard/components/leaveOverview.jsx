@@ -19,7 +19,7 @@ import { recentLeaves } from "../../../services/leaveOverviewServices";
 
 export default function RecentLeaveCard() {
   return (
-    <Card className="w-full shadow-sm">
+    <Card className="w-full h-full shadow-sm">
       <CardHeader>
         <CardTitle>Recent Leave Filings</CardTitle>
         <CardDescription>
@@ -51,8 +51,8 @@ export default function RecentLeaveCard() {
                     leave.status === "Approved"
                       ? "text-green-600"
                       : leave.status === "Pending"
-                      ? "text-yellow-600"
-                      : "text-red-600"
+                        ? "text-yellow-600"
+                        : "text-red-600"
                   }
                 >
                   {leave.status}

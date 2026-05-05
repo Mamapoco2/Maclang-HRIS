@@ -19,18 +19,44 @@ import notificationSound from "@/assets/ringtone.mp3";
 
 const TYPE_DOT = {
   leave: "bg-orange-400",
-  account: "bg-blue-500",
+  account_pending: "bg-blue-500",
   announcement: "bg-purple-400",
   training: "bg-cyan-400",
 };
 
-function playAccountSound() {
+// ─── shared audio context unlocked on first user gesture ─────────────────────
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx)
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function unlockAudio() {
+  const ctx = getAudioContext();
+  if (ctx.state === "suspended") ctx.resume();
+}
+
+async function playAccountSound() {
   try {
-    const audio = new Audio(notificationSound);
-    audio.volume = 0.6;
-    audio.play().catch(() => {});
-  } catch {
-    // fail silently
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") await ctx.resume();
+
+    const response = await fetch(notificationSound);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+    const source = ctx.createBufferSource();
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = 0.6;
+
+    source.buffer = audioBuffer;
+    source.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    source.start(0);
+  } catch (err) {
+    console.error("Audio play failed:", err);
   }
 }
 
@@ -95,24 +121,31 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
-  const prevIdsRef = useRef(new Set());
+
+  // ── unlock AudioContext on any user interaction ────────────────────────────
+  useEffect(() => {
+    const unlock = () => {
+      unlockAudio();
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+    document.addEventListener("click", unlock);
+    document.addEventListener("keydown", unlock);
+    return () => {
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const data = await notificationService.getNotifications();
       const incoming = data.notifications ?? [];
-
-      const hasNewAccount = incoming.some(
-        (n) => n.type === "account" && !n.read && !prevIdsRef.current.has(n.id),
-      );
-      if (hasNewAccount) playAccountSound();
-
-      prevIdsRef.current = new Set(incoming.map((n) => n.id));
       setNotifications(incoming);
       setUnreadCount(data.unread_count ?? 0);
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error("fetchNotifications error:", err);
     } finally {
       setLoading(false);
     }
@@ -127,7 +160,6 @@ export function NotificationBell() {
       echo
         .channel("notifications")
         .listen(".notification.created", (payload) => {
-          // Don't notify the user who posted the training
           const currentUserId = parseInt(
             localStorage.getItem("user_id") ?? "0",
           );
@@ -137,6 +169,12 @@ export function NotificationBell() {
           )
             return;
 
+          // ✅ Play sound immediately from the WebSocket event — no fetch latency
+          if (payload.type === "account_pending") {
+            playAccountSound();
+          }
+
+          // Fetch in background to update the notification list
           fetchNotifications();
         });
     }
@@ -147,7 +185,7 @@ export function NotificationBell() {
     };
   }, [fetchNotifications]);
 
-  // close on outside click
+  // ── close on outside click ─────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -194,7 +232,6 @@ export function NotificationBell() {
 
       {/* ── dropdown ── */}
       {open && (
-        // Wider (w-[26rem]) to accommodate the training detail card
         <div className="absolute right-0 top-10 z-50 w-[26rem] rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
           {/* header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -218,7 +255,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          {/* list — taller max-h to fit training cards */}
+          {/* list */}
           <div className="max-h-[32rem] overflow-y-auto divide-y divide-border">
             {loading ? (
               <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
@@ -238,13 +275,11 @@ export function NotificationBell() {
                     !n.read ? "bg-blue-50/60 dark:bg-blue-950/20" : ""
                   }`}
                 >
-                  {/* colored dot */}
                   <span
                     className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[n.type] ?? "bg-gray-400"}`}
                   />
 
                   <div className="flex-1 min-w-0">
-                    {/* title row */}
                     <div className="flex items-center justify-between gap-2">
                       <p
                         className={`text-sm truncate ${!n.read ? "font-semibold" : "font-medium"}`}
@@ -256,17 +291,14 @@ export function NotificationBell() {
                       )}
                     </div>
 
-                    {/* message */}
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {n.message}
                     </p>
 
-                    {/* ── training detail card (only for training type) ── */}
                     {n.type === "training" && n.data && (
                       <TrainingDetails data={n.data} />
                     )}
 
-                    {/* timestamp */}
                     <p className="text-[10px] text-muted-foreground/60 mt-1.5">
                       {n.time}
                     </p>

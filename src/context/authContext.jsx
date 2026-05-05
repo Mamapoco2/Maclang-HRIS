@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback } from "react";
+import { createContext, useState, useEffect, useCallback, useRef } from "react";
 import authService from "@/services/authService";
 import { getUser, clearAuth, setUser } from "@/lib/tokenStorage";
 import { getEcho } from "@/lib/echo";
@@ -15,13 +15,20 @@ export const AuthProvider = ({ children }) => {
       if (res?.success && res.user) {
         setUser(res.user);
         setUserState(res.user);
+      } else {
+        clearAuth();
+        setUserState(null);
       }
     } catch (err) {
       console.error("refreshUser error:", err);
     }
   }, []);
 
-  // ── Initial user sync ─────────────────────────────────────────────────────
+  const refreshUserRef = useRef(refreshUser);
+  useEffect(() => {
+    refreshUserRef.current = refreshUser;
+  }, [refreshUser]);
+
   useEffect(() => {
     const syncUser = async () => {
       const stored = getUser();
@@ -48,7 +55,6 @@ export const AuthProvider = ({ children }) => {
     syncUser();
   }, []);
 
-  // ── Realtime permission updates ───────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;
 
@@ -57,14 +63,15 @@ export const AuthProvider = ({ children }) => {
 
     const channel = echo.channel(`user.${user.id}`);
 
-    channel.listen(".permissions.updated", () => {
-      refreshUser();
+    channel.listen(".permissions.updated", (e) => {
+      console.log("🔔 permissions.updated received — refreshing user", e);
+      refreshUserRef.current();
     });
 
     return () => {
       echo.leaveChannel(`user.${user.id}`);
     };
-  }, [user?.id, refreshUser]);
+  }, [user?.id]);
 
   const login = async (email, password) => {
     try {
@@ -104,6 +111,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const hasPermission = useCallback(
+    (permission) => user?.permissions?.includes(permission) ?? false,
+    [user?.permissions],
+  );
+
+  const hasRole = useCallback(
+    (role) =>
+      user?.roles?.some((r) => r.toLowerCase() === role.toLowerCase()) ?? false,
+    [user?.roles],
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -113,6 +131,8 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         refreshUser,
+        hasPermission,
+        hasRole,
         isAuthenticated: !!user,
       }}
     >

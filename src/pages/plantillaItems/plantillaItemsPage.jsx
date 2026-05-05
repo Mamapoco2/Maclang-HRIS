@@ -1,44 +1,62 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import {
+  Plus,
+  Search,
+  LayoutList,
+  CheckCircle2,
+  CircleDashed,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import PlantillaItemTable from "./components/plantillaItemTable";
-import PlantillaItemModal from "./components/plantillaItemModal";
+import { AddItemModal } from "./components/plantillaItemModal";
 import { plantillaItemService } from "../../services/plantillaService";
 
 const STAT_CARDS = [
-  { label: "Total Items", key: "total" },
-  { label: "Filled", key: "FILLED" },
-  { label: "Unfilled", key: "UNFILLED" },
-  { label: "Vacant", key: "VACANT" },
+  {
+    label: "Total Items",
+    key: "total_items",
+    icon: LayoutList,
+    cls: "text-blue-500 bg-blue-50",
+  },
+  {
+    label: "Filled",
+    key: "filled",
+    icon: CheckCircle2,
+    cls: "text-emerald-500 bg-emerald-50",
+  },
+  {
+    label: "Vacant",
+    key: "vacant",
+    icon: CircleDashed,
+    cls: "text-amber-500 bg-amber-50",
+  },
+  {
+    label: "Unfilled",
+    key: "unfilled",
+    icon: AlertCircle,
+    cls: "text-red-500 bg-red-50",
+  },
 ];
 
 export default function PlantillaItemsPage() {
   const [items, setItems] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [tableLoading, setTableLoading] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [showAddItem, setShowAddItem] = useState(false);
 
-  const stats = {
-    total: items.length,
-    FILLED: items.filter((i) => i.status?.toUpperCase() === "FILLED").length,
-    UNFILLED: items.filter((i) => i.status?.toUpperCase() === "UNFILLED")
-      .length,
-    VACANT: items.filter((i) => i.status?.toUpperCase() === "VACANT").length,
-  };
-
+  // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchItems = useCallback(async () => {
-    setTableLoading(true);
+    setLoading(true);
     try {
       const data = await plantillaItemService.getPlantillaItems();
       setItems(Array.isArray(data) ? data : (data.data ?? []));
     } catch {
       toast.error("Failed to load plantilla items.");
     } finally {
-      setTableLoading(false);
+      setLoading(false);
     }
   }, []);
 
@@ -46,61 +64,44 @@ export default function PlantillaItemsPage() {
     fetchItems();
   }, [fetchItems]);
 
-  const filteredItems = useMemo(() => {
+  // ── Stats — derived from nested positions ────────────────────────────────
+  const stats = useMemo(() => {
+    const all = items.flatMap((i) => i.positions ?? []);
+    const status = (p) => (p.computed_status ?? p.status ?? "").toUpperCase();
+    return {
+      total_items: items.length,
+      filled: all.filter((p) => status(p) === "FILLED").length,
+      vacant: all.filter((p) => status(p) === "VACANT").length,
+      unfilled: all.filter((p) => status(p) === "UNFILLED").length,
+    };
+  }, [items]);
+
+  // ── Search filter ────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
     return items.filter(
       (item) =>
-        item.item_number?.toString().toLowerCase().includes(q) ||
         item.title?.toLowerCase().includes(q) ||
-        item.status?.toLowerCase().includes(q),
+        item.base_item_number?.toString().includes(q),
     );
   }, [items, search]);
 
-  const openAdd = () => {
-    setSelected(null);
-    setShowForm(true);
-  };
-
-  const openEdit = (item) => {
-    setSelected(item);
-    setShowForm(true);
-  };
-
-  const handleSubmit = async (data) => {
-    setFormLoading(true);
-    try {
-      if (data.id) {
-        await plantillaItemService.updatePlantillaItem(data.id, data);
-        toast.success("Plantilla item updated.");
-      } else {
-        await plantillaItemService.createPlantillaItem(data);
-        toast.success("Plantilla item added.");
-      }
-      setShowForm(false);
-      await fetchItems();
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-cover max-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-5">
-        {/* Page Header */}
+        {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
               Plantilla Items
             </h1>
             <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
-              {tableLoading
-                ? "Loading..."
+              {loading
+                ? "Loading…"
                 : search
-                  ? `${filteredItems.length} result${filteredItems.length !== 1 ? "s" : ""} for "${search}"`
-                  : `${items.length} total`}
+                  ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search}"`
+                  : `${items.length} items · ${items.reduce((s, i) => s + (i.positions?.length ?? 0), 0)} total slots`}
             </p>
           </div>
 
@@ -114,8 +115,8 @@ export default function PlantillaItemsPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search items..."
-                className="pl-8 h-9 w-full sm:w-48 md:w-56 text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1"
+                placeholder="Search items…"
+                className="pl-8 h-9 w-full sm:w-52 text-sm border-gray-200"
               />
               {search && (
                 <button
@@ -128,49 +129,50 @@ export default function PlantillaItemsPage() {
             </div>
 
             <Button
+              onClick={() => setShowAddItem(true)}
               className="bg-gray-900 hover:bg-black text-white text-sm h-9 px-3 sm:px-4 shrink-0"
-              onClick={openAdd}
             >
-              <Plus size={14} className="mr-1 sm:mr-1.5" />
+              <Plus size={14} className="mr-1.5" />
               Add Item
             </Button>
           </div>
         </div>
 
-        {/* Stat Cards */}
+        {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          {STAT_CARDS.map(({ label, key }) => (
+          {STAT_CARDS.map(({ label, key, icon: Icon, cls }) => (
             <div
               key={key}
-              className="rounded-lg border border-gray-200 bg-white px-3 sm:px-4 md:px-5 py-3 sm:py-4"
+              className="rounded-lg border border-gray-200 bg-white px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-3 sm:gap-4"
             >
-              <div className="text-xl sm:text-2xl font-bold text-gray-900 font-mono">
-                {stats[key]}
+              <div className={`shrink-0 rounded-md p-2 sm:p-2.5 ${cls}`}>
+                <Icon size={16} strokeWidth={2} />
               </div>
-              <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1 uppercase tracking-widest font-medium">
-                {label}
+              <div className="min-w-0">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 font-mono leading-none">
+                  {stats[key]}
+                </div>
+                <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5 uppercase tracking-widest font-medium truncate">
+                  {label}
+                </div>
               </div>
             </div>
           ))}
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-          <PlantillaItemTable
-            items={filteredItems}
-            loading={tableLoading}
-            onEdit={openEdit}
-            search={search}
-          />
-        </div>
+        <PlantillaItemTable
+          items={filtered}
+          loading={loading}
+          search={search}
+          onRefresh={fetchItems}
+        />
       </div>
 
-      <PlantillaItemModal
-        open={showForm}
-        onOpenChange={setShowForm}
-        item={selected}
-        loading={formLoading}
-        onSubmit={handleSubmit}
+      <AddItemModal
+        open={showAddItem}
+        onOpenChange={setShowAddItem}
+        onSuccess={fetchItems}
       />
     </div>
   );

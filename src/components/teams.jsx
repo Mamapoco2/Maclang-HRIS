@@ -14,7 +14,7 @@ export default function Teams() {
   }, []);
 
   return (
-    <Card className="w-full max-w-md md:max-w-xl lg:max-w-2xl">
+    <Card className="w-full h-full">
       <CardHeader>
         <CardTitle>Team Members</CardTitle>
         <p className="text-sm text-muted-foreground">

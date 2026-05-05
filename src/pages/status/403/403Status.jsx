@@ -1,22 +1,35 @@
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+// For Next.js, replace with: import { useRouter } from "next/navigation";
 
-export default function Status403() {
+export default function Forbidden() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
-      <span className="text-6xl font-bold text-muted-foreground">403</span>
-      <h1 className="text-2xl font-semibold">Access Denied</h1>
-      <p className="text-muted-foreground max-w-sm">
-        You don't have permission to view this page. Contact your HR
-        administrator to request access.
-      </p>
-      <button
-        onClick={() => navigate(-1)}
-        className="mt-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
-      >
-        Go Back
-      </button>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="text-center max-w-md">
+        <p className="text-[120px] font-medium leading-none tracking-tight text-foreground">
+          403
+        </p>
+
+        <h1 className="mt-4 text-2xl font-medium text-foreground">
+          Access forbidden
+        </h1>
+
+        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+          You don't have permission to access this page. If you think this is a
+          mistake, contact your administrator.
+        </p>
+
+        <div className="mt-8 flex items-center justify-center gap-3">
+          <Button variant="default" onClick={() => navigate(-1)}>
+            Go back
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/")}>
+            Go home
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

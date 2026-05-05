@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { IconFileExport, IconLoader2 } from "@tabler/icons-react";
-import XLSXStyle from "xlsx-js-style"; // ← must use xlsx-js-style, not xlsx
+import XLSXStyle from "xlsx-js-style";
 import api from "../../../api/api";
+import { AuthContext } from "@/context/AuthContext";
 
 // ── Employment type row colors ────────────────────────────────────────────────
 const ROW_FILLS = {
@@ -37,7 +38,6 @@ const COL_WIDTHS = {
   "EMPLOYMENT STATUS": 20,
 };
 
-// ── Reusable style builders ───────────────────────────────────────────────────
 const titleStyle = {
   font: { bold: true, sz: 20, color: { rgb: "1E3A5F" }, name: "Arial" },
   alignment: { horizontal: "center", vertical: "center" },
@@ -76,6 +76,10 @@ const dataStyle = (fgColor) => ({
 
 export default function ReportGeneration({ department, division }) {
   const [loading, setLoading] = useState(false);
+  const { hasPermission } = useContext(AuthContext); // ✅
+
+  // ✅ Don't render anything if user lacks manpower.manage
+  if (!hasPermission("manpower.manage")) return null;
 
   const handleExport = async () => {
     try {
@@ -99,24 +103,20 @@ export default function ReportGeneration({ department, division }) {
       const wb = XLSXStyle.utils.book_new();
       const ws = {};
 
-      // ── Merge title across all columns ───────────────────────────────────
       ws["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
       ];
 
-      // ── Title row — style ALL cells in the merged range ──────────────────
       headers.forEach((_, ci) => {
         const addr = XLSXStyle.utils.encode_cell({ r: 0, c: ci });
         ws[addr] = { v: ci === 0 ? title : "", t: "s", s: titleStyle };
       });
 
-      // ── Header row ───────────────────────────────────────────────────────
       headers.forEach((h, ci) => {
         const addr = XLSXStyle.utils.encode_cell({ r: 1, c: ci });
         ws[addr] = { v: h, t: "s", s: headerStyle };
       });
 
-      // ── Data rows ────────────────────────────────────────────────────────
       report.forEach((row, ri) => {
         const fill = resolveRowFill(row["EMPLOYMENT TYPE"] || "");
         headers.forEach((h, ci) => {
@@ -125,7 +125,6 @@ export default function ReportGeneration({ department, division }) {
         });
       });
 
-      // ── Sheet metadata ───────────────────────────────────────────────────
       ws["!ref"] = XLSXStyle.utils.encode_range({
         s: { r: 0, c: 0 },
         e: { r: report.length + 1, c: headers.length - 1 },
@@ -134,8 +133,8 @@ export default function ReportGeneration({ department, division }) {
       ws["!cols"] = headers.map((h) => ({ wch: COL_WIDTHS[h] || 16 }));
 
       ws["!rows"] = [
-        { hpt: 48 }, // title
-        { hpt: 28 }, // header
+        { hpt: 48 },
+        { hpt: 28 },
         ...report.map(() => ({ hpt: 18 })),
       ];
 

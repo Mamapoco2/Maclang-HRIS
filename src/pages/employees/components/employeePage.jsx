@@ -31,6 +31,7 @@ import EmployeeDeleteDialog from "./employeeDeleteDialog";
 import EmployeeViewDialog from "./employeeViewDialog";
 
 const DEFAULT_PAGINATION = { current_page: 1, last_page: 1, total: 0 };
+const PER_PAGE = 10;
 
 export default function EmployeePage() {
   const [employees, setEmployees] = useState([]);
@@ -89,6 +90,7 @@ export default function EmployeePage() {
       try {
         const res = await employeeService.getEmployees({
           page,
+          per_page: PER_PAGE,
           search: searchValue || undefined,
           division_id: division_id || undefined,
           department_id: department_id || undefined,
@@ -198,43 +200,74 @@ export default function EmployeePage() {
     }
   };
 
+  const pageRange = () => {
+    const total = pagination.last_page;
+    const cur = pagination.current_page;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const delta = 2;
+    const left = Math.max(2, cur - delta);
+    const right = Math.min(total - 1, cur + delta);
+    const pages = [1];
+    if (left > 2) pages.push("...");
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < total - 1) pages.push("...");
+    pages.push(total);
+    return pages;
+  };
+
   return (
     <div className="p-6 space-y-4">
+      {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Employees</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+            Employees
+          </h1>
+          {pagination.total > 0 && (
+            <p className="text-xs text-gray-400 mt-0.5">
+              {pagination.total} total records
+            </p>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search
               size={13}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
             />
             <Input
               placeholder="Search employee..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9 w-56 text-sm"
+              className="pl-8 h-9 w-56 text-sm border-gray-200 bg-white rounded-lg placeholder:text-gray-400"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                ✕
+                <X size={12} />
               </button>
             )}
           </div>
-          <Button onClick={handleAdd} className="h-9 px-4 text-sm">
-            <Plus size={14} className="mr-1.5" /> Add Employee
+
+          <Button
+            onClick={handleAdd}
+            className="h-9 px-4 text-sm bg-gray-900 hover:bg-gray-800 text-white rounded-lg gap-1.5 font-medium"
+          >
+            <Plus size={14} /> Add Employee
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 justify-end flex-wrap">
+      {/* ── Filters ── */}
+      <div className="flex items-center gap-2 flex-wrap">
         <Select
           value={divisionFilter || "all"}
           onValueChange={handleDivisionChange}
         >
-          <SelectTrigger className="h-9 text-sm w-48">
+          <SelectTrigger className="h-8 text-xs w-44 rounded-lg border-gray-200 bg-white text-gray-600">
             <SelectValue placeholder="All Divisions" />
           </SelectTrigger>
           <SelectContent>
@@ -251,7 +284,7 @@ export default function EmployeePage() {
           value={departmentFilter || "all"}
           onValueChange={handleDepartmentChange}
         >
-          <SelectTrigger className="h-9 text-sm w-52">
+          <SelectTrigger className="h-8 text-xs w-48 rounded-lg border-gray-200 bg-white text-gray-600">
             <SelectValue placeholder="All Departments" />
           </SelectTrigger>
           <SelectContent>
@@ -265,17 +298,16 @@ export default function EmployeePage() {
         </Select>
 
         {hasFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={clearFilters}
-            className="h-9 text-xs text-muted-foreground"
+            className="flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
           >
-            <X size={13} className="mr-1" /> Clear
-          </Button>
+            <X size={11} /> Clear
+          </button>
         )}
       </div>
 
+      {/* ── Table ── */}
       <EmployeeTable
         employees={employees}
         loading={loading}
@@ -285,100 +317,115 @@ export default function EmployeePage() {
       />
 
       {/* ── Pagination ── */}
-      <div className="flex items-center justify-between pt-1 gap-2 flex-wrap">
-        {/* Left — first + prev */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadEmployees({ page: 1 })}
-            disabled={pagination.current_page === 1 || loading}
-            className="h-8 px-2 text-xs"
-          >
-            <ChevronsLeft size={14} />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadEmployees({ page: pagination.current_page - 1 })}
-            disabled={pagination.current_page === 1 || loading}
-            className="h-8 px-3 text-xs"
-          >
-            <ChevronLeft size={14} className="mr-1" /> Previous
-          </Button>
-        </div>
+      {pagination.last_page > 0 && (
+        <div className="flex items-center justify-between gap-2 flex-wrap text-xs text-gray-500 pt-1">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadEmployees({ page: 1 })}
+              disabled={pagination.current_page === 1 || loading}
+              className="h-8 w-8 p-0 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+            >
+              <ChevronsLeft size={14} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                loadEmployees({ page: pagination.current_page - 1 })
+              }
+              disabled={pagination.current_page === 1 || loading}
+              className="h-8 px-3 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 gap-1"
+            >
+              <ChevronLeft size={13} /> Prev
+            </Button>
+          </div>
 
-        {/* Center — page info + jump */}
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-muted-foreground">
-            Page{" "}
-            <span className="font-medium text-foreground">
-              {pagination.current_page}
-            </span>{" "}
-            of{" "}
-            <span className="font-medium text-foreground">
-              {pagination.last_page}
+          <div className="flex items-center gap-1 flex-wrap justify-center">
+            {pageRange().map((p, i) =>
+              p === "..." ? (
+                <span key={`ellipsis-${i}`} className="px-1 text-gray-300">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() =>
+                    p !== pagination.current_page && loadEmployees({ page: p })
+                  }
+                  disabled={loading}
+                  className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
+                    p === pagination.current_page
+                      ? "bg-gray-900 text-white"
+                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+            <span className="ml-2 text-gray-400">
+              ({pagination.total} total)
             </span>
-            <span className="ml-2">({pagination.total} total)</span>
-          </p>
-
-          {pagination.last_page > 1 && (
-            <form onSubmit={handleJumpPage} className="flex items-center gap-1">
-              <Input
-                type="number"
-                min={1}
-                max={pagination.last_page}
-                value={jumpPage}
-                onChange={(e) => setJumpPage(e.target.value)}
-                placeholder="Go to"
-                className="h-8 w-16 text-xs text-center"
-              />
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="h-8 px-2 text-xs"
+            {pagination.last_page > 1 && (
+              <form
+                onSubmit={handleJumpPage}
+                className="flex items-center gap-1 ml-1"
               >
-                Go
-              </Button>
-            </form>
-          )}
-        </div>
+                <Input
+                  type="number"
+                  min={1}
+                  max={pagination.last_page}
+                  value={jumpPage}
+                  onChange={(e) => setJumpPage(e.target.value)}
+                  placeholder="Go to"
+                  className="h-8 w-16 text-xs text-center rounded-lg border-gray-200"
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2.5 text-xs rounded-lg border-gray-200 text-gray-600 hover:bg-gray-50"
+                >
+                  Go
+                </Button>
+              </form>
+            )}
+          </div>
 
-        {/* Right — next + last */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadEmployees({ page: pagination.current_page + 1 })}
-            disabled={
-              pagination.current_page === pagination.last_page || loading
-            }
-            className="h-8 px-3 text-xs"
-          >
-            Next <ChevronRight size={14} className="ml-1" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadEmployees({ page: pagination.last_page })}
-            disabled={
-              pagination.current_page === pagination.last_page || loading
-            }
-            className="h-8 px-2 text-xs"
-          >
-            <ChevronsRight size={14} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                loadEmployees({ page: pagination.current_page + 1 })
+              }
+              disabled={
+                pagination.current_page === pagination.last_page || loading
+              }
+              className="h-8 px-3 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 gap-1"
+            >
+              Next <ChevronRight size={13} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadEmployees({ page: pagination.last_page })}
+              disabled={
+                pagination.current_page === pagination.last_page || loading
+              }
+              className="h-8 w-8 p-0 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+            >
+              <ChevronsRight size={14} />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* ── Dialogs ── */}
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent className="w-full max-w-[1400px] min-w-[1400px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingEmployee ? "Edit Employee" : "Add Employee"}
-            </DialogTitle>
-          </DialogHeader>
           <EmployeeForm
             employee={editingEmployee}
             refresh={() => loadEmployees({ page: pagination.current_page })}

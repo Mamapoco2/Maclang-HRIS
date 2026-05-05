@@ -4,7 +4,7 @@ import {
   activateUser,
   bulkActivateUsers,
 } from "@/services/accountsService";
-import { IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2, IconCheck } from "@tabler/icons-react";
 import {
   Table,
   TableBody,
@@ -41,14 +41,8 @@ export default function UsersTable() {
     if (!echo) return;
 
     const channel = echo.channel("pending-users");
-
-    channel.listen(".user.registered", () => {
-      loadUsers(false);
-    });
-
-    channel.listen(".user.activated", () => {
-      loadUsers(false);
-    });
+    channel.listen(".user.registered", () => loadUsers(false));
+    channel.listen(".user.activated", () => loadUsers(false));
 
     return () => {
       echo.leaveChannel("pending-users");
@@ -89,47 +83,54 @@ export default function UsersTable() {
   const allSelected = users.length > 0 && selected.length === users.length;
   const someSelected = selected.length > 0 && !allSelected;
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="flex justify-center items-center p-6">
+      <div className="flex justify-center items-center py-16">
         <IconLoader2
-          size={32}
+          size={24}
           stroke={1.5}
-          className="animate-spin text-gray-500"
+          className="animate-spin text-gray-400"
         />
       </div>
     );
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Pending Users Account</h2>
+    <div>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-800">
+            Pending approval
+          </span>
+          <span className="text-sm text-gray-400">
+            {users.length} user{users.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
         {selected.length > 0 && (
           <Button
             onClick={handleBulkActivate}
             disabled={bulkActivating}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            size="sm"
+            className="bg-green-700 hover:bg-green-800 text-white text-xs font-medium h-8 px-3 gap-1.5 transition-all"
           >
             {bulkActivating ? (
-              <>
-                <IconLoader2
-                  size={16}
-                  stroke={1.5}
-                  className="animate-spin mr-2"
-                />
-                Activating...
-              </>
+              <IconLoader2 size={13} stroke={1.5} className="animate-spin" />
             ) : (
-              `Activate Selected (${selected.length})`
+              <IconCheck size={13} stroke={2} />
             )}
+            {bulkActivating
+              ? "Activating..."
+              : `Activate selected (${selected.length})`}
           </Button>
         )}
       </div>
 
-      <Table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
-        <TableHeader className="bg-gray-100">
-          <TableRow>
-            <TableHead className="w-10 px-4 py-2">
+      <Table>
+        <TableHeader className="py-0">
+          <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableHead>
               <Checkbox
                 checked={allSelected}
                 ref={(el) => {
@@ -137,57 +138,80 @@ export default function UsersTable() {
                 }}
                 onCheckedChange={toggleAll}
                 aria-label="Select all"
+                className="border-gray-300"
               />
             </TableHead>
-            <TableHead className="text-center px-4 py-2">Email</TableHead>
-            <TableHead className="text-center px-4 py-2">Status</TableHead>
-            <TableHead className="text-center px-4 py-2">Actions</TableHead>
+            <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Email address
+            </TableHead>
+            <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Status
+            </TableHead>
+            <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Action
+            </TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {users.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+              <TableCell
+                colSpan={4}
+                className="py-14 text-center text-sm text-gray-400"
+              >
                 No pending users found.
               </TableCell>
             </TableRow>
           )}
+
           {users.map((u) => (
             <TableRow
               key={u.id}
-              className={`hover:bg-gray-50 ${selected.includes(u.id) ? "bg-green-50" : ""}`}
+              className={`transition-colors ${
+                selected.includes(u.id)
+                  ? "bg-green-50 hover:bg-green-50"
+                  : "hover:bg-gray-50"
+              }`}
             >
-              <TableCell className="px-4 py-3">
+              <TableCell className="px-5 py-3">
                 <Checkbox
                   checked={selected.includes(u.id)}
                   onCheckedChange={() => toggleSelect(u.id)}
                   aria-label={`Select ${u.email}`}
+                  className="border-gray-300"
                 />
               </TableCell>
-              <TableCell className="px-4 py-3 text-center">{u.email}</TableCell>
-              <TableCell className="px-4 py-3 text-center">
+
+              <TableCell className="py-3 text-sm text-gray-600">
+                {u.email}
+              </TableCell>
+
+              <TableCell className="py-3 text-center">
                 <span
-                  className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                  className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     u.approval_status === "APPROVED"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-500 text-white"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-50 text-red-700"
                   }`}
                 >
-                  {u.approval_status}
+                  {u.approval_status === "APPROVED" ? "Approved" : "Pending"}
                 </span>
               </TableCell>
-              <TableCell className="text-center px-4 py-3">
+
+              <TableCell className="py-3 text-center">
                 <button
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded
-                             bg-green-600 text-white hover:bg-green-700
-                             disabled:opacity-50"
                   onClick={() => handleActivate(u.id)}
                   disabled={activatingId === u.id || bulkActivating}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
+                             border border-gray-200 bg-white text-gray-700
+                             hover:bg-green-50 hover:border-green-300 hover:text-green-800
+                             disabled:opacity-40 disabled:cursor-not-allowed
+                             transition-colors"
                 >
                   {activatingId === u.id && (
                     <IconLoader2
-                      size={16}
+                      size={12}
                       stroke={1.5}
                       className="animate-spin"
                     />

@@ -10,8 +10,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { IconLoader2 } from "@tabler/icons-react";
-import { DateTimePicker } from "../components/datetimePicker";
+import { DateTimePicker } from "./datetimePicker";
 import api from "../../../api/api";
+
+// ── Helper: combine a date + 12h time parts into a single Date ───────────────
+function buildDateTime(date, hours, minutes, ampm) {
+  if (!date) return null;
+  // Use explicit local year/month/day to avoid any UTC-to-local shift
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  let h = parseInt(hours, 10);
+  if (ampm === "PM" && h < 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  // Build entirely from local parts — no timezone drift possible
+  return new Date(year, month, day, h, parseInt(minutes, 10), 0, 0);
+}
+
+// ── Helper: compute duration string from two Date objects ────────────────────
+function getDuration(start, end) {
+  if (!start || !end) return "";
+  const mins = (end - start) / 60000;
+  if (mins <= 0) return "";
+  const d = Math.floor(mins / (24 * 60));
+  const h = Math.floor((mins % (24 * 60)) / 60);
+  const m = Math.floor(mins % 60);
+  return [d > 0 ? `${d}d` : null, h > 0 ? `${h}h` : null, `${m}m`]
+    .filter(Boolean)
+    .join(" ");
+}
 
 export default function TrainingForm({ onSubmit }) {
   const [form, setForm] = useState({
@@ -21,17 +48,14 @@ export default function TrainingForm({ onSubmit }) {
     instructor: "",
     category: "",
     eventAddress: "",
-    eventStartDateTime: null,
-    eventEndDateTime: null,
+    // Store only the calendar date (no time baked in)
+    startDate: null,
+    endDate: null,
     trainingMode: "",
     maxParticipants: "",
   });
 
-  const [departments, setDepartments] = useState([]);
-  const [loadingDepts, setLoadingDepts] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
-
+  // Time parts stored separately — never merged back into the date during typing
   const [startHours, setStartHours] = useState("12");
   const [startMinutes, setStartMinutes] = useState("00");
   const [startAmPm, setStartAmPm] = useState("AM");
@@ -39,7 +63,11 @@ export default function TrainingForm({ onSubmit }) {
   const [endMinutes, setEndMinutes] = useState("00");
   const [endAmPm, setEndAmPm] = useState("AM");
 
-  // ── Fetch departments ────────────────────────────────────────────────────
+  const [departments, setDepartments] = useState([]);
+  const [loadingDepts, setLoadingDepts] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
   useEffect(() => {
     setLoadingDepts(true);
     api
@@ -49,56 +77,21 @@ export default function TrainingForm({ onSubmit }) {
       .finally(() => setLoadingDepts(false));
   }, []);
 
-  // ── Sync start time ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!form.eventStartDateTime) return;
-    const d = new Date(form.eventStartDateTime);
-    let h = parseInt(startHours);
-    if (startAmPm === "PM" && h < 12) h += 12;
-    if (startAmPm === "AM" && h === 12) h = 0;
-    d.setHours(h);
-    d.setMinutes(parseInt(startMinutes));
-    setForm((p) => ({ ...p, eventStartDateTime: d }));
-  }, [startHours, startMinutes, startAmPm]);
+  // ── Compute final datetimes only when needed (no useEffect mutation) ──────
+  const getFinalStart = () =>
+    buildDateTime(form.startDate, startHours, startMinutes, startAmPm);
+  const getFinalEnd = () =>
+    buildDateTime(form.endDate, endHours, endMinutes, endAmPm);
 
-  // ── Sync end time ────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!form.eventEndDateTime) return;
-    const d = new Date(form.eventEndDateTime);
-    let h = parseInt(endHours);
-    if (endAmPm === "PM" && h < 12) h += 12;
-    if (endAmPm === "AM" && h === 12) h = 0;
-    d.setHours(h);
-    d.setMinutes(parseInt(endMinutes));
-    setForm((p) => ({ ...p, eventEndDateTime: d }));
-  }, [endHours, endMinutes, endAmPm]);
-
-  // ── Duration ─────────────────────────────────────────────────────────────
-  const getDuration = () => {
-    if (!form.eventStartDateTime || !form.eventEndDateTime) return "";
-    const mins = (form.eventEndDateTime - form.eventStartDateTime) / 60000;
-    if (mins <= 0) return "";
-    const d = Math.floor(mins / (24 * 60));
-    const h = Math.floor((mins % (24 * 60)) / 60);
-    const m = Math.floor(mins % 60);
-    return [d > 0 ? `${d}d` : null, h > 0 ? `${h}h` : null, `${m}m`]
-      .filter(Boolean)
-      .join(" ");
-  };
-
-  // ── Validate ─────────────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
+    const start = getFinalStart();
+    const end = getFinalEnd();
     if (!form.title.trim()) e.title = "Title is required.";
-    if (!form.eventStartDateTime) e.startDate = "Start date is required.";
-    if (!form.eventEndDateTime) e.endDate = "End date is required.";
-    if (
-      form.eventStartDateTime &&
-      form.eventEndDateTime &&
-      form.eventEndDateTime <= form.eventStartDateTime
-    ) {
+    if (!start) e.startDate = "Start date is required.";
+    if (!end) e.endDate = "End date is required.";
+    if (start && end && end <= start)
       e.endDate = "End date must be after start date.";
-    }
     if (
       form.maxParticipants !== "" &&
       (isNaN(Number(form.maxParticipants)) || Number(form.maxParticipants) < 1)
@@ -108,7 +101,6 @@ export default function TrainingForm({ onSubmit }) {
     return e;
   };
 
-  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -116,6 +108,9 @@ export default function TrainingForm({ onSubmit }) {
       return;
     }
     setErrors({});
+
+    const start = getFinalStart();
+    const end = getFinalEnd();
 
     try {
       setSubmitting(true);
@@ -127,14 +122,14 @@ export default function TrainingForm({ onSubmit }) {
         category: form.category,
         eventAddress: form.eventAddress,
         trainingMode: form.trainingMode,
-        startDate: form.eventStartDateTime,
-        endDate: form.eventEndDateTime,
-        duration: getDuration(),
+        startDate: start,
+        endDate: end,
+        duration: getDuration(start, end),
         maxParticipants:
           form.maxParticipants !== "" ? Number(form.maxParticipants) : 0,
       });
 
-      // Reset form on success
+      // Reset
       setForm({
         title: "",
         description: "",
@@ -142,11 +137,17 @@ export default function TrainingForm({ onSubmit }) {
         instructor: "",
         category: "",
         eventAddress: "",
-        eventStartDateTime: null,
-        eventEndDateTime: null,
+        startDate: null,
+        endDate: null,
         trainingMode: "",
         maxParticipants: "",
       });
+      setStartHours("12");
+      setStartMinutes("00");
+      setStartAmPm("AM");
+      setEndHours("12");
+      setEndMinutes("00");
+      setEndAmPm("AM");
     } catch (err) {
       console.error("Failed to submit training:", err);
     } finally {
@@ -154,7 +155,6 @@ export default function TrainingForm({ onSubmit }) {
     }
   };
 
-  // ── Helper ────────────────────────────────────────────────────────────────
   const field = (key) => ({
     value: form[key],
     onChange: (e) => {
@@ -163,9 +163,12 @@ export default function TrainingForm({ onSubmit }) {
     },
   });
 
+  // For preview in the disabled duration field
+  const previewStart = getFinalStart();
+  const previewEnd = getFinalEnd();
+
   return (
     <div className="space-y-3 max-w-md">
-      {/* Title */}
       <div>
         <Input placeholder="Training Title *" {...field("title")} />
         {errors.title && (
@@ -173,10 +176,8 @@ export default function TrainingForm({ onSubmit }) {
         )}
       </div>
 
-      {/* Description */}
       <Textarea placeholder="Description" {...field("description")} />
 
-      {/* Department — connected to /api/departments */}
       <div>
         <Select
           value={form.department}
@@ -207,13 +208,9 @@ export default function TrainingForm({ onSubmit }) {
         )}
       </div>
 
-      {/* Instructor */}
       <Input placeholder="Instructor" {...field("instructor")} />
-
-      {/* Category */}
       <Input placeholder="Category" {...field("category")} />
 
-      {/* Mode of Training */}
       <Select
         value={form.trainingMode}
         onValueChange={(v) => setForm((p) => ({ ...p, trainingMode: v }))}
@@ -227,10 +224,8 @@ export default function TrainingForm({ onSubmit }) {
         </SelectContent>
       </Select>
 
-      {/* Event Address */}
       <Input placeholder="Event Address" {...field("eventAddress")} />
 
-      {/* Max Participants */}
       <div>
         <Input
           type="number"
@@ -243,14 +238,14 @@ export default function TrainingForm({ onSubmit }) {
         )}
       </div>
 
-      {/* Start & End DateTime */}
       <div className="flex gap-2">
         <div className="flex-1">
           <DateTimePicker
             label="Start Date & Time *"
-            date={form.eventStartDateTime}
+            date={form.startDate}
             setDate={(d) => {
-              setForm((p) => ({ ...p, eventStartDateTime: d }));
+              // Store only the raw date — time is handled by the separate state
+              setForm((p) => ({ ...p, startDate: d }));
               if (errors.startDate)
                 setErrors((p) => ({ ...p, startDate: null }));
             }}
@@ -258,7 +253,7 @@ export default function TrainingForm({ onSubmit }) {
             minutes={startMinutes}
             ampm={startAmPm}
             setHours={setStartHours}
-            setMinutes={setStartMinutes}
+            setMinutes={(m) => setStartMinutes(String(m).padStart(2, "0"))}
             setAmPm={setStartAmPm}
           />
           {errors.startDate && (
@@ -269,16 +264,16 @@ export default function TrainingForm({ onSubmit }) {
         <div className="flex-1">
           <DateTimePicker
             label="End Date & Time *"
-            date={form.eventEndDateTime}
+            date={form.endDate}
             setDate={(d) => {
-              setForm((p) => ({ ...p, eventEndDateTime: d }));
+              setForm((p) => ({ ...p, endDate: d }));
               if (errors.endDate) setErrors((p) => ({ ...p, endDate: null }));
             }}
             hours={endHours}
             minutes={endMinutes}
             ampm={endAmPm}
             setHours={setEndHours}
-            setMinutes={setEndMinutes}
+            setMinutes={(m) => setEndMinutes(String(m).padStart(2, "0"))}
             setAmPm={setEndAmPm}
           />
           {errors.endDate && (
@@ -287,14 +282,12 @@ export default function TrainingForm({ onSubmit }) {
         </div>
       </div>
 
-      {/* Duration (auto-computed) */}
       <Input
-        value={getDuration()}
+        value={getDuration(previewStart, previewEnd)}
         disabled
         placeholder="Duration (auto-computed)"
       />
 
-      {/* Submit */}
       <Button
         type="button"
         onClick={handleSubmit}

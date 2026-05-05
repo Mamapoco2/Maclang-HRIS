@@ -37,18 +37,18 @@ const colors = [
 
 // Sample data
 const interviewers = [
-  { id: "1", name: "John Smith" },
-  { id: "2", name: "Sarah Johnson" },
-  { id: "3", name: "Michael Brown" },
-  { id: "4", name: "Emily Davis" },
+  { id: "1", name: "JOHN SMITH" },
+  { id: "2", name: "SARAH JOHNSON" },
+  { id: "3", name: "MICHAEL BROWN" },
+  { id: "4", name: "EMILY DAVIS" },
 ];
 
 const interviewees = [
-  { id: "1", name: "Alice Wilson" },
-  { id: "2", name: "Bob Martinez" },
-  { id: "3", name: "Carol Anderson" },
-  { id: "4", name: "David Taylor" },
-  { id: "5", name: "Eve Thomas" },
+  { id: "1", name: "ALICE WILSON" },
+  { id: "2", name: "BOB MARTINEZ" },
+  { id: "3", name: "CAROL ANDERSON" },
+  { id: "4", name: "DAVID TAYLOR" },
+  { id: "5", name: "EVE THOMAS" },
 ];
 
 export default function CreateEventDialog({
@@ -71,11 +71,11 @@ export default function CreateEventDialog({
 
   const getSelectedIntervieweesText = () => {
     const selected = newEvent.interviewees || [];
-    if (selected.length === 0) return "Select interviewees";
+    if (selected.length === 0) return "SELECT INTERVIEWEES";
     if (selected.length === 1) {
       return interviewees.find((i) => i.id === selected[0])?.name;
     }
-    return `${selected.length} selected`;
+    return `${selected.length} SELECTED`;
   };
 
   return (
@@ -83,28 +83,34 @@ export default function CreateEventDialog({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            Create Event
+            CREATE EVENT
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Title</Label>
+            <Label>TITLE</Label>
             <Input
               value={newEvent.title}
               onChange={(e) =>
-                setNewEvent({ ...newEvent, title: e.target.value })
+                setNewEvent({
+                  ...newEvent,
+                  title: e.target.value.toUpperCase(),
+                })
               }
               className="h-12"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>DESCRIPTION</Label>
             <Textarea
               value={newEvent.description}
               onChange={(e) =>
-                setNewEvent({ ...newEvent, description: e.target.value })
+                setNewEvent({
+                  ...newEvent,
+                  description: e.target.value.toUpperCase(),
+                })
               }
               className="min-h-20"
             />
@@ -112,7 +118,7 @@ export default function CreateEventDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Interviewer</Label>
+              <Label>INTERVIEWER</Label>
               <Select
                 value={newEvent.interviewer}
                 onValueChange={(val) =>
@@ -120,7 +126,7 @@ export default function CreateEventDialog({
                 }
               >
                 <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Select interviewer" />
+                  <SelectValue placeholder="SELECT INTERVIEWER" />
                 </SelectTrigger>
                 <SelectContent>
                   {interviewers.map((i) => (
@@ -133,7 +139,7 @@ export default function CreateEventDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Interviewees</Label>
+              <Label>INTERVIEWEES</Label>
               <Popover
                 open={openInterviewees}
                 onOpenChange={setOpenInterviewees}
@@ -169,8 +175,8 @@ export default function CreateEventDialog({
 
           {/* Dates */}
           {[
-            { label: "Start Date", key: "startDate" },
-            { label: "End Date", key: "endDate" },
+            { label: "START DATE", key: "startDate" },
+            { label: "END DATE", key: "endDate" },
           ].map(({ label, key }) => (
             <div key={key} className="space-y-2">
               <Label>{label}</Label>
@@ -182,8 +188,8 @@ export default function CreateEventDialog({
                   >
                     <IconCalendar size={16} stroke={1.5} className="mr-2" />
                     {newEvent[key]
-                      ? format(new Date(newEvent[key]), "PPP")
-                      : "Pick a date"}
+                      ? format(new Date(newEvent[key]), "PPP").toUpperCase()
+                      : "PICK A DATE"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -212,22 +218,25 @@ export default function CreateEventDialog({
                 setNewEvent({ ...newEvent, allDay: val })
               }
             />
-            <Label>All day</Label>
+            <Label>ALL DAY</Label>
           </div>
 
           <div className="space-y-2">
-            <Label>Location</Label>
+            <Label>LOCATION</Label>
             <Input
               value={newEvent.location}
               onChange={(e) =>
-                setNewEvent({ ...newEvent, location: e.target.value })
+                setNewEvent({
+                  ...newEvent,
+                  location: e.target.value.toUpperCase(),
+                })
               }
               className="h-12"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Color</Label>
+            <Label>COLOR</Label>
             <div className="flex gap-2">
               {colors.map((c) => (
                 <button
@@ -244,10 +253,10 @@ export default function CreateEventDialog({
 
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              CANCEL
             </Button>
             <Button className="bg-black text-white" onClick={onSave}>
-              Save
+              SAVE
             </Button>
           </div>
         </div>

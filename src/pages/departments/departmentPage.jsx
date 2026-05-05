@@ -77,8 +77,8 @@ export default function DepartmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-screen-2xl py-6 space-y-5">
+    <div className=" bg-background p-4">
+      <div className="p-2 w-auto space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">

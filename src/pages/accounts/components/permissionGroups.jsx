@@ -95,3 +95,12 @@ export const PERMISSION_GROUPS = [
     permissions: [{ key: "notifications.view", label: "View Notifications" }],
   },
 ];
+
+export const ASSIGNABLE_ROLES = [
+  { value: "admin", label: "Admin" },
+  { value: "director", label: "Director" },
+  { value: "hr", label: "HR" },
+  { value: "head", label: "Head" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "staff", label: "Staff" },
+];

@@ -53,9 +53,11 @@ const NAV_MAIN = [
   },
   {
     title: "Trainings",
-    url: "/trainings",
     icon: IconSchool,
-    permission: "trainings.view",
+    items: [
+      { title: "Training", url: "/trainings" },
+      { title: "Skill Gap Analysis Test", url: "/skillGapAnalysis" },
+    ],
   },
   {
     title: "Team",
@@ -126,7 +128,9 @@ const NAV_MAIN = [
   },
 ];
 
-const NAV_SECONDARY = [{ title: "Settings", url: "#", icon: IconSettings }];
+const NAV_SECONDARY = [
+  { title: "Settings", url: "/settings", icon: IconSettings },
+];
 
 const NAV_DOCUMENTS = [{ name: "Reports", url: "#", icon: IconReport }];
 

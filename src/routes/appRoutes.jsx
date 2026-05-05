@@ -11,14 +11,15 @@ import Login from "../pages/login/components/loginPage";
 import Register from "../pages/register/registerPage";
 import Team from "../pages/team/components/teamPage";
 import Analytics from "../pages/analytics/components/analyticsPage";
-import Trainings from "../pages/trainings/components/trainingPage";
+import Trainings from "../pages/trainings/training/trainingPage";
+import SkillAnalysis from "../pages/trainings/skillGapAnalysis/skillGapTest";
 import Applications from "../pages/hiring/application/components/applicationPage";
 import OnboardingPage from "../pages/hiring/onboarding/onboardingPage";
 import Leave from "../pages/leave/components/leavePage";
 import Applicants from "../pages/hiring/applicants/components/applicantsPage";
 import Accounts from "../pages/accounts/components/accountsPage";
 import ManPower from "../pages/manpower/manPowerPage";
-import IPCRForm from "../pages/spms/IPCRForm";
+import IPCRForm from "../pages/spms/ipcr/IPCRForm";
 import OPCRForm from "../pages/spms/OPCRPage";
 import MFOPage from "../pages/spms/MFOPage";
 import PerformancePeriod from "../pages/spms/PerformancePeriodPage";
@@ -31,6 +32,8 @@ import Sent from "../pages/announcement/sent/sent";
 import ProtectedRoute from "./protectedRoutes";
 import PublicRoute from "./publicRoute";
 import PermissionRoute from "./permissionRoute";
+import Updates from "../pages/updates/update";
+import Settings from "../pages/settings/settingsPage";
 import { ProfileGate } from "../pages/profile/profileGate";
 
 function AppRoutes() {
@@ -86,6 +89,7 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+            <Route path="/skillGapAnalysis" element={<SkillAnalysis />} />
             <Route
               path="/accounts"
               element={
@@ -214,6 +218,8 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+            <Route path="/updates" element={<Updates />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
       </Routes>

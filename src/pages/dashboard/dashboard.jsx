@@ -21,24 +21,27 @@ export default function Page() {
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <SectionCards />
 
-            <div className="w-full flex flex-col gap-4 px-4 lg:px-6 md:flex-row">
-              <div className="w-full md:w-2/3">
-                <ChartAreaInteractive />
+            {/* Charts row */}
+            <div className="w-full flex flex-col gap-4 px-4 lg:px-6 md:flex-row md:items-stretch">
+              <div className="w-full md:w-2/3 flex flex-col">
+                <ChartAreaInteractive className="h-full" />
               </div>
-
-              <div className="w-full md:w-1/3">
-                <ChartBarMultiple />
+              <div className="w-full md:w-1/3 flex flex-col">
+                <ChartBarMultiple className="h-full" />
               </div>
             </div>
 
-            <div className=" flex flex-col gap-2 px-4 lg:px-6 md:flex-row">
-              <div className="w-full md:w-1/2">
+            {/* Teams / Leave row */}
+            <div className="flex flex-col gap-4 px-4 lg:px-6 md:flex-row md:items-stretch">
+              <div className="w-full md:w-1/2 flex flex-col">
                 <Teams />
               </div>
-
-              <div className="w-full md:w-1/2">
+              <div className="w-full md:w-1/2 flex flex-col">
                 <LeaveOverview />
               </div>
+            </div>
+            <div>
+              <DataTable />
             </div>
           </div>
         </div>

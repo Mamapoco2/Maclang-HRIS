@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import UsersTable from "./UsersTable";
-import ApprovedAccountsTab from "./ApprovedAccountsTab";
+import ApprovedAccountsTab from "./approvedAccountsTab";
 
 export default function AccountsPage() {
   return (

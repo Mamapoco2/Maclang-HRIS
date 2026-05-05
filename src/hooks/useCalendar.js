@@ -1,46 +1,67 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
-export function useCalendar() {
+export function useCalendar(externalEvents = []) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState("Month");
-  const [events, setEvents] = useState([]); // ✅ store all events in array
+  const [localEvents, setLocalEvents] = useState([]);
 
-  const nextMonth = () =>
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-    );
+  // Merge API events + local optimistic events
+  const allEvents = [...externalEvents, ...localEvents];
 
-  const prevMonth = () =>
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    );
+  const nextMonth = () => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() + 1);
+      return d;
+    });
+  };
+
+  const prevMonth = () => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() - 1);
+      return d;
+    });
+  };
 
   const goToToday = () => setCurrentDate(new Date());
 
-  const addEvent = (event) => {
-    setEvents((prev) => [...prev, event]);
-  };
+  const addEvent = useCallback((event) => {
+    setLocalEvents((prev) => [...prev, event]);
+  }, []);
 
-  // ✅ Get events for a given day (multi-day aware)
-  const getEventsForDay = (dayObj) => {
-    const date = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + (dayObj.monthOffset || 0),
-      dayObj.day
-    );
+  const getEventsForDay = useCallback(
+    (dayObj) => {
+      let year, month, day;
 
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+      if (dayObj instanceof Date) {
+        year = dayObj.getFullYear();
+        month = dayObj.getMonth();
+        day = dayObj.getDate();
+      } else {
+        year = currentDate.getFullYear();
+        month = currentDate.getMonth() + (dayObj.monthOffset || 0);
+        day = dayObj.day;
+      }
 
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+      const target = new Date(year, month, day);
+      target.setHours(0, 0, 0, 0);
 
-    return events.filter((event) => {
-      const eventStart = new Date(event.startDate);
-      const eventEnd = new Date(event.endDate || event.startDate);
-      return eventStart <= endOfDay && eventEnd >= startOfDay;
-    });
-  };
+      return allEvents.filter((event) => {
+        const start = new Date(event.startDate ?? event.start_date);
+        const end = new Date(
+          event.endDate ??
+            event.end_date ??
+            event.startDate ??
+            event.start_date,
+        );
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        return target >= start && target <= end;
+      });
+    },
+    [allEvents, currentDate],
+  );
 
   return {
     currentDate,
@@ -51,5 +72,7 @@ export function useCalendar() {
     goToToday,
     addEvent,
     getEventsForDay,
+    localEvents,
+    setLocalEvents,
   };
 }

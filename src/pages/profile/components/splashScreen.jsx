@@ -1,4 +1,4 @@
-// src/components/SplashScreen.jsx
+// src/pages/profile/components/SplashScreen.jsx
 import { useEffect, useState } from "react";
 import logo from "@/assets/rmbghlogo.png";
 

@@ -45,14 +45,14 @@ const chartConfig = {
 
 export function ChartBarMultiple() {
   return (
-    <Card className="@container/card">
+    <Card className="@container/card h-full">
       <CardHeader>
         <CardTitle>Applications per Month</CardTitle>
         <CardDescription>January - June 2024</CardDescription>
       </CardHeader>
 
       <CardContent>
-        <ChartContainer config={chartConfig}>
+        <ChartContainer config={chartConfig} className="h-[350px] w-full">
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} />
             <XAxis
@@ -85,12 +85,6 @@ export function ChartBarMultiple() {
       </CardContent>
 
       {/* Optional footer if you want to show trend */}
-      {/* 
-      <CardFooter className="flex items-center gap-2 text-sm text-muted-foreground">
-        <IconTrendingUp size={16} stroke={1.5} />
-        +12% compared to last month
-      </CardFooter>
-      */}
     </Card>
   );
 }

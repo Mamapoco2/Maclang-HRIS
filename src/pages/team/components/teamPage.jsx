@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { employeeService } from "../../../services/employeeService";
 import { AuthContext } from "@/context/authContext";
+import { getEcho } from "../../../lib/echo";
 import TeamTableHeader from "./TeamTableHeader";
 import DepartmentTeamCard from "./departmentTeamCard";
 
@@ -26,6 +27,33 @@ export default function TeamTable() {
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
+
+  // ✅ Realtime: listen for employee updates and activations
+  useEffect(() => {
+    const echo = getEcho();
+    const channel = echo.channel("employees");
+
+    // Fired when an employee's department/details change
+    const onEmployeeUpdated = (e) => {
+      if (!e.employee) return;
+      setMembers((prev) => {
+        const exists = prev.some((m) => m.id === e.employee.id);
+        if (exists) {
+          return prev.map((m) =>
+            m.id === e.employee.id ? { ...m, ...e.employee } : m,
+          );
+        }
+        // New employee assigned to a dept — add to list
+        return [e.employee, ...prev];
+      });
+    };
+
+    channel.listen(".employee.updated", onEmployeeUpdated);
+
+    return () => {
+      channel.stopListening(".employee.updated", onEmployeeUpdated);
+    };
+  }, []);
 
   const userDepartmentIds = useMemo(() => {
     if (!user?.department_ids) return [];

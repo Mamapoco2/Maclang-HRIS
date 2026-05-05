@@ -1,6 +1,6 @@
 // src/pages/profile/components/AvatarUpload.jsx
 import { useRef, useState } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera } from "lucide-react";
 
 /**
  * Props:
@@ -10,23 +10,47 @@ export function AvatarUpload({ onFileSelected }) {
   const inputRef = useRef(null);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
+  const validate = (file) => {
+    if (!file) return null;
+    if (!file.type.startsWith("image/")) return "Please select an image file.";
+    if (file.size > 10 * 1024 * 1024) return "Image must be smaller than 10MB.";
+    return null;
+  };
+
+  const processFile = (file) => {
     if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError("Please select an image file.");
+    const err = validate(file);
+    if (err) {
+      setError(err);
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Image must be smaller than 10MB.");
-      return;
-    }
-
     setError("");
     setPreview(URL.createObjectURL(file));
-    onFileSelected?.(file); // pass raw File up to the modal
+    onFileSelected?.(file);
+  };
+
+  const handleFileChange = (e) => {
+    processFile(e.target.files?.[0]);
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    processFile(e.dataTransfer.files?.[0]);
   };
 
   return (
@@ -34,7 +58,16 @@ export function AvatarUpload({ onFileSelected }) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="relative group h-24 w-24 rounded-full border-2 border-dashed border-muted-foreground/40 overflow-hidden bg-muted hover:border-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={[
+          "relative group h-24 w-24 rounded-full border-2 border-dashed overflow-hidden bg-muted transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          isDragging
+            ? "border-primary scale-105 bg-primary/10 shadow-md shadow-primary/20"
+            : "border-muted-foreground/40 hover:border-primary",
+        ].join(" ")}
         title="Upload profile photo"
       >
         {preview ? (
@@ -45,20 +78,35 @@ export function AvatarUpload({ onFileSelected }) {
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full w-full text-muted-foreground">
-            <Camera className="h-6 w-6" />
-            <span className="text-[10px] mt-1">Upload photo</span>
+            <Camera
+              className={[
+                "h-6 w-6 transition-transform",
+                isDragging ? "scale-110 text-primary" : "",
+              ].join(" ")}
+            />
+            <span className="text-[10px] mt-1">
+              {isDragging ? "Drop here" : "Upload photo"}
+            </span>
           </div>
         )}
 
-        {preview && (
+        {/* Hover overlay (only when preview exists and not dragging) */}
+        {preview && !isDragging && (
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <Camera className="h-5 w-5 text-white" />
+          </div>
+        )}
+
+        {/* Drag overlay */}
+        {isDragging && (
+          <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+            <Camera className="h-6 w-6 text-primary" />
           </div>
         )}
       </button>
 
       <p className="text-xs text-muted-foreground">
-        Click to upload (max 10MB)
+        {isDragging ? "Release to upload" : "Click or drag & drop (max 10MB)"}
       </p>
 
       {error && (

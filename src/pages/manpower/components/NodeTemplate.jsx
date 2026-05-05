@@ -20,12 +20,15 @@ const EMPLOYMENT_COLORS = {
 function buildDisplayName(data) {
   const prefix = data.prefix ? data.prefix.replace(/\.$/, "") + "." : null;
   const middle = data.middle_name ? data.middle_name.charAt(0) + "." : null;
-  const name = [prefix, data.first_name, middle, data.last_name]
+
+  const nameParts = [prefix, data.first_name, middle, data.last_name]
     .filter(Boolean)
     .join(" ");
-  const suffix = data.suffix ? ", " + data.suffix : "";
-  const title = data.title ? ", " + data.title : "";
-  return name + suffix + title || data.name || "Unnamed";
+
+  const suffix = data.suffix ? `, ${data.suffix}` : "";
+  const title = data.title ? `, ${data.title}` : "";
+
+  return nameParts + suffix + title || data.name || "Unnamed";
 }
 
 const NodeTemplate = (node) => {
@@ -100,7 +103,7 @@ const NodeTemplate = (node) => {
         </div>
 
         {/* ── STAFF LIST ──────────────────────────────────── */}
-        {data.staff?.length > 0 && (
+        {/* {data.staff?.length > 0 && (
           <div
             className="mt-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
             style={{ width: "300px" }}
@@ -150,7 +153,7 @@ const NodeTemplate = (node) => {
               })}
             </div>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Modal */}

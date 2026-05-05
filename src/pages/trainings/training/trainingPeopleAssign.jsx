@@ -16,7 +16,7 @@ import {
   IconUserPlus,
   IconUserCheck,
 } from "@tabler/icons-react";
-import TrainingProgress from "../components/trainingProgress";
+import TrainingProgress from "./trainingProgress";
 import api from "../../../api/api";
 import { getEcho } from "../../../lib/echo";
 

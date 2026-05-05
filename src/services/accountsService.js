@@ -1,7 +1,5 @@
 import api from "@/api/api";
 
-// ── Pending users ─────────────────────────────────────────────────────────────
-
 export async function getUsers() {
   try {
     const res = await api.get("/pending-users");
@@ -32,8 +30,6 @@ export async function bulkActivateUsers(ids) {
   return res.data;
 }
 
-// ── Approved users ────────────────────────────────────────────────────────────
-
 export async function getApprovedUsers() {
   try {
     const res = await api.get("/approved-users");
@@ -48,9 +44,13 @@ export async function getApprovedUsers() {
   }
 }
 
-// ── Permissions ───────────────────────────────────────────────────────────────
-
 export async function updateUserPermissions(userId, permissions) {
   const res = await api.put(`/users/${userId}/permissions`, { permissions });
+  return res.data;
+}
+
+// ✅ New
+export async function updateUserRole(userId, role) {
+  const res = await api.put(`/users/${userId}/role`, { role });
   return res.data;
 }

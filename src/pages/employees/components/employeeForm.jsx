@@ -326,20 +326,20 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-h-[80vh] overflow-y-auto p-8 bg-white w-full min-w-[1200px] space-y-6"
+      className="max-h-[90vh] overflow-y-auto sm:p-6 lg:p-8 bg-white w-full space-y-6"
     >
-      <div className="border-b pb-4">
-        <h2 className="text-2xl font-bold uppercase">
+      <div className="border-b">
+        <h2 className="text-xl sm:text-2xl font-bold uppercase">
           {employee ? "Edit Employee" : "New Employee"}
         </h2>
       </div>
 
       {/* ── Avatar ── */}
-      <section className="flex items-center gap-6 border-b pb-6">
+      <section className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 border-b pb-6">
         <div className="relative group flex-shrink-0">
           <div
             className={cn(
-              "h-24 w-24 rounded-full overflow-hidden cursor-pointer transition-all duration-200 ring-2",
+              "h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden cursor-pointer transition-all duration-200 ring-2",
               isDragging
                 ? "ring-black ring-offset-2 scale-105"
                 : "ring-gray-200 hover:ring-black hover:ring-offset-2",
@@ -395,8 +395,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-semibold truncate uppercase">
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <h2 className="text-lg sm:text-xl font-semibold truncate uppercase">
             {formData.firstName || "First"} {formData.lastName || "Last"}
           </h2>
           <p className="text-sm text-gray-500 mt-0.5 uppercase">
@@ -429,7 +429,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         <h3 className="text-sm font-semibold uppercase border-b pb-2">
           Employee Information
         </h3>
-        <div className="grid grid-cols-4 gap-4">
+        {/* 1 col on mobile → 2 on sm → 3 on md → 4 on lg */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <InputField
             label="Employee Number"
             value={formData.employeeNumber}
@@ -478,52 +479,55 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
             ]}
             onChange={(v) => handleChange("suffix", v)}
           />
-          <SearchableSelect
-            label="Title / Profession"
-            value={formData.title}
-            placeholder="Select title"
-            multiple
-            options={[
-              { value: "MD", label: "MD" },
-              { value: "RN", label: "RN" },
-              { value: "RM", label: "RM" },
-              { value: "CPA", label: "CPA" },
-              { value: "RND", label: "RND" },
-              { value: "RSW", label: "RSW" },
-              { value: "MAN", label: "MAN" },
-              { value: "DBA", label: "DBA" },
-              { value: "RMT", label: "RMT" },
-              { value: "RPH", label: "RPH" },
-              { value: "RADT", label: "RADT" },
-              { value: "RRT", label: "RRT" },
-              { value: "RTRP", label: "RTRP" },
-              { value: "PT", label: "PT" },
-              { value: "OT", label: "OT" },
-              { value: "SLP", label: "SLP" },
-              { value: "ND", label: "ND" },
-              { value: "DMD", label: "DMD" },
-              { value: "DPBS", label: "DPBS" },
-              { value: "DPBO", label: "DPBO" },
-              { value: "DPBU", label: "DPBU" },
-              { value: "DPIM", label: "DPIM" },
-              { value: "DPOGS", label: "DPOGS" },
-              { value: "FPCS", label: "FPCS" },
-              { value: "FPSGS", label: "FPSGS" },
-              { value: "FPAO", label: "FPAO" },
-              { value: "FPUA", label: "FPUA" },
-              { value: "FPCR", label: "FPCR" },
-              { value: "FICS", label: "FICS" },
-              { value: "FPOA", label: "FPOA" },
-              { value: "FPALES", label: "FPALES" },
-              { value: "MBA", label: "MBA" },
-              { value: "MHM", label: "MHM" },
-              { value: "MMHOA", label: "MMHOA" },
-              { value: "MPH", label: "MPH" },
-              { value: "MET III", label: "MET III" },
-              { value: "HD TECHNICIAN", label: "HD TECHNICIAN" },
-            ]}
-            onChange={(v) => handleChange("title", v)}
-          />
+          {/* Title spans full width on mobile, normal on larger */}
+          <div className="sm:col-span-2 md:col-span-1 lg:col-span-2">
+            <SearchableSelect
+              label="Title / Profession"
+              value={formData.title}
+              placeholder="Select title"
+              multiple
+              options={[
+                { value: "MD", label: "MD" },
+                { value: "RN", label: "RN" },
+                { value: "RM", label: "RM" },
+                { value: "CPA", label: "CPA" },
+                { value: "RND", label: "RND" },
+                { value: "RSW", label: "RSW" },
+                { value: "MAN", label: "MAN" },
+                { value: "DBA", label: "DBA" },
+                { value: "RMT", label: "RMT" },
+                { value: "RPH", label: "RPH" },
+                { value: "RADT", label: "RADT" },
+                { value: "RRT", label: "RRT" },
+                { value: "RTRP", label: "RTRP" },
+                { value: "PT", label: "PT" },
+                { value: "OT", label: "OT" },
+                { value: "SLP", label: "SLP" },
+                { value: "ND", label: "ND" },
+                { value: "DMD", label: "DMD" },
+                { value: "DPBS", label: "DPBS" },
+                { value: "DPBO", label: "DPBO" },
+                { value: "DPBU", label: "DPBU" },
+                { value: "DPIM", label: "DPIM" },
+                { value: "DPOGS", label: "DPOGS" },
+                { value: "FPCS", label: "FPCS" },
+                { value: "FPSGS", label: "FPSGS" },
+                { value: "FPAO", label: "FPAO" },
+                { value: "FPUA", label: "FPUA" },
+                { value: "FPCR", label: "FPCR" },
+                { value: "FICS", label: "FICS" },
+                { value: "FPOA", label: "FPOA" },
+                { value: "FPALES", label: "FPALES" },
+                { value: "MBA", label: "MBA" },
+                { value: "MHM", label: "MHM" },
+                { value: "MMHOA", label: "MMHOA" },
+                { value: "MPH", label: "MPH" },
+                { value: "MET III", label: "MET III" },
+                { value: "HD TECHNICIAN", label: "HD TECHNICIAN" },
+              ]}
+              onChange={(v) => handleChange("title", v)}
+            />
+          </div>
         </div>
       </section>
 
@@ -532,7 +536,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         <h3 className="text-sm font-semibold uppercase border-b pb-2">
           Employment Information
         </h3>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <SearchableSelect
             label="Position Classification"
             value={formData.rolePosition}
@@ -624,7 +628,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         </div>
 
         {formData.employeeType === "Plantilla" && (
-          <div className="grid grid-cols-3 gap-4 pt-2 border-t">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
             <SearchableSelect
               label="Plantilla Position"
               value={formData.plantillaItemId}
@@ -690,7 +694,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
             (emp) => String(emp.id) === parent.parentId,
           );
           return (
-            <div key={index} className="flex gap-2">
+            <div key={index} className="flex flex-col sm:flex-row gap-2">
               <Popover
                 open={openIndex === index}
                 onOpenChange={(open) => setOpenIndex(open ? index : null)}
@@ -700,7 +704,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                     variant="outline"
                     role="combobox"
                     className={cn(
-                      "w-[300px] justify-between font-normal uppercase",
+                      "w-full sm:w-[300px] justify-between font-normal uppercase",
                       !selectedEmployee && "text-gray-400",
                     )}
                   >
@@ -717,7 +721,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                     <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50 flex-shrink-0" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
+                <PopoverContent className="w-[min(300px,calc(100vw-2rem))] p-0">
                   <Command>
                     <CommandInput placeholder="Search employee..." />
                     <CommandEmpty>No employee found.</CommandEmpty>
@@ -755,6 +759,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
               <Button
                 type="button"
                 variant="destructive"
+                className="w-full sm:w-auto"
                 onClick={() => removeParent(index)}
               >
                 Remove
@@ -764,9 +769,11 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         })}
       </section>
 
-      <Button type="submit" className="w-full bg-black text-white">
-        {employee ? "Update Employee" : "Add Employee"}
-      </Button>
+      <div className="w-full flex justify-center">
+        <Button type="submit" className="w-md bg-black text-white">
+          {employee ? "Update Employee" : "Add Employee"}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -832,7 +839,7 @@ function SearchableSelect({
             role="combobox"
             disabled={disabled}
             className={cn(
-              "justify-between font-normal uppercase",
+              "w-full justify-between font-normal uppercase",
               !selectedLabels ? "text-gray-400" : "text-foreground",
             )}
           >
@@ -848,7 +855,7 @@ function SearchableSelect({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="p-0"
+          className="p-0 w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))]"
           style={{ minWidth: "var(--radix-popover-trigger-width)" }}
         >
           <Command>
