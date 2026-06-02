@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { CalendarDays, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SummaryCard } from "./summaryCard";
 import { ApplicantsTable } from "../../application/components/overview/applicationsTable";
@@ -88,8 +89,14 @@ export default function ApplicantsPage() {
       {/* Tabs — Calendar (default) + List with Onboard button */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="list">Applicants List</TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Calendar
+          </TabsTrigger>
+          <TabsTrigger value="list" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Applicants List
+          </TabsTrigger>
         </TabsList>
 
         {/* Calendar Tab */}

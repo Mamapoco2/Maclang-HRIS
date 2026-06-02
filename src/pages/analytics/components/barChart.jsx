@@ -1,14 +1,18 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
 
 const data = [
   { month: "Jan", applications: 120 },
@@ -25,31 +29,58 @@ const data = [
   { month: "Dec", applications: 185 },
 ];
 
+const chartConfig = {
+  applications: { label: "Applications", color: "var(--chart-2)" },
+};
+
 export default function MonthlyApplicationsChart() {
   return (
-    <Card className="shadow-md rounded-2xl">
+    <Card className="@container/card">
       <CardHeader>
         <CardTitle>Monthly Job Applications</CardTitle>
+        <CardDescription>Total applications received per month</CardDescription>
       </CardHeader>
-
-      <CardContent className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
+      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        <ChartContainer
+          config={chartConfig}
+          className="aspect-auto h-[300px] w-full"
+        >
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" className="text-xs" />
-            <YAxis />
-            <Tooltip />
-            <Legend className="text-xs" />
-
+            <defs>
+              <linearGradient id="fillApplications" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--chart-2)"
+                  stopOpacity={0.9}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--chart-2)"
+                  stopOpacity={0.3}
+                />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="dot" />}
+            />
+            <ChartLegend content={<ChartLegendContent />} />
             <Bar
               dataKey="applications"
-              name="Applications"
-              fill="var(--chart-2)"
-              opacity={0.7}
+              fill="url(#fillApplications)"
               radius={[6, 6, 0, 0]}
             />
           </BarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

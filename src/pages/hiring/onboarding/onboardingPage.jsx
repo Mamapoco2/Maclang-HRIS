@@ -46,6 +46,7 @@ import {
   IconUser,
   IconPencil,
   IconX,
+  IconFileText,
 } from "@tabler/icons-react";
 import {
   getOnboardingSummary,
@@ -447,8 +448,14 @@ export default function OnboardingPage() {
 
       <Tabs defaultValue="onboarding">
         <TabsList>
-          <TabsTrigger value="onboarding">ONBOARDING</TabsTrigger>
-          <TabsTrigger value="contracts">CONTRACT GENERATION</TabsTrigger>
+          <TabsTrigger value="onboarding" className="flex items-center gap-2">
+            <IconClipboardList size={15} />
+            ONBOARDING
+          </TabsTrigger>
+          <TabsTrigger value="contracts" className="flex items-center gap-2">
+            <IconFileText size={15} />
+            CONTRACT GENERATION
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Onboarding Tab ─────────────────────────────────────────────── */}

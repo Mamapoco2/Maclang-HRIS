@@ -1,4 +1,4 @@
-// src/pages/manpower/components/OverviewTab.jsx
+// src/pages/manpower/overViewPage.jsx
 import { useEffect, useState, useRef } from "react";
 import SummaryCard from "./components/statCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,13 +12,14 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { getManpowerSummary } from "../../services/manpowerService";
+import { manpowerService } from "../../services/manpowerService";
 import { employeeService } from "@/services/employeeService";
 
 // ─── count-up hook ────────────────────────────────────────────────────────────
 function useCountUp(target, duration = 1200) {
   const [display, setDisplay] = useState(0);
   const raf = useRef(null);
+
   useEffect(() => {
     if (!target) return;
     const start = performance.now();
@@ -31,6 +32,7 @@ function useCountUp(target, duration = 1200) {
     raf.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf.current);
   }, [target, duration]);
+
   return display;
 }
 
@@ -53,10 +55,9 @@ function GenderCard({ male, female }) {
         Male to Female Staff
       </p>
 
-      {/* Two columns */}
       <div className="flex gap-2">
         {/* Male */}
-        <div className="flex-1 rounded-lg  dark:bg-blue-950/40 px-3 py-2.5 text-center">
+        <div className="flex-1 rounded-lg dark:bg-blue-950/40 px-3 py-2.5 text-center">
           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
             {animMale}
           </p>
@@ -72,7 +73,7 @@ function GenderCard({ male, female }) {
         </div>
 
         {/* Female */}
-        <div className="flex-1 rounded-lg  dark:bg-pink-950/40 px-3 py-2.5 text-center">
+        <div className="flex-1 rounded-lg dark:bg-pink-950/40 px-3 py-2.5 text-center">
           <p className="text-2xl font-bold text-pink-500 dark:text-pink-400 tabular-nums">
             {animFemale}
           </p>
@@ -114,20 +115,49 @@ export default function OverviewTab() {
     vacant: 0,
   });
   const [gender, setGender] = useState({ male: 0, female: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    getManpowerSummary()
-      .then((data) =>
-        setCounts({
-          plantilla: data.plantilla ?? 0,
-          cos: data.cos ?? 0,
-          consultant: data.consultant ?? 0,
-          vacant: data.vacant ?? 0,
-        }),
-      )
-      .catch(console.error);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    employeeService.getGenderCount().then(setGender).catch(console.error);
+        // Fetch manpower counts in parallel
+        const [plantilla, cos, consultant, vacant] = await Promise.all([
+          manpowerService.getPlantillaCount(),
+          manpowerService.getCosCount(),
+          manpowerService.getConsultantCount(),
+          manpowerService.getVacantCount(),
+        ]);
+
+        setCounts({
+          plantilla: plantilla ?? 0,
+          cos: cos ?? 0,
+          consultant: consultant ?? 0,
+          vacant: vacant ?? 0,
+        });
+
+        // Fetch gender count
+        employeeService
+          .getGenderCount()
+          .then((genderData) => {
+            setGender({
+              male: genderData?.male ?? 0,
+              female: genderData?.female ?? 0,
+            });
+          })
+          .catch((err) => console.error("Gender count error:", err));
+      } catch (err) {
+        console.error("Failed to fetch manpower counts:", err);
+        setError(err?.message || "Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const manpowerData = [
@@ -136,6 +166,17 @@ export default function OverviewTab() {
     { name: "Consultant", value: counts.consultant, color: "var(--chart-3)" },
     { name: "Vacant", value: counts.vacant, color: "var(--chart-4)" },
   ];
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <p className="font-semibold">Error loading overview data</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -172,19 +213,25 @@ export default function OverviewTab() {
           </CardTitle>
         </CardHeader>
         <CardContent className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={manpowerData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {manpowerData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-gray-400">Loading chart...</div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={manpowerData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {manpowerData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>

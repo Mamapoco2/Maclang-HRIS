@@ -7,13 +7,10 @@ export function filterTreeByDepartment(nodes, department) {
     if (!node || typeof node !== "object") return null;
 
     const children = Array.isArray(node.children)
-      ? node.children
-          .map(filterNode)
-          .filter(Boolean)
+      ? node.children.map(filterNode).filter(Boolean)
       : [];
 
-    const matches =
-      node?.data?.department === department;
+    const matches = node?.data?.department === department;
 
     if (matches || children.length > 0) {
       return {

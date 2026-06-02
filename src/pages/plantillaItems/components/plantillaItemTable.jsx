@@ -117,7 +117,6 @@ export default function PlantillaItemTable({
                       )}
                       onClick={() => toggleExpand(item.id)}
                     >
-                      {/* Chevron */}
                       <TableCell className="w-10 text-center">
                         {isOpen ? (
                           <ChevronDown
@@ -132,29 +131,25 @@ export default function PlantillaItemTable({
                         )}
                       </TableCell>
 
-                      {/* # */}
                       <TableCell className="text-xs text-slate-300 font-mono text-center w-10">
                         {globalIdx}
                       </TableCell>
 
-                      {/* Title + position_title subtitle */}
                       <TableCell className="text-left">
-                        <div className="font-medium text-slate-800 text-sm">
+                        <div className="font-medium text-slate-800 text-sm uppercase">
                           {item.title}
                         </div>
-                        {item.position_title && (
+                        {item.description && (
                           <div className="text-xs text-slate-400 mt-0.5">
-                            {item.position_title}
+                            {item.description}
                           </div>
                         )}
                       </TableCell>
 
-                      {/* Approved */}
                       <TableCell className="text-center font-mono text-sm font-semibold text-slate-700">
                         {item.approved_slots}
                       </TableCell>
 
-                      {/* Filled */}
                       <TableCell className="text-center">
                         <span
                           className={cn(
@@ -168,7 +163,6 @@ export default function PlantillaItemTable({
                         </span>
                       </TableCell>
 
-                      {/* Vacant */}
                       <TableCell className="text-center">
                         <span
                           className={cn(
@@ -180,7 +174,6 @@ export default function PlantillaItemTable({
                         </span>
                       </TableCell>
 
-                      {/* Unfilled */}
                       <TableCell className="text-center">
                         <span
                           className={cn(
@@ -192,14 +185,12 @@ export default function PlantillaItemTable({
                         </span>
                       </TableCell>
 
-                      {/* Empty actions cell — stop propagation */}
                       <TableCell
                         className="w-12"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </TableRow>
 
-                    {/* Expanded sub-table */}
                     {isOpen && (
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={HEADERS.length} className="p-0">
@@ -218,7 +209,6 @@ export default function PlantillaItemTable({
         </Table>
       </div>
 
-      {/* Pagination */}
       {!loading && items.length > PAGE_SIZE && (
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-slate-400">

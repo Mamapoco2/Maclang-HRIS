@@ -15,7 +15,12 @@ import Trainings from "../pages/trainings/training/trainingPage";
 import SkillAnalysis from "../pages/trainings/skillGapAnalysis/skillGapTest";
 import Applications from "../pages/hiring/application/components/applicationPage";
 import OnboardingPage from "../pages/hiring/onboarding/onboardingPage";
-import Leave from "../pages/leave/components/leavePage";
+import Leave from "../pages/leave/DashboardPage";
+import LeaveBalance from "../pages/leave/BalancesPage";
+import LeaveCalendar from "../pages/leave/CalendarPage";
+import LeaveApproval from "../pages/leave/ApprovalsPage";
+import LeaveRequest from "../pages/leave/RequestsPage";
+import NewLeaveRequest from "../pages/leave/NewRequestPage";
 import Applicants from "../pages/hiring/applicants/components/applicantsPage";
 import Accounts from "../pages/accounts/components/accountsPage";
 import ManPower from "../pages/manpower/manPowerPage";
@@ -35,6 +40,13 @@ import PermissionRoute from "./permissionRoute";
 import Updates from "../pages/updates/update";
 import Settings from "../pages/settings/settingsPage";
 import { ProfileGate } from "../pages/profile/profileGate";
+import TopPeformerDepartmentPage from "../pages/topPerformer/topDepartmentPerformer/topDepartmentPerformerPage";
+import TopPeformerHospitalPage from "../pages/topPerformer/topHospitalPerformer/topHospitalPerformerPage";
+import TrainingEffectivenessPage from "../pages/trainings/trainingEffectiveness/trainingEffectivenessPage";
+import CosPage from "../pages/positions/CosPositionsPage";
+import Consultant from "../pages/positions/ConsultantPositionsPage";
+import ConsultantPositionsPage from "../pages/positions/ConsultantPositionsPage";
+import OrientationPage from "../pages/orientation/orientationPage";
 
 function AppRoutes() {
   return (
@@ -99,7 +111,7 @@ function AppRoutes() {
               }
             />
             <Route
-              path="/applications"
+              path="/hiring/plantilla/applications"
               element={
                 <PermissionRoute permission="hiring.view">
                   <Applications />
@@ -107,7 +119,7 @@ function AppRoutes() {
               }
             />
             <Route
-              path="/applicants"
+              path="/hiring/plantilla/applicants"
               element={
                 <PermissionRoute permission="hiring.view">
                   <Applicants />
@@ -115,7 +127,7 @@ function AppRoutes() {
               }
             />
             <Route
-              path="/onboarding"
+              path="/hiring/plantilla/onboarding"
               element={
                 <PermissionRoute permission="hiring.view">
                   <OnboardingPage />
@@ -123,13 +135,20 @@ function AppRoutes() {
               }
             />
             <Route
-              path="/leave"
+              path="/leaveDashboard"
               element={
                 <PermissionRoute permission="leave.view">
                   <Leave />
                 </PermissionRoute>
               }
             />
+            <Route path="/leaveApproval" element={<LeaveApproval />} />
+            <Route path="/leaveBalance" element={<LeaveBalance />} />
+            <Route path="/leaveCalendar" element={<LeaveCalendar />} />
+            <Route path="/NewLeaveRequest" element={<NewLeaveRequest />} />
+            <Route path="/leaveRequest" element={<LeaveRequest />} />
+            <Route path="/Orientation" element={<OrientationPage />} />
+
             <Route
               path="/team"
               element={
@@ -218,8 +237,23 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+
             <Route path="/updates" element={<Updates />} />
             <Route path="/settings" element={<Settings />} />
+            <Route
+              path="/TopDepartment"
+              element={<TopPeformerDepartmentPage />}
+            />
+            <Route path="/TopHospital" element={<TopPeformerHospitalPage />} />
+            <Route
+              path="/trainingEffectiveness"
+              element={<TrainingEffectivenessPage />}
+            />
+            <Route path="/COSList" element={<CosPage />} />
+            <Route
+              path="/ConsultantList"
+              element={<ConsultantPositionsPage />}
+            />
           </Route>
         </Route>
       </Routes>

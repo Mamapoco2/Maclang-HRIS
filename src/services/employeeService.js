@@ -1,63 +1,100 @@
 import api from "@/api/api";
 
 export const employeeService = {
+  async getAll(params = {}) {
+    const res = await api.get("/employees", { params });
+    return res.data;
+  },
+
   async getEmployees(params = {}) {
     const res = await api.get("/employees", { params });
     return res.data;
   },
 
-  async getAllEmployees() {
-    const res = await api.get("/employees", { params: { per_page: 9999 } });
-    return { data: res.data?.data ?? res.data };
-  },
-
-  async addEmployee(payload) {
-    const res = await api.post("/employees", payload, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+  async getAllEmployees(params = {}) {
+    const res = await api.get("/employees", { params });
     return res.data;
   },
 
-  async updateEmployee(id, payload) {
-    if (payload instanceof FormData) {
-      const cleaned = new FormData();
-      for (const [key, value] of payload.entries()) {
-        if (value === "") continue;
-        cleaned.append(key, value);
-      }
-      if (!cleaned.has("_method")) cleaned.append("_method", "PUT");
-
-      const res = await api.post(`/employees/${id}`, cleaned, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return res.data;
-    }
-
-    const res = await api.post(`/employees/${id}?_method=PUT`, payload, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+  async getById(id) {
+    const res = await api.get(`/employees/${id}`);
     return res.data;
   },
 
-  async deleteEmployee(id) {
+  /**
+   * Get assignable plantilla positions.
+   * Always returns a plain array with is_assignable / is_current_employee flags.
+   */
+  async getAssignablePositions(employeeId = null) {
+    const params = { per_page: 999 };
+    if (employeeId) params.employee_id = employeeId;
+
+    const res = await api.get("/plantilla-positions", { params });
+
+    // PlantillaPositionController returns { data: [...], pagination: {...} }
+    const list = res.data?.data ?? res.data ?? [];
+
+    // Ensure it's actually an array (guards against unexpected shapes)
+    const arr = Array.isArray(list) ? list : [];
+
+    // Derive flags if not already set by the backend
+    return arr.map((pos) => {
+      const computedStatus = (
+        pos.computed_status ??
+        pos.status ??
+        ""
+      ).toUpperCase();
+      const isVacant =
+        computedStatus === "VACANT" || computedStatus === "UNFILLED";
+
+      return {
+        ...pos,
+        // position_slot_name is the display label (e.g. "22" or "23-1")
+        // keep item_number as an alias so EmployeeForm label-building still works
+        item_number: pos.item_number ?? pos.position_slot_name ?? "",
+        is_assignable: pos.is_assignable ?? isVacant,
+        is_current_employee:
+          pos.is_current_employee ??
+          (employeeId != null &&
+            pos.active_assignments?.some?.(
+              (a) => String(a.employee_id) === String(employeeId),
+            )),
+      };
+    });
+  },
+
+  async getStepsByPosition(positionId) {
+    const res = await api.get(`/plantilla-positions/${positionId}/steps`);
+    return res.data;
+  },
+
+  async addEmployee(data) {
+    const res = await api.post("/employees", data);
+    return res.data;
+  },
+
+  async create(data) {
+    const res = await api.post("/employees", data);
+    return res.data;
+  },
+
+  async updateEmployee(id, data) {
+    const res = await api.post(`/employees/${id}?_method=PUT`, data);
+    return res.data;
+  },
+
+  async update(id, data) {
+    const res = await api.put(`/employees/${id}`, data);
+    return res.data;
+  },
+
+  async delete(id) {
     const res = await api.delete(`/employees/${id}`);
     return res.data;
   },
 
-  async getPlantillaItems(employeeId = null) {
-    const res = await api.get("/plantilla-items", {
-      params: { employee_id: employeeId },
-    });
-    return res.data;
-  },
-
-  async getDivisions() {
-    const res = await api.get("/divisions");
-    return Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
-  },
-
-  async getDepartments() {
-    const res = await api.get("/departments");
+  async getNonRoot(params = {}) {
+    const res = await api.get("/employees/non-root", { params });
     return res.data;
   },
 
@@ -66,7 +103,110 @@ export const employeeService = {
     return res.data;
   },
 
-  getStepsByPlantilla(id) {
-    return api.get(`/plantilla-items/${id}/steps`);
+  async getAvatar(id) {
+    const res = await api.get(`/employees/${id}/avatar`);
+    return res.data;
+  },
+
+  async search(term, params = {}) {
+    const res = await api.get("/employees", {
+      params: { ...params, search: term },
+    });
+    return res.data;
+  },
+
+  async getDivisions() {
+    const res = await api.get("/divisions");
+    return res.data;
+  },
+
+  async getDepartments(divisionId = null) {
+    const params = divisionId ? { division_id: divisionId } : {};
+    const res = await api.get("/departments", { params });
+    return res.data;
+  },
+
+  async getDepartmentById(id) {
+    const res = await api.get(`/departments/${id}`);
+    return res.data;
+  },
+
+  async getSalaryGrades() {
+    const res = await api.get("/salary-grades");
+    return res.data;
+  },
+
+  async getStepIncrements() {
+    const res = await api.get("/step-increments");
+    return res.data;
+  },
+
+  async getPlantillaItems(params = {}) {
+    const res = await api.get("/plantilla-items", { params });
+    return res.data;
+  },
+
+  async getAvailablePlantillaItems() {
+    const res = await api.get("/plantilla-items/available");
+    return res.data;
+  },
+
+  async getPlantillaItemsSummary() {
+    const res = await api.get("/plantilla-items/summary");
+    return res.data;
+  },
+
+  async getPlantillaPositions(params = {}) {
+    const res = await api.get("/plantilla-positions", { params });
+    return res.data;
+  },
+
+  async getEmployeeAssignments(employeeId) {
+    const res = await api.get(`/assignments/employee/${employeeId}`);
+    return res.data;
+  },
+
+  async getEmployeeDepartmentAssignments(employeeId) {
+    const res = await api.get(
+      `/employees/${employeeId}/department-assignments`,
+    );
+    return res.data;
+  },
+
+  async createDepartmentAssignment(employeeId, data) {
+    const res = await api.post(
+      `/employees/${employeeId}/department-assignments`,
+      data,
+    );
+    return res.data;
+  },
+
+  async updateDepartmentAssignment(employeeId, assignmentId, data) {
+    const res = await api.patch(
+      `/employees/${employeeId}/department-assignments/${assignmentId}`,
+      data,
+    );
+    return res.data;
+  },
+
+  async deleteDepartmentAssignment(employeeId, assignmentId) {
+    const res = await api.delete(
+      `/employees/${employeeId}/department-assignments/${assignmentId}`,
+    );
+    return res.data;
+  },
+
+  async getCosPositions(search = "") {
+    const params = { per_page: 200 };
+    if (search) params.search = search;
+    const res = await api.get("/cos-positions", { params });
+    return res.data?.data ?? res.data ?? [];
+  },
+
+  async getConsultantPositions(search = "") {
+    const params = { per_page: 200 };
+    if (search) params.search = search;
+    const res = await api.get("/consultant-positions", { params });
+    return res.data?.data ?? res.data ?? [];
   },
 };

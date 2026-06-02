@@ -21,6 +21,26 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+// ─── Normalize employment_type from API to match form option values ───────────
+const normalizeEmployeeType = (raw) => {
+  const map = {
+    plantilla: "Plantilla",
+    "contract of service": "Contract of Service",
+    cos: "Contract of Service",
+    consultant: "Consultant",
+  };
+  return map[(raw ?? "").toLowerCase().trim()] ?? raw ?? "Plantilla";
+};
+
+// ─── Build a human-readable label for a plantilla position ───────────────────
+// Uses position_slot_name (e.g. "22" or "23-1") + position_title / title
+const positionLabel = (pos) => {
+  if (!pos) return "";
+  const slot = pos.position_slot_name ?? pos.item_number ?? "";
+  const title = pos.position_title ?? pos.title ?? "";
+  return slot && title ? `${slot} — ${title}` : slot || title;
+};
+
 export default function EmployeeForm({ employee, refresh, onClose }) {
   const initialState = {
     employeeNumber: "",
@@ -37,10 +57,13 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     title: [],
     gender: "",
     department: [],
-    plantillaItemId: "",
+    plantillaPositionId: "",
     stepIncrementId: "",
+    stepNumber: "",
     sgLevel: "",
     annualSalary: "",
+    cosPositionId: "",
+    consultantPositionId: "",
   };
 
   const [formData, setFormData] = useState(initialState);
@@ -49,12 +72,17 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const [openIndex, setOpenIndex] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [allDivisions, setAllDivisions] = useState([]);
-  const [plantillaItems, setPlantillaItems] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [steps, setSteps] = useState([]);
+  const [cosPositions, setCosPositions] = useState([]);
+  const [consultantPositions, setConsultantPositions] = useState([]);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedPositionLabel, setSelectedPositionLabel] = useState("");
   const fileInputRef = useRef(null);
+
+  const isInitialMount = useRef(true);
 
   const selectedDepartment = departments.find(
     (d) =>
@@ -62,18 +90,33 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       formData.department.includes(String(d.id)),
   );
 
+  // ─── Fetch COS + Consultant positions on mount ────────────────────────────
+  useEffect(() => {
+    employeeService
+      .getCosPositions()
+      .then(setCosPositions)
+      .catch(() => setCosPositions([]));
+
+    employeeService
+      .getConsultantPositions()
+      .then(setConsultantPositions)
+      .catch(() => setConsultantPositions([]));
+  }, []);
+
+  // ─── Fetch plantilla positions + departments on mount ─────────────────────
   useEffect(() => {
     const fetchAndInit = async () => {
       try {
-        const [dept, plantilla] = await Promise.all([
+        const [dept, positionList] = await Promise.all([
           employeeService.getDepartments(),
-          employeeService.getPlantillaItems(employee?.id),
+          employeeService.getAssignablePositions(employee?.id ?? null),
         ]);
 
         const deptList = dept.data ?? dept;
         const validDeptIds = deptList.map((d) => String(d.id));
         setDepartments(deptList);
-        setPlantillaItems(plantilla.data ?? plantilla);
+        // getAssignablePositions now always returns a plain array
+        setPositions(Array.isArray(positionList) ? positionList : []);
 
         if (!employee) return;
 
@@ -88,20 +131,28 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
 
         const assignment =
           employee.primary_assignment ?? employee.primaryAssignment ?? null;
-        const plantillaItem =
-          assignment?.plantilla_item ?? assignment?.plantillaItem ?? null;
+
+        const position =
+          assignment?.plantilla_position ??
+          assignment?.plantillaPosition ??
+          null;
+
         const step =
           assignment?.step_increment ?? assignment?.stepIncrement ?? null;
 
         const sgValue =
-          plantillaItem?.salary_grade?.salary_grade ??
-          plantillaItem?.salaryGrade?.salary_grade ??
+          position?.salary_grade?.salary_grade ??
+          position?.salaryGrade?.salary_grade ??
           "";
+
         const annualSalaryValue =
           step?.annual_salary ??
-          plantillaItem?.salary_grade?.annual_salary ??
-          plantillaItem?.salaryGrade?.annual_salary ??
+          position?.salary_grade?.annual_salary ??
+          position?.salaryGrade?.annual_salary ??
           "";
+
+        // Build the display label from position_slot_name + position_title
+        setSelectedPositionLabel(positionLabel(position));
 
         const toUpperArray = (val) =>
           (Array.isArray(val) ? val : val ? [val] : []).map((v) =>
@@ -123,14 +174,21 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
             ? String(employee.info.gender).toUpperCase()
             : "",
           department: safeDeptIds,
-          employeeType: employee.employment_type ?? "Plantilla",
+          employeeType: normalizeEmployeeType(employee.employment_type),
           status: employee.employment_status
             ? String(employee.employment_status).toUpperCase()
             : "",
-          plantillaItemId: plantillaItem?.id ? String(plantillaItem.id) : "",
+          plantillaPositionId: position?.id ? String(position.id) : "",
           stepIncrementId: step?.id ? String(step.id) : "",
+          stepNumber: step?.step != null ? String(step.step) : "",
           sgLevel: sgValue ? String(sgValue) : "",
           annualSalary: annualSalaryValue ?? "",
+          cosPositionId: employee.cos_position_id
+            ? String(employee.cos_position_id)
+            : "",
+          consultantPositionId: employee.consultant_position_id
+            ? String(employee.consultant_position_id)
+            : "",
         });
 
         if (employee.parents?.length) {
@@ -147,46 +205,65 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   }, [employee]);
 
   useEffect(() => {
-    const fetchDivisions = async () => {
-      try {
-        const res = await employeeService.getDivisions();
-        setAllDivisions(res.data ?? res);
-      } catch (err) {
-        console.error(err);
+    employeeService
+      .getDivisions()
+      .then((res) => setAllDivisions(res.data ?? res));
+  }, []);
+
+  useEffect(() => {
+    employeeService.getAllEmployees().then((res) => setAllEmployees(res.data));
+  }, []);
+
+  // ─── Load steps when position slot changes ────────────────────────────────
+  useEffect(() => {
+    if (
+      !formData.plantillaPositionId ||
+      !Array.isArray(positions) ||
+      positions.length === 0
+    ) {
+      if (!formData.plantillaPositionId) {
+        setSteps([]);
+        setFormData((prev) => ({
+          ...prev,
+          stepIncrementId: "",
+          stepNumber: "",
+          sgLevel: "",
+          annualSalary: "",
+        }));
       }
-    };
-    fetchDivisions();
-  }, []);
-
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      const res = await employeeService.getAllEmployees();
-      setAllEmployees(res.data);
-    };
-    fetchEmployees();
-  }, []);
-
-  useEffect(() => {
-    if (!formData.plantillaItemId) {
-      setSteps([]);
       return;
     }
-    const item = plantillaItems.find(
-      (p) => String(p.id) === String(formData.plantillaItemId),
+
+    const selectedPos = positions.find(
+      (p) => String(p.id) === String(formData.plantillaPositionId),
     );
-    if (!item) {
-      setSteps([]);
-      return;
+    if (selectedPos) {
+      const sg =
+        selectedPos.salary_grade?.salary_grade ??
+        selectedPos.salaryGrade?.salary_grade ??
+        "";
+      setFormData((prev) => ({ ...prev, sgLevel: sg ? String(sg) : "" }));
     }
-    if (item.step_increment) {
-      setSteps([item.step_increment]);
-    } else {
-      employeeService
-        .getStepsByPlantilla(formData.plantillaItemId)
-        .then((res) => setSteps(res.data ?? []));
-    }
-  }, [formData.plantillaItemId, plantillaItems]);
 
+    employeeService
+      .getStepsByPosition(formData.plantillaPositionId)
+      .then((res) => {
+        const loaded = res ?? [];
+        setSteps(loaded);
+        setFormData((prev) => {
+          if (!prev.stepIncrementId || prev.stepNumber) return prev;
+          const match = loaded.find(
+            (s) => String(s.id) === String(prev.stepIncrementId),
+          );
+          return match ? { ...prev, stepNumber: String(match.step) } : prev;
+        });
+      })
+      .catch(() => setSteps([]));
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.plantillaPositionId, positions]);
+
+  // ─── Update salary + stepNumber when step changes ─────────────────────────
   useEffect(() => {
     if (!formData.stepIncrementId) return;
     const step = steps.find(
@@ -196,21 +273,38 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     setFormData((prev) => ({
       ...prev,
       annualSalary: step.annual_salary ?? "",
+      stepNumber: String(step.step),
     }));
   }, [formData.stepIncrementId, steps]);
 
+  // ─── Clear fields when type changes (skip on initial mount) ──────────────
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     if (formData.employeeType !== "Plantilla") {
       setFormData((prev) => ({
         ...prev,
-        plantillaItemId: "",
+        plantillaPositionId: "",
         stepIncrementId: "",
+        stepNumber: "",
         sgLevel: "",
         annualSalary: "",
       }));
+      setSelectedPositionLabel("");
+      setSteps([]);
+    }
+    if (formData.employeeType !== "Contract of Service") {
+      setFormData((prev) => ({ ...prev, cosPositionId: "" }));
+    }
+    if (formData.employeeType !== "Consultant") {
+      setFormData((prev) => ({ ...prev, consultantPositionId: "" }));
     }
   }, [formData.employeeType]);
 
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   const handleChange = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value ?? "" }));
 
@@ -227,19 +321,20 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handlePlantillaChange = (id) => {
-    const item = plantillaItems.find((p) => String(p.id) === String(id));
+  const handlePositionChange = (id) => {
+    const pos = Array.isArray(positions)
+      ? positions.find((p) => String(p.id) === String(id))
+      : null;
     const sg =
-      item?.salary_grade?.salary_grade ?? item?.salaryGrade?.salary_grade ?? "";
-    const stepObj = item?.step_increment ?? item?.stepIncrement ?? null;
-    const stepId = stepObj?.id ? String(stepObj.id) : "";
-    const annualSalary = stepObj?.annual_salary ?? "";
+      pos?.salary_grade?.salary_grade ?? pos?.salaryGrade?.salary_grade ?? "";
+    setSelectedPositionLabel(positionLabel(pos));
     setFormData((prev) => ({
       ...prev,
-      plantillaItemId: id,
+      plantillaPositionId: id,
       sgLevel: sg ? String(sg) : "",
-      stepIncrementId: stepId,
-      annualSalary,
+      stepIncrementId: "",
+      stepNumber: "",
+      annualSalary: "",
     }));
   };
 
@@ -253,6 +348,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const removeParent = (index) =>
     setParents((prev) => prev.filter((_, i) => i !== index));
 
+  // ─── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     const up = (v) => (v ? String(v).toUpperCase() : "");
@@ -281,8 +377,10 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
 
     form.append("employment_type", formData.employeeType);
     form.append("employment_status", up(formData.status));
-    form.append("plantilla_item_id", formData.plantillaItemId);
+    form.append("plantilla_position_id", formData.plantillaPositionId);
     form.append("step_increment_id", formData.stepIncrementId);
+    form.append("cos_position_id", formData.cosPositionId);
+    form.append("consultant_position_id", formData.consultantPositionId);
     form.append("first_name", up(formData.firstName));
     form.append("middle_name", up(formData.middleName));
     form.append("last_name", up(formData.lastName));
@@ -308,14 +406,29 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         await employeeService.updateEmployee(employee.id, form);
         toast.success("Employee updated");
       } else {
-        await employeeService.addEmployee(form);
+        const response = await employeeService.addEmployee(form);
+        const newEmployeeId = response.id || response.data?.id;
+
+        if (newEmployeeId && formData.department?.[0]) {
+          try {
+            await employeeService.createDepartmentAssignment(newEmployeeId, {
+              department_id: formData.department[0],
+              is_primary: true,
+              start_date: new Date().toISOString().split("T")[0],
+            });
+          } catch (err) {
+            console.error("Failed to create department assignment:", err);
+          }
+        }
+
         toast.success("Employee added");
       }
+
       refresh();
       onClose();
     } catch (err) {
-      console.error(err.response?.data || err);
-      toast.error("Save failed");
+      console.error(err);
+      toast.error(err.response?.data?.message ?? "Save failed");
     }
   };
 
@@ -323,6 +436,41 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     (emp) => emp.id !== employee?.id,
   );
 
+  // ─── Derived display values ───────────────────────────────────────────────
+  const selectedPosition =
+    Array.isArray(positions) && positions.length > 0
+      ? positions.find(
+          (p) => String(p.id) === String(formData.plantillaPositionId),
+        )
+      : null;
+
+  const positionTitle =
+    selectedPosition?.position_title ?? selectedPosition?.title ?? "";
+
+  const selectedCosPosition =
+    Array.isArray(cosPositions) && cosPositions.length > 0
+      ? cosPositions.find(
+          (p) => String(p.id) === String(formData.cosPositionId),
+        )
+      : null;
+
+  const selectedConsultantPosition =
+    Array.isArray(consultantPositions) && consultantPositions.length > 0
+      ? consultantPositions.find(
+          (p) => String(p.id) === String(formData.consultantPositionId),
+        )
+      : null;
+
+  const activePositionLabel =
+    formData.employeeType === "Plantilla"
+      ? positionTitle
+      : formData.employeeType === "Contract of Service"
+        ? (selectedCosPosition?.title ?? "")
+        : formData.employeeType === "Consultant"
+          ? (selectedConsultantPosition?.title ?? "")
+          : "";
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <form
       onSubmit={handleSubmit}
@@ -410,6 +558,11 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
               ? `, ${selectedDepartment.name}`
               : ", Department"}
           </p>
+          {activePositionLabel ? (
+            <p className="text-xs text-gray-400 mt-0.5 uppercase font-medium tracking-wide">
+              {activePositionLabel}
+            </p>
+          ) : null}
           <p className="text-xs mt-2">
             {avatarFile ? (
               <span className="text-emerald-600 font-medium">
@@ -429,7 +582,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         <h3 className="text-sm font-semibold uppercase border-b pb-2">
           Employee Information
         </h3>
-        {/* 1 col on mobile → 2 on sm → 3 on md → 4 on lg */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <InputField
             label="Employee Number"
@@ -479,7 +631,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
             ]}
             onChange={(v) => handleChange("suffix", v)}
           />
-          {/* Title spans full width on mobile, normal on larger */}
           <div className="sm:col-span-2 md:col-span-1 lg:col-span-2">
             <SearchableSelect
               label="Title / Profession"
@@ -617,7 +768,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           <SearchableSelect
             label="Status"
             value={formData.status}
-            placeholder="SELECT STATUS"
+            placeholder="Select status"
             options={[
               { value: "ACTIVE", label: "ACTIVE" },
               { value: "INACTIVE", label: "INACTIVE" },
@@ -627,55 +778,100 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           />
         </div>
 
+        {/* ── Plantilla fields ── */}
         {formData.employeeType === "Plantilla" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
             <SearchableSelect
               label="Plantilla Position"
-              value={formData.plantillaItemId}
-              options={plantillaItems
-                .filter(
-                  (item) =>
-                    item.status?.toUpperCase() !== "FILLED" ||
-                    item.is_current_employee,
-                )
-                .map((item) => ({
-                  value: String(item.id),
-                  label: `${item.item_number} - ${item.title}`,
-                }))}
-              onChange={handlePlantillaChange}
-              placeholder="Select position"
-            />
-            <SearchableSelect
-              label="Salary Grade"
-              value={formData.sgLevel}
-              placeholder={
-                !formData.plantillaItemId
-                  ? "Select plantilla first"
-                  : "Salary grade"
+              value={formData.plantillaPositionId}
+              displayLabel={selectedPositionLabel}
+              options={
+                Array.isArray(positions)
+                  ? positions
+                      .filter(
+                        (pos) =>
+                          pos.is_assignable ||
+                          pos.is_current_employee ||
+                          String(pos.id) ===
+                            String(formData.plantillaPositionId),
+                      )
+                      .map((pos) => ({
+                        value: String(pos.id),
+                        label: positionLabel(pos),
+                        disabled:
+                          !pos.is_assignable && !pos.is_current_employee,
+                      }))
+                  : []
               }
-              disabled={!formData.plantillaItemId}
-              options={Array.from({ length: 33 }, (_, i) => ({
-                value: String(i + 1),
-                label: `SG ${i + 1}`,
-              }))}
-              onChange={(v) => handleChange("sgLevel", v)}
+              onChange={handlePositionChange}
+              placeholder="Select position slot"
             />
+            <div className="flex flex-col">
+              <Label className="text-xs font-semibold uppercase">
+                Salary Grade
+              </Label>
+              <Input
+                value={formData.sgLevel ? `SG ${formData.sgLevel}` : "—"}
+                readOnly
+                className="bg-gray-50 cursor-default text-gray-600"
+              />
+            </div>
             <SearchableSelect
               label="Step"
               value={formData.stepIncrementId}
-              disabled={!formData.plantillaItemId}
+              placeholder={
+                formData.plantillaPositionId
+                  ? steps.length === 0
+                    ? "No steps available"
+                    : "Select step"
+                  : "Select a position first"
+              }
+              disabled={!formData.plantillaPositionId || steps.length === 0}
               options={steps.map((s) => ({
                 value: String(s.id),
                 label: `Step ${s.step}`,
               }))}
               onChange={(v) => handleChange("stepIncrementId", v)}
-              placeholder={
-                !formData.plantillaItemId
-                  ? "Select plantilla first"
-                  : steps.length === 0
-                    ? "Loading steps..."
-                    : "Select step"
+            />
+          </div>
+        )}
+
+        {/* ── Contract of Service fields ── */}
+        {formData.employeeType === "Contract of Service" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+            <SearchableSelect
+              label="COS Position"
+              value={formData.cosPositionId}
+              placeholder="Select COS position"
+              options={
+                Array.isArray(cosPositions)
+                  ? cosPositions.map((p) => ({
+                      value: String(p.id),
+                      label: p.title.toUpperCase(),
+                    }))
+                  : []
               }
+              onChange={(v) => handleChange("cosPositionId", v)}
+            />
+          </div>
+        )}
+
+        {/* ── Consultant fields ── */}
+        {formData.employeeType === "Consultant" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+            <SearchableSelect
+              label="Consultant Position"
+              value={formData.consultantPositionId}
+              placeholder="Select consultant position"
+              options={
+                Array.isArray(consultantPositions)
+                  ? consultantPositions.map((p) => ({
+                      value: String(p.id),
+                      label: p.title.toUpperCase(),
+                    }))
+                  : []
+              }
+              onChange={(v) => handleChange("consultantPositionId", v)}
             />
           </div>
         )}
@@ -802,6 +998,7 @@ function SearchableSelect({
   placeholder,
   disabled,
   multiple = false,
+  displayLabel = "",
 }) {
   const [open, setOpen] = useState(false);
 
@@ -811,10 +1008,12 @@ function SearchableSelect({
       : [value].filter(Boolean)
     : [value].filter(Boolean);
 
-  const selectedLabels = options
-    .filter((o) => selectedValues.includes(o.value))
-    .map((o) => o.label)
-    .join(", ");
+  const selectedLabels =
+    displayLabel ||
+    options
+      .filter((o) => selectedValues.includes(o.value))
+      .map((o) => o.label)
+      .join(", ");
 
   const toggleValue = (val) => {
     if (!multiple) {

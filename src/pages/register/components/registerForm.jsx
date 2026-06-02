@@ -1,4 +1,3 @@
-// src/pages/register/components/registerForm.jsx
 import { useContext, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +26,7 @@ export default function RegisterForm() {
   const onSubmit = async (data) => {
     setServerError("");
     const res = await registerUser(
+      data.username,
       data.email,
       data.password,
       data.password_confirmation,
@@ -45,6 +45,35 @@ export default function RegisterForm() {
           {serverError}
         </div>
       )}
+
+      {/* Username */}
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="username"
+          className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+        >
+          Username
+        </Label>
+        <Input
+          id="username"
+          type="text" // ✅ was type="username"
+          placeholder="Enter your username"
+          autoComplete="username"
+          className="bg-white/80 dark:bg-gray-800/80 uppercase"
+          {...register("username", {
+            required: "Username is required.",
+            minLength: {
+              value: 3,
+              message: "Username must be at least 3 characters.",
+            }, // ✅ no email regex
+          })}
+        />
+        {errors.username && (
+          <p className="text-xs text-red-500 uppercase tracking-wide">
+            {errors.username.message}
+          </p>
+        )}
+      </div>
 
       {/* Email */}
       <div className="space-y-1.5">

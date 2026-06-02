@@ -5,6 +5,7 @@ export function useCurrentTime() {
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+
     return () => clearInterval(timer);
   }, []);
 
@@ -12,7 +13,9 @@ export function useCurrentTime() {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    hour12: true,
   });
+
   const formattedDate = currentTime.toLocaleDateString([], {
     weekday: "long",
     year: "numeric",

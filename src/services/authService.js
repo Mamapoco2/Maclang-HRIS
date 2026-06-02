@@ -9,6 +9,7 @@ import {
 
 const normalizeUser = (user) => ({
   id: user.id,
+  username: user.username,
   email: user.email,
   is_active: user.is_active,
   approval_status: user.approval_status,
@@ -24,13 +25,13 @@ const normalizeUser = (user) => ({
   position: user.position ?? null,
 });
 
-const login = async (email, password) => {
+const login = async (username, password) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await api.post(
       "/login",
-      { email, password },
+      { username, password },
       { signal: controller.signal },
     );
     const { token, user } = res.data;
@@ -39,7 +40,7 @@ const login = async (email, password) => {
     setUser(normalized);
     return { success: true, user: normalized };
   } catch (err) {
-    if (err.name === "AbortError")
+    if (err.code === "ERR_CANCELED" || err.name === "AbortError")
       return { success: false, error: "Request timed out. Please try again." };
     return {
       success: false,
@@ -49,10 +50,10 @@ const login = async (email, password) => {
     clearTimeout(timeout);
   }
 };
-
-const register = async (email, password, password_confirmation) => {
+const register = async (username, email, password, password_confirmation) => {
   try {
     const res = await api.post("/register", {
+      username,
       email,
       password,
       password_confirmation,

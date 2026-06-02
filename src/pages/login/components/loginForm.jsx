@@ -7,9 +7,11 @@ import { CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useContext, useState, useRef } from "react";
 import { IconLoader2 } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000;
@@ -19,6 +21,7 @@ export default function LoginForm() {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState("");
   const [lockoutUntil, setLockoutUntil] = useState(null);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const attempts = useRef(0);
 
   const {
@@ -37,7 +40,7 @@ export default function LoginForm() {
 
     setServerError("");
 
-    const res = await login(data.email, data.password);
+    const res = await login(data.username, data.password);
 
     if (res.success) {
       attempts.current = 0;
@@ -51,7 +54,7 @@ export default function LoginForm() {
         setServerError("TOO MANY ATTEMPTS. TRY AGAIN IN 60 SECONDS.");
       } else {
         setServerError(
-          res.error ? res.error.toUpperCase() : "INVALID EMAIL OR PASSWORD.",
+          res.error ? res.error.toUpperCase() : "INVALID USERNAME OR PASSWORD.",
         );
       }
     }
@@ -60,6 +63,7 @@ export default function LoginForm() {
   return (
     <CardContent>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* Server / lockout error */}
         {serverError && (
           <p
             role="alert"
@@ -69,36 +73,56 @@ export default function LoginForm() {
           </p>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="email" className="uppercase">
-            Email
+        {/* username */}
+        <div className="space-y-1">
+          <Label htmlFor="username" className="leading-5">
+            Username<span className="text-red-500">*</span>
           </Label>
           <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            {...register("email")}
-            placeholder="EMAIL ADDRESS"
-            className="uppercase placeholder:uppercase"
+            id="username"
+            type="text"
+            autoComplete="username"
+            placeholder="Enter your username"
+            {...register("username")}
           />
-          {errors.email && (
+          {errors.username && (
             <p className="text-red-500 text-sm uppercase">
-              {errors.email.message}
+              {errors.username.message}
             </p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="password" className="uppercase">
-            Password
+        {/* Password */}
+        <div className="w-full space-y-1">
+          <Label htmlFor="password" className="leading-5">
+            Password<span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            {...register("password")}
-            placeholder="PASSWORD"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={isPasswordVisible ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="••••••••••••••••"
+              className="pr-9"
+              {...register("password")}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsPasswordVisible((prev) => !prev)}
+              className="text-muted-foreground focus-visible:ring-ring/50 absolute inset-y-0 right-0 rounded-l-none hover:bg-transparent"
+            >
+              {isPasswordVisible ? (
+                <EyeOffIcon size={18} />
+              ) : (
+                <EyeIcon size={18} />
+              )}
+              <span className="sr-only">
+                {isPasswordVisible ? "Hide password" : "Show password"}
+              </span>
+            </Button>
+          </div>
           {errors.password && (
             <p className="text-red-500 text-sm uppercase">
               {errors.password.message}
@@ -106,6 +130,20 @@ export default function LoginForm() {
           )}
         </div>
 
+        {/* Remember Me + Forgot Password */}
+        <div className="flex items-center justify-between gap-y-2">
+          <div className="flex items-center gap-3">
+            <Checkbox id="rememberMe" className="size-5" />
+            <Label
+              htmlFor="rememberMe"
+              className="text-muted-foreground font-normal"
+            >
+              Remember Me
+            </Label>
+          </div>
+        </div>
+
+        {/* Submit */}
         <Button
           type="submit"
           className="w-full bg-black text-white uppercase"

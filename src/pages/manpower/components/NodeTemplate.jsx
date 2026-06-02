@@ -1,3 +1,4 @@
+// src/pages/manpower/components/NodeTemplate.jsx
 import { useState } from "react";
 import NodeModal from "./NodeModal";
 
@@ -36,24 +37,33 @@ const NodeTemplate = (node) => {
   const data = node?.data || {};
 
   const fullName = buildDisplayName(data);
-  const empType = (data.employmentType || "").toUpperCase();
+  const empType = (
+    data.employmentType ||
+    data.employment_type ||
+    ""
+  ).toUpperCase();
   const colors = EMPLOYMENT_COLORS[empType] || {
     bg: "bg-gray-50",
     text: "text-gray-500",
     dot: "bg-gray-400",
   };
-  const image = data.image || DEFAULT_IMG;
+  const image = data.image || data.avatar_url || DEFAULT_IMG;
+
+  // Role: always show if present — removed the showRole gate
+  const role = data.role || null;
+
+  // Department: first entry from the department field
+  const department = data.department || null;
 
   return (
     <>
-      {/* ── MAIN NODE ───────────────────────────────────── */}
       <div className="flex flex-col items-center">
         <div
           onClick={() => setOpen(true)}
           className="group relative bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer overflow-hidden"
           style={{ width: "300px" }}
         >
-          {/* Top accent bar — color per employment type */}
+          {/* Top accent bar */}
           <div className={`h-1 w-full ${colors.dot}`} />
 
           <div className="flex items-center gap-3 p-3">
@@ -75,17 +85,17 @@ const NodeTemplate = (node) => {
                 {fullName}
               </span>
 
-              {/* Role — only for non-staff */}
-              {data.showRole && data.role && (
-                <span className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
-                  {data.role}
+              {/* Role — always shown when present */}
+              {role && (
+                <span className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-1">
+                  {role}
                 </span>
               )}
 
-              {/* Department — only for non-staff */}
-              {data.showDept && data.department && (
+              {/* Department — always shown when present */}
+              {department && (
                 <span className="text-[10px] text-blue-500 mt-0.5 font-medium truncate">
-                  {data.department}
+                  {department}
                 </span>
               )}
 
@@ -101,62 +111,8 @@ const NodeTemplate = (node) => {
             </div>
           </div>
         </div>
-
-        {/* ── STAFF LIST ──────────────────────────────────── */}
-        {/* {data.staff?.length > 0 && (
-          <div
-            className="mt-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
-            style={{ width: "300px" }}
-          >
-            <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                Staff ({data.staff.length})
-              </span>
-            </div>
-
-            <div className="max-h-[220px] overflow-y-auto">
-              {data.staff.map((s, i) => {
-                const sName = buildDisplayName(s);
-                const sType = (s.employmentType || "").toUpperCase();
-                const sColor = EMPLOYMENT_COLORS[sType] || {
-                  dot: "bg-gray-300",
-                };
-
-                return (
-                  <div
-                    key={s.id || i}
-                    className="flex items-center gap-2.5 px-3 py-2 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors"
-                  >
-                    <img
-                      src={s.image || DEFAULT_IMG}
-                      alt={sName}
-                      className="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100"
-                      onError={(e) => {
-                        e.target.src = DEFAULT_IMG;
-                      }}
-                    />
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[11px] font-medium text-gray-700 leading-tight truncate">
-                        {sName}
-                      </span>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sColor.dot}`}
-                        />
-                        <span className="text-[9px] text-gray-400 uppercase tracking-wide">
-                          {sType || "Staff"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )} */}
       </div>
 
-      {/* Modal */}
       <NodeModal open={open} onClose={() => setOpen(false)} node={node} />
     </>
   );

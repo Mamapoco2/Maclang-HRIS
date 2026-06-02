@@ -73,9 +73,9 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user?.id]);
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
-      const res = await authService.login(email, password);
+      const res = await authService.login(username, password);
       if (res?.success) {
         setUserState(res.user);
       }
@@ -85,10 +85,11 @@ export const AuthProvider = ({ children }) => {
       return { success: false };
     }
   };
-
-  const register = async (email, password, password_confirmation) => {
+  
+  const register = async (username, email, password, password_confirmation) => {
     try {
       const res = await authService.register(
+        username,
         email,
         password,
         password_confirmation,

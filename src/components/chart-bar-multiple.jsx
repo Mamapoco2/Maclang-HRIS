@@ -54,6 +54,33 @@ export function ChartBarMultiple() {
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[350px] w-full">
           <BarChart accessibilityLayer data={chartData}>
+            <defs>
+              <linearGradient id="gradDesktop" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="0%"
+                  stopColor="var(--color-desktop)"
+                  stopOpacity={0.9}
+                />
+                <stop
+                  offset="100%"
+                  stopColor="var(--color-desktop)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+              <linearGradient id="gradMobile" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="0%"
+                  stopColor="var(--color-mobile)"
+                  stopOpacity={0.9}
+                />
+                <stop
+                  offset="100%"
+                  stopColor="var(--color-mobile)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+            </defs>
+
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="month"
@@ -62,29 +89,15 @@ export function ChartBarMultiple() {
               axisLine={false}
               tickFormatter={(value) => value.slice(0, 3)}
             />
-
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent indicator="dashed" />}
             />
-
-            <Bar
-              dataKey="desktop"
-              fill="var(--color-desktop)"
-              opacity={0.5}
-              radius={4}
-            />
-            <Bar
-              dataKey="mobile"
-              fill="var(--color-mobile)"
-              opacity={0.5}
-              radius={4}
-            />
+            <Bar dataKey="desktop" fill="url(#gradDesktop)" radius={4} />
+            <Bar dataKey="mobile" fill="url(#gradMobile)" radius={4} />
           </BarChart>
         </ChartContainer>
       </CardContent>
-
-      {/* Optional footer if you want to show trend */}
     </Card>
   );
 }

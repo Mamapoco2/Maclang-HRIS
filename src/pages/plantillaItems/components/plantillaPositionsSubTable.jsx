@@ -23,7 +23,7 @@ const STATUS_STYLES = {
 };
 
 const HEADERS = [
-  "Item No.",
+  "Item Number",
   "Position Title",
   "SG",
   "Step",
@@ -55,10 +55,14 @@ export default function PositionsSubTable({ item, onRefresh }) {
   const [assignPos, setAssignPos] = useState(null);
 
   const handleDelete = async () => {
-    await plantillaPositionService.deletePosition(deletePos.id);
-    toast.success("Slot removed.");
-    setDeletePos(null);
-    onRefresh();
+    try {
+      await plantillaPositionService.deletePosition(deletePos.id);
+      toast.success("Slot removed.");
+      setDeletePos(null);
+      onRefresh();
+    } catch (err) {
+      toast.error(err?.response?.data?.message ?? "Failed to remove slot.");
+    }
   };
 
   return (
@@ -91,15 +95,11 @@ export default function PositionsSubTable({ item, onRefresh }) {
                 </TableRow>
               ) : (
                 positions.map((pos) => {
-                  const statusKey = (
-                    pos.computed_status ?? pos.status
-                  )?.toUpperCase();
-
+                  const statusKey = (pos.status ?? "").toUpperCase();
                   const canDelete =
                     statusKey !== "FILLED" && statusKey !== "UNFILLED";
                   const canAssign = statusKey === "VACANT";
 
-                  // Resolve active employee name from nested assignments
                   const activeEmployee = pos.assignments?.[0]?.employee;
                   const employeeName = activeEmployee
                     ? [
@@ -117,27 +117,31 @@ export default function PositionsSubTable({ item, onRefresh }) {
                       key={pos.id}
                       className="hover:bg-slate-50/60 transition-colors"
                     >
-                      {/* Item No. */}
+                      {/* Slot name / number */}
                       <TableCell className="text-center">
                         <div className="font-mono text-xs font-semibold text-indigo-600">
-                          {pos.item_number}
+                          {pos.position_slot_name ?? pos.slot_number}
                         </div>
                       </TableCell>
 
-                      {/* Position. */}
-                      <TableCell className="text-sm text-slate-600 text-center font-mono">
-                        {pos.position_title}
+                      {/* Position title (per-slot override) */}
+                      <TableCell className="text-sm text-slate-600 text-center uppercase">
+                        {pos.position_title ?? (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
                       </TableCell>
 
-                      {/* SG — now per position, not inherited from parent item */}
-                      <TableCell className="text-sm text-slate-600 text-center font-mono">
-                        {pos.salary_grade?.salary_grade
-                          ? `SG ${pos.salary_grade.salary_grade}`
-                          : "—"}
+                      {/* SG */}
+                      <TableCell className="text-sm text-slate-600 text-center font-mono uppercase">
+                        {pos.salary_grade?.salary_grade ? (
+                          `SG ${pos.salary_grade.salary_grade}`
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
                       </TableCell>
 
                       {/* Step */}
-                      <TableCell className="text-sm text-slate-600 text-center">
+                      <TableCell className="text-sm text-slate-600 text-center uppercase">
                         {pos.step_increment?.step ? (
                           `Step ${pos.step_increment.step}`
                         ) : (
@@ -147,9 +151,7 @@ export default function PositionsSubTable({ item, onRefresh }) {
 
                       {/* Status */}
                       <TableCell className="text-center">
-                        <StatusBadge
-                          status={pos.computed_status ?? pos.status}
-                        />
+                        <StatusBadge status={pos.status} />
                       </TableCell>
 
                       {/* Assigned To */}
@@ -166,7 +168,6 @@ export default function PositionsSubTable({ item, onRefresh }) {
                       {/* Actions */}
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {/* Assign employee — VACANT only */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -182,7 +183,6 @@ export default function PositionsSubTable({ item, onRefresh }) {
                             <UserPlus size={12} />
                           </Button>
 
-                          {/* Edit step / date */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -193,7 +193,6 @@ export default function PositionsSubTable({ item, onRefresh }) {
                             <Pencil size={12} />
                           </Button>
 
-                          {/* Delete — VACANT only */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -219,7 +218,6 @@ export default function PositionsSubTable({ item, onRefresh }) {
         </div>
       </div>
 
-      {/* Edit step/date modal */}
       <PositionModal
         open={!!editPos}
         onOpenChange={(v) => {
@@ -233,7 +231,6 @@ export default function PositionsSubTable({ item, onRefresh }) {
         }}
       />
 
-      {/* Assign employee modal */}
       <AssignEmployeeModal
         open={!!assignPos}
         onOpenChange={(v) => {
@@ -247,7 +244,6 @@ export default function PositionsSubTable({ item, onRefresh }) {
         }}
       />
 
-      {/* Delete confirm modal */}
       <DeleteConfirmModal
         open={!!deletePos}
         onOpenChange={(v) => {

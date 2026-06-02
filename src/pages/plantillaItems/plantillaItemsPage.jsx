@@ -47,12 +47,11 @@ export default function PlantillaItemsPage() {
   const [search, setSearch] = useState("");
   const [showAddItem, setShowAddItem] = useState(false);
 
-  // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const data = await plantillaItemService.getPlantillaItems();
-      setItems(Array.isArray(data) ? data : (data.data ?? []));
+      setItems(Array.isArray(data) ? data : []);
     } catch {
       toast.error("Failed to load plantilla items.");
     } finally {
@@ -64,7 +63,6 @@ export default function PlantillaItemsPage() {
     fetchItems();
   }, [fetchItems]);
 
-  // ── Stats — derived from nested positions ────────────────────────────────
   const stats = useMemo(() => {
     const all = items.flatMap((i) => i.positions ?? []);
     const status = (p) => (p.computed_status ?? p.status ?? "").toUpperCase();
@@ -76,7 +74,6 @@ export default function PlantillaItemsPage() {
     };
   }, [items]);
 
-  // ── Search filter ────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
@@ -94,7 +91,7 @@ export default function PlantillaItemsPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
-              Plantilla Items
+              Plantilla Positions
             </h1>
             <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
               {loading
@@ -106,7 +103,6 @@ export default function PlantillaItemsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
             <div className="relative flex-1 sm:flex-none">
               <Search
                 size={13}

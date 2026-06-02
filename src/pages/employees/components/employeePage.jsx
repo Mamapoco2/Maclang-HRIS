@@ -190,7 +190,7 @@ export default function EmployeePage() {
 
   const confirmDelete = async () => {
     try {
-      await employeeService.deleteEmployee(deleteEmployeeId);
+      await employeeService.delete(deleteEmployeeId);
       toast.success("Employee deleted successfully.");
       loadEmployees({ page: pagination.current_page });
     } catch {

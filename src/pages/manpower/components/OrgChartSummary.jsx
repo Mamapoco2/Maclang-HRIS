@@ -18,30 +18,27 @@ const defaultTotals = {
 };
 
 const OrgChartSummary = ({ totals = defaultTotals }) => {
-
   if (!totals || typeof totals !== "object") {
     return null;
   }
 
-return (
-  <div className="w-full flex justify-center">
-    <div className="flex gap-2 flex-wrap justify-center mb-3 mt-2">
-      {Object.entries(totals).map(([key, value]) => (
-        <div
-          key={key}
-          className={`flex items-center gap-1 px-3 py-1 rounded text-sm font-medium shadow ${
-            colorMap[key] || "bg-gray-400 text-white"
-          }`}
-        >
-          <span className="capitalize">
-            {key.replace(/_/g, " ")}:
-          </span>
-          <span>{value ?? 0}</span>
-        </div>
-      ))}
+  return (
+    <div className="w-full flex justify-center">
+      <div className="flex gap-2 flex-wrap justify-center mb-3 mt-2">
+        {Object.entries(totals).map(([key, value]) => (
+          <div
+            key={key}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-sm font-medium shadow ${
+              colorMap[key] || "bg-gray-400 text-white"
+            }`}
+          >
+            <span className="capitalize">{key.replace(/_/g, " ")}:</span>
+            <span>{value ?? 0}</span>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default OrgChartSummary;

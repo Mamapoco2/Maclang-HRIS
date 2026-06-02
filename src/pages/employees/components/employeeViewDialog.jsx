@@ -17,7 +17,6 @@ import {
   User,
   Building2,
   TrendingUp,
-  BadgeCheck,
 } from "lucide-react";
 
 const formatRole = (role) =>
@@ -98,21 +97,51 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
   if (!employee) return null;
 
   const info = employee.info || {};
+
+  // Resolve assignment — support both camelCase and snake_case from API
   const assignment =
-    employee.primaryAssignment || employee.primary_assignment || {};
-  const plantillaItem =
-    assignment.plantilla_item || assignment.plantillaItem || {};
-  const salaryGrade =
-    plantillaItem.salary_grade || plantillaItem.salaryGrade || {};
+    employee.primaryAssignment ?? employee.primary_assignment ?? {};
+
+  // Resolve plantilla position — the form uses plantilla_position, not plantilla_item
+  const plantillaPosition =
+    assignment.plantilla_position ??
+    assignment.plantillaPosition ??
+    assignment.plantilla_item ??
+    assignment.plantillaItem ??
+    {};
+
+  // Position title: nested under item.title or directly as position_title
+  const positionTitle =
+    plantillaPosition?.item?.title ??
+    plantillaPosition?.position_title ??
+    plantillaPosition?.title ??
+    null;
+
+  // Salary grade: nested under salary_grade object
+  const salaryGradeObj =
+    plantillaPosition?.salary_grade ?? plantillaPosition?.salaryGrade ?? {};
+
+  const salaryGradeLevel = salaryGradeObj?.salary_grade ?? null;
+  const monthlySalary = salaryGradeObj?.monthly_salary ?? null;
+
+  // Step increment
   const stepIncrement =
-    assignment.step_increment || assignment.stepIncrement || {};
+    assignment.step_increment ?? assignment.stepIncrement ?? {};
+
+  // Determine employee type (normalized)
+  const employmentType = (employee.employment_type ?? "").toLowerCase().trim();
+  const isPlantilla = employmentType === "plantilla" || employmentType === "";
+  const isCos =
+    employmentType === "contract of service" || employmentType === "cos";
+  const isConsultant = employmentType === "consultant";
+
   const deptNames = getDeptNames(employee);
   const avatarSrc = getAvatarUrl(employee.avatar_url);
   const email = employee.user?.email ?? info.email ?? null;
   const status = getStatusFromInfo(employee, info);
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.Inactive;
 
-  const { full, withAffixes, titleStr, prefix } = buildDisplayName(employee);
+  const { full } = buildDisplayName(employee);
 
   const InfoRow = ({ icon: Icon, label, value }) => (
     <div className="flex items-start gap-3 py-2.5 border-b border-gray-100 last:border-none">
@@ -230,29 +259,35 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
               />
               <InfoRow
                 icon={Briefcase}
-                label="Position Title (Plantilla)"
-                value={plantillaItem.title}
+                label="Position Title"
+                value={positionTitle}
               />
-              <InfoRow
-                icon={TrendingUp}
-                label="Salary Grade"
-                value={
-                  salaryGrade.salary_grade
-                    ? `SG-${salaryGrade.salary_grade}`
-                    : null
-                }
-              />
-              <InfoRow
-                icon={TrendingUp}
-                label="Step"
-                value={stepIncrement.step ? `Step ${stepIncrement.step}` : null}
-              />
+
+              {/* Show Salary Grade and Step only for Plantilla employees */}
+              {isPlantilla && (
+                <>
+                  <InfoRow
+                    icon={TrendingUp}
+                    label="Salary Grade"
+                    value={salaryGradeLevel ? `SG-${salaryGradeLevel}` : null}
+                  />
+                  <InfoRow
+                    icon={TrendingUp}
+                    label="Step"
+                    value={
+                      stepIncrement.step ? `Step ${stepIncrement.step}` : null
+                    }
+                  />
+                </>
+              )}
+
+              {/* Show Monthly Salary for all types */}
               <InfoRow
                 icon={DollarSign}
                 label="Monthly Salary"
                 value={
-                  salaryGrade.monthly_salary
-                    ? `₱${Number(salaryGrade.monthly_salary).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+                  monthlySalary
+                    ? `₱${Number(monthlySalary).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
                     : null
                 }
               />
@@ -264,6 +299,7 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
       {/* Avatar full-size preview */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-sm p-2 border-none">
+          <DialogTitle className="sr-only">Employee Avatar Preview</DialogTitle>
           <div className="flex justify-center items-center">
             <img
               src={avatarSrc}

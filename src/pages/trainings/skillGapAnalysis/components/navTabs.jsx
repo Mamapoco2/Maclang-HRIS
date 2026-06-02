@@ -7,11 +7,7 @@ const TABS = [
     label: "Self-Assessment",
     icon: <ClipboardList className="w-4 h-4" />,
   },
-  {
-    id: "analysis",
-    label: "Gap Analysis",
-    icon: <BarChart2 className="w-4 h-4" />,
-  },
+
   {
     id: "manager",
     label: "Manager Guide",

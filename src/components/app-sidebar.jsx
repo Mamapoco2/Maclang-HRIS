@@ -16,6 +16,10 @@ import {
   IconBuildingStore,
   IconFileText,
   IconInnerShadowTop,
+  IconAward,
+  IconWallet,
+  IconSettings2,
+  IconCompass,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -39,18 +43,283 @@ const NAV_MAIN = [
     icon: IconDashboard,
     permission: "dashboard.view",
   },
+
+  {
+    title: "Recruitment, Selection, Placement",
+    icon: IconBriefcase,
+    permission: "hiring.view",
+    items: [
+      {
+        title: "Hiring",
+        items: [
+          {
+            title: "Plantilla (PSB)",
+            items: [
+              {
+                title: "Applicants",
+                url: "/hiring/plantilla/applicants",
+              },
+              {
+                title: "Applications",
+                url: "/hiring/plantilla/applications",
+              },
+              {
+                title: "Onboarding",
+                url: "/hiring/plantilla/onboarding",
+              },
+            ],
+          },
+
+          {
+            title: "Non-Plantilla",
+            items: [
+              {
+                title: "Applicants",
+                url: "/hiring/non-plantilla/applicants",
+              },
+              {
+                title: "Applications",
+                url: "/hiring/non-plantilla/applications",
+              },
+              {
+                title: "Onboarding",
+                url: "/hiring/non-plantilla/onboarding",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Learning & Development ",
+    icon: IconSchool,
+    permission: "hiring.view",
+    items: [
+      {
+        title: "Training",
+        items: [
+          {
+            title: "Trainings",
+            url: "/trainings",
+          },
+          {
+            title: "Skill Gap Analysis",
+            url: "/skillGapAnalysis",
+          },
+          {
+            title: "Training Effectiveness Analysis",
+            url: "/trainingEffectiveness",
+          },
+          {
+            title: "Coaching & Mentoring",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "SPMS",
+    icon: IconTarget,
+    permission: "hiring.view",
+    items: [
+      {
+        title: "Plantilla",
+        items: [
+          {
+            title: "MFO",
+          },
+          {
+            title: "KPI",
+          },
+          {
+            title: "QET",
+          },
+        ],
+      },
+      {
+        title: "IPCR",
+        url: "/IPCR",
+      },
+      {
+        title: "DPCR",
+        url: "/DPCR",
+      },
+      {
+        title: "OPCR",
+        url: "/OPCR",
+      },
+      {
+        title: "Non-Plantilla",
+        items: [
+          {
+            title: "Appraisal Form",
+            url: "/appraisalForm",
+          },
+        ],
+      },
+      {
+        title: "SPMS Management",
+        items: [
+          {
+            title: "Performance Period",
+            url: "/PerformancePeriod",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Compensation & Benefits",
+    icon: IconWallet,
+    permission: "hiring.view",
+    items: [
+      {
+        title: "Compensation",
+        items: [
+          {
+            title: "Regular",
+            items: [
+              {
+                title: "Salary",
+                items: [
+                  {
+                    title: "Attendance & Report Generation",
+                  },
+                  {
+                    title: "Certification",
+                  },
+                  {
+                    title: "Transmittal",
+                  },
+                ],
+              },
+              {
+                title: "Hazard",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Special",
+        items: [
+          {
+            title: "Salary",
+            items: [
+              {
+                title: "Attendance & Report Generation",
+              },
+              {
+                title: "Certification",
+              },
+              {
+                title: "Transmittal",
+              },
+            ],
+          },
+          {
+            title: "Hazard",
+            items: [
+              {
+                title: "Attendance & Report Generation",
+              },
+              {
+                title: "Certification",
+              },
+              {
+                title: "Transmittal",
+              },
+            ],
+          },
+          {
+            title: "Night Diff",
+          },
+          {
+            title: "Salary Diff",
+            items: [
+              {
+                title: "Same as Spec & Rec Sal",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "System Management",
+    icon: IconSettings2,
+    permission: "hiring.view",
+    items: [
+      {
+        title: "Role Management",
+      },
+      {
+        title: "Accounts Management",
+      },
+      {
+        title: "Departments",
+        url: "/departments",
+      },
+      {
+        title: "Positions",
+        items: [
+          {
+            title: "Plantilla",
+          },
+          {
+            title: "Non-Plantilla",
+            items: [
+              {
+                title: "COS",
+                url: "/COSList",
+              },
+              {
+                title: "CONS",
+                url: "/ConsultantList",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Rewards & Recognition",
+    icon: IconAward,
+    permission: "hiring.view",
+    items: [
+      {
+        title: "Top Performer",
+        items: [
+          {
+            title: "Hospital",
+            url: "/TopHospital",
+          },
+          {
+            title: "Department",
+            url: "/TopDepartment",
+          },
+        ],
+      },
+    ],
+  },
+
   {
     title: "Employees",
     url: "/employees",
     icon: IconUsers,
     permission: "employees.view",
   },
+
   {
     title: "Analytics",
     url: "/analytics",
     icon: IconChartBar,
     permission: "analytics.view",
   },
+
   {
     title: "Trainings",
     icon: IconSchool,
@@ -59,46 +328,48 @@ const NAV_MAIN = [
       { title: "Skill Gap Analysis Test", url: "/skillGapAnalysis" },
     ],
   },
+
   {
     title: "Team",
     url: "/team",
     icon: IconUsersGroup,
     permission: "team.view",
   },
+
+  {
+    title: "Orientation",
+    url: "/Orientation",
+    icon: IconCompass,
+  },
+
   {
     title: "Leave",
-    url: "/leave",
     icon: IconPlane,
     permission: "leave.view",
+    items: [
+      { title: "Dashboard", url: "/leaveDashboard" },
+      { title: "Approval", url: "/leaveApproval" },
+      { title: "Balance", url: "/leaveBalance" },
+      { title: "Calendar", url: "/leaveCalendar" },
+      { title: "Leave Request", url: "/leaveRequest" },
+      { title: "New Leave Request", url: "/newLeaveRequest" },
+    ],
   },
+
   {
     title: "Accounts",
     url: "/accounts",
     icon: IconUserCheck,
     permission: "accounts.view",
   },
-  {
-    title: "Departments",
-    url: "/departments",
-    icon: IconBuildingStore,
-    permission: "departments.view",
-  },
+
   {
     title: "Plantilla Items",
     url: "/plantillaItems",
     icon: IconFileText,
     permission: "plantilla_items.view",
   },
-  {
-    title: "Hiring",
-    icon: IconBriefcase,
-    permission: "hiring.view",
-    items: [
-      { title: "Applications", url: "/applications" },
-      { title: "Applicants", url: "/applicants" },
-      { title: "Onboarding", url: "/onboarding" },
-    ],
-  },
+
   {
     title: "Announcement",
     icon: IconSpeakerphone,
@@ -109,22 +380,12 @@ const NAV_MAIN = [
       { title: "Sent", url: "/sent" },
     ],
   },
+
   {
     title: "Manpower Mapping",
     url: "/manpower",
     icon: IconUsersGroup,
     permission: "manpower.view",
-  },
-  {
-    title: "SPMS",
-    icon: IconTarget,
-    permission: "spms.view",
-    items: [
-      { title: "IPCR", url: "/IPCR" },
-      { title: "OPCR", url: "/OPCR" },
-      { title: "MFO", url: "/MFO" },
-      { title: "Performance Period", url: "/PerformancePeriod" },
-    ],
   },
 ];
 

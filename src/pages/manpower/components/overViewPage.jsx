@@ -12,9 +12,7 @@ import {
   Cell,
 } from "recharts";
 
-import {
- getManpowerSummary
-} from "../../services/manpowerService";
+import { manpowerService } from "../../services/manpowerService";
 
 export default function OverviewTab() {
   const [plantillaCount, setPlantillaCount] = useState(0);
@@ -25,7 +23,7 @@ export default function OverviewTab() {
   useEffect(() => {
     async function fetchCounts() {
       try {
-        const data = await getManpowerSummary();
+        const data = await manpowerService.getSummary();
 
         setPlantillaCount(data.plantilla);
         setCosCount(data.cos);

@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Pencil, UserPlus, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
-  plantillaItemService,
+  plantillaPositionService as plantillaItemService,
   plantillaPositionService,
 } from "../../../services/plantillaService";
 import api from "@/api/api";
@@ -35,8 +35,6 @@ import api from "@/api/api";
 /*
 |─────────────────────────────────────────────────────────────────────────────
 | AddItemModal
-| salary_grade_id removed — SG now lives per position slot, not per item
-| NEW: Dropdown to select existing plantilla items
 |─────────────────────────────────────────────────────────────────────────────
 */
 
@@ -54,19 +52,15 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
   const [loadingItems, setLoadingItems] = useState(false);
   const [selectedExistingItem, setSelectedExistingItem] = useState("");
 
-  // Load existing plantilla items on modal open
   useEffect(() => {
     if (!open) return;
     setLoadingItems(true);
     plantillaItemService
       .getPlantillaItems()
-      .then((res) => {
-        const data = Array.isArray(res) ? res : (res.data ?? []);
-        setExistingItems(data);
+      .then((data) => {
+        setExistingItems(Array.isArray(data) ? data : []);
       })
-      .catch((err) => {
-        console.error("Failed to load items:", err);
-      })
+      .catch((err) => console.error("Failed to load items:", err))
       .finally(() => setLoadingItems(false));
   }, [open]);
 
@@ -78,42 +72,43 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
   }, [open]);
 
   const handleSubmit = async (data) => {
-    // If an existing item is selected, add a slot to it
+    // ── Add a slot to an existing item (by base_item_number)
     if (selectedExistingItem) {
       setSaving(true);
       try {
         await api.post("/plantilla-positions", {
-          plantilla_item_id: Number(selectedExistingItem),
+          base_item_number: selectedExistingItem,
+          title:
+            existingItems.find(
+              (i) =>
+                String(i.base_item_number) === String(selectedExistingItem),
+            )?.title ?? "",
         });
         toast.success("Slot added to existing plantilla item.");
         onOpenChange(false);
         onSuccess?.();
       } catch (err) {
-        toast.error(
-          err?.response?.data?.message ??
-            "Something went wrong. Please try again.",
-        );
+        toast.error(err?.response?.data?.message ?? "Something went wrong.");
       } finally {
         setSaving(false);
       }
       return;
     }
 
-    // Otherwise, create a new item
+    // ── Create a brand-new item + slots
     setSaving(true);
     try {
       await plantillaItemService.createPlantillaItem({
-        ...data,
+        base_item_number: data.base_item_number,
+        title: data.title,
+        description: data.description,
         approved_slots: Number(data.approved_slots),
       });
       toast.success("Plantilla item added and slots provisioned.");
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
-      toast.error(
-        err?.response?.data?.message ??
-          "Something went wrong. Please try again.",
-      );
+      toast.error(err?.response?.data?.message ?? "Something went wrong.");
     } finally {
       setSaving(false);
     }
@@ -136,17 +131,17 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
             onSubmit={form.handleSubmit(handleSubmit)}
             className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto"
           >
-            {/* Dropdown to select existing item */}
+            {/* Select existing item to add a slot */}
             <div>
               <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-2">
-                Or Select Existing Item
+                Add Slot to Existing Item
               </FormLabel>
               <Select
                 value={selectedExistingItem}
                 onValueChange={setSelectedExistingItem}
                 disabled={loadingItems}
               >
-                <SelectTrigger className="text-sm border-gray-200 focus:ring-gray-300 focus:ring-1">
+                <SelectTrigger className="text-sm border-gray-200">
                   <SelectValue
                     placeholder={
                       loadingItems
@@ -158,11 +153,14 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                 <SelectContent className="max-h-60">
                   {existingItems.length === 0 ? (
                     <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                      No existing items found. Create one below.
+                      No existing items found.
                     </div>
                   ) : (
                     existingItems.map((item) => (
-                      <SelectItem key={item.id} value={String(item.id)}>
+                      <SelectItem
+                        key={item.base_item_number}
+                        value={String(item.base_item_number)}
+                      >
                         <span className="font-mono text-xs mr-2">
                           #{item.base_item_number}
                         </span>
@@ -178,7 +176,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
+                    <div className="w-full border-t border-gray-200" />
                   </div>
                   <div className="relative flex justify-center text-sm">
                     <span className="px-2 bg-white text-gray-400">
@@ -199,7 +197,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                       <FormControl>
                         <Input
                           placeholder="e.g. 8"
-                          className="font-mono text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1"
+                          className="font-mono text-sm border-gray-200"
                           {...field}
                         />
                       </FormControl>
@@ -220,7 +218,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                       <FormControl>
                         <Input
                           placeholder="e.g. NURSE I"
-                          className="text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1 uppercase"
+                          className="text-sm border-gray-200"
                           {...field}
                           onChange={(e) =>
                             field.onChange(e.target.value.toUpperCase())
@@ -246,7 +244,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                       <FormControl>
                         <Textarea
                           placeholder="Brief description..."
-                          className="text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1 resize-none"
+                          className="text-sm border-gray-200 resize-none"
                           rows={2}
                           {...field}
                         />
@@ -275,7 +273,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                           min={1}
                           max={99}
                           placeholder="1"
-                          className="font-mono text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1"
+                          className="font-mono text-sm border-gray-200"
                           {...field}
                           onChange={(e) =>
                             field.onChange(Number(e.target.value))
@@ -283,8 +281,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                         />
                       </FormControl>
                       <p className="text-[11px] text-gray-400 mt-1">
-                        Sets how many position slots will be created. Salary
-                        Grade and Step are set per slot after creation.
+                        Salary Grade and Step are set per slot after creation.
                       </p>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -297,7 +294,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
               <Button
                 type="button"
                 variant="outline"
-                className="text-sm border-gray-200 text-gray-600 hover:bg-gray-50 h-9"
+                className="text-sm border-gray-200 text-gray-600 h-9"
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
@@ -330,8 +327,7 @@ export default function PlantillaItemModal(props) {
 
 /*
 |─────────────────────────────────────────────────────────────────────────────
-| PositionModal — edit SG + step + date of assumption on a slot
-| SG and steps now fetched from the position itself, not the parent item
+| PositionModal
 |─────────────────────────────────────────────────────────────────────────────
 */
 
@@ -340,6 +336,7 @@ const positionDefaults = {
   salary_grade_id: "",
   step_increment_id: "",
   date_of_assumption: "",
+  department_ids: [],
 };
 
 export function PositionModal({
@@ -353,22 +350,37 @@ export function PositionModal({
 
   const [salaryGrades, setSalaryGrades] = useState([]);
   const [steps, setSteps] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loadingGrades, setLoadingGrades] = useState(false);
   const [loadingSteps, setLoadingSteps] = useState(false);
+  const [loadingDepts, setLoadingDepts] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Load salary grades once on open
+  // status lives directly on the position row
+  const isFilled = (position?.status ?? "").toUpperCase() === "FILLED";
+
   useEffect(() => {
     if (!open) return;
+
     setLoadingGrades(true);
     plantillaItemService
       .getSalaryGrades()
       .then((res) => setSalaryGrades(res.data ?? res))
       .catch(console.error)
       .finally(() => setLoadingGrades(false));
+
+    setLoadingDepts(true);
+    api
+      .get("/departments")
+      .then((res) => {
+        const data = res.data;
+        setDepartments(Array.isArray(data) ? data : (data.data ?? []));
+      })
+      .catch(console.error)
+      .finally(() => setLoadingDepts(false));
   }, [open]);
 
-  // Pre-fill form from position data
+  // Pre-fill form — uses exact column names
   useEffect(() => {
     if (open && position) {
       form.reset({
@@ -376,11 +388,16 @@ export function PositionModal({
         salary_grade_id: String(position.salary_grade_id ?? ""),
         step_increment_id: String(position.step_increment_id ?? ""),
         date_of_assumption: position.date_of_assumption ?? "",
+        department_ids: (
+          position.department_ids ??
+          item?.department_ids ??
+          []
+        ).map(String),
       });
     }
   }, [open, position]);
 
-  // Load steps whenever salary_grade_id changes
+  // Load steps when SG changes
   const watchedSgId = form.watch("salary_grade_id");
   useEffect(() => {
     if (!watchedSgId) {
@@ -388,7 +405,6 @@ export function PositionModal({
       return;
     }
     setLoadingSteps(true);
-    // Clear stale step selection when SG changes
     form.setValue("step_increment_id", "");
     plantillaItemService
       .getStepsBySalaryGrade(watchedSgId)
@@ -409,8 +425,9 @@ export function PositionModal({
           ? Number(data.step_increment_id)
           : null,
         date_of_assumption: data.date_of_assumption || null,
+        department_ids: data.department_ids?.map(Number) ?? [],
       });
-      toast.success(`Slot ${position.item_number} updated.`);
+      toast.success(`Slot ${position.slot_number} updated.`);
       onSuccess?.();
     } catch (err) {
       toast.error(err?.response?.data?.message ?? "Failed to update slot.");
@@ -419,9 +436,24 @@ export function PositionModal({
     }
   };
 
+  const watchedDeptIds = form.watch("department_ids") ?? [];
+
+  const toggleDept = (id) => {
+    const current = form.getValues("department_ids") ?? [];
+    const asStr = String(id);
+    if (current.includes(asStr)) {
+      form.setValue(
+        "department_ids",
+        current.filter((d) => d !== asStr),
+      );
+    } else {
+      form.setValue("department_ids", [...current, asStr]);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] bg-white border border-gray-200 shadow-lg p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[460px] bg-white border border-gray-200 shadow-lg p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-gray-100">
           <DialogTitle className="flex items-center gap-2.5 text-gray-900 font-semibold text-sm">
             <span className="flex items-center justify-center w-7 h-7 rounded-md bg-gray-100 text-gray-600">
@@ -429,164 +461,239 @@ export function PositionModal({
             </span>
             Edit Slot{" "}
             <span className="font-mono text-indigo-600">
-              {position?.item_number}
+              {position?.position_slot_name ?? position?.slot_number}
             </span>
+            {isFilled && (
+              <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                FILLED — config locked
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="px-6 py-5 space-y-4"
+            className="px-6 py-5 space-y-4 max-h-[78vh] overflow-y-auto"
           >
-            <FormField
-              control={form.control}
-              name="position_title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Position Title{" "}
+            {isFilled ? (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-4 space-y-2">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-widest">
+                  Slot is currently filled
+                </p>
+                <p className="text-sm text-emerald-800">
+                  Configuration is locked while an employee occupies this slot.
+                  To edit, vacate the position first.
+                </p>
+                {position?.salary_grade?.salary_grade && (
+                  <p className="text-xs text-emerald-700 font-mono">
+                    SG {position.salary_grade.salary_grade}
+                    {position?.step_increment?.step &&
+                      ` · Step ${position.step_increment.step}`}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Position Title */}
+                <FormField
+                  control={form.control}
+                  name="position_title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                        Position Title{" "}
+                        <span className="text-gray-300 normal-case font-normal">
+                          (optional)
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. NURSE I"
+                          className="text-sm border-gray-200"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Departments */}
+                <div className="space-y-2">
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400 block">
+                    Departments{" "}
                     <span className="text-gray-300 normal-case font-normal">
-                      (optional)
+                      (select all that apply)
                     </span>
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. NURSE I"
-                      className="text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
+                  {loadingDepts ? (
+                    <div className="text-xs text-gray-400 py-1">
+                      Loading departments…
+                    </div>
+                  ) : departments.length === 0 ? (
+                    <div className="text-xs text-gray-400 py-1">
+                      No departments found.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                      {departments.map((dept) => {
+                        const selected = watchedDeptIds.includes(
+                          String(dept.id),
+                        );
+                        return (
+                          <button
+                            key={dept.id}
+                            type="button"
+                            onClick={() => toggleDept(dept.id)}
+                            className={`text-xs px-3 py-1 rounded-full border transition-colors whitespace-nowrap ${
+                              selected
+                                ? "bg-indigo-600 text-white border-indigo-600"
+                                : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
+                            }`}
+                          >
+                            {dept.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-            {/* Salary Grade — now editable per slot */}
-            <FormField
-              control={form.control}
-              name="salary_grade_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Salary Grade
-                  </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={loadingGrades}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="text-sm border-gray-200 focus:ring-gray-300 focus:ring-1">
-                        <SelectValue
-                          placeholder={
-                            loadingGrades ? "Loading..." : "Select salary grade"
-                          }
+                {/* Salary Grade */}
+                <FormField
+                  control={form.control}
+                  name="salary_grade_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                        Salary Grade
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={loadingGrades}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="text-sm border-gray-200">
+                            <SelectValue
+                              placeholder={
+                                loadingGrades
+                                  ? "Loading..."
+                                  : "Select salary grade"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60">
+                          {salaryGrades.map((sg) => (
+                            <SelectItem key={sg.id} value={String(sg.id)}>
+                              SG {sg.salary_grade}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Step */}
+                <FormField
+                  control={form.control}
+                  name="step_increment_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                        Step Increment
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={loadingSteps || !watchedSgId}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="text-sm border-gray-200">
+                            <SelectValue
+                              placeholder={
+                                !watchedSgId
+                                  ? "Select SG first"
+                                  : loadingSteps
+                                    ? "Loading..."
+                                    : "Select step"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60">
+                          {steps.map((s) => (
+                            <SelectItem key={s.id} value={String(s.id)}>
+                              Step {s.step}
+                              {s.monthly_salary != null && (
+                                <span className="ml-2 text-slate-400 text-xs">
+                                  — ₱
+                                  {Number(s.monthly_salary).toLocaleString(
+                                    "en-PH",
+                                  )}
+                                  /mo
+                                </span>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Date of Assumption */}
+                <FormField
+                  control={form.control}
+                  name="date_of_assumption"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                        Date of Assumption{" "}
+                        <span className="text-gray-300 normal-case font-normal">
+                          (optional)
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          className="text-sm border-gray-200"
+                          {...field}
                         />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-60">
-                      {salaryGrades.map((sg) => (
-                        <SelectItem key={sg.id} value={String(sg.id)}>
-                          SG {sg.salary_grade}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            {/* Step — dependent on SG selection above */}
-            <FormField
-              control={form.control}
-              name="step_increment_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Step Increment
-                  </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={loadingSteps || !watchedSgId}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="text-sm border-gray-200 focus:ring-gray-300 focus:ring-1">
-                        <SelectValue
-                          placeholder={
-                            !watchedSgId
-                              ? "Select SG first"
-                              : loadingSteps
-                                ? "Loading..."
-                                : "Select step"
-                          }
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-60">
-                      {steps.map((s) => (
-                        <SelectItem key={s.id} value={String(s.id)}>
-                          Step {s.step}
-                          {s.monthly_salary != null && (
-                            <span className="ml-2 text-slate-400 text-xs">
-                              — ₱
-                              {Number(s.monthly_salary).toLocaleString("en-PH")}
-                              /mo
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="date_of_assumption"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Date of Assumption{" "}
-                    <span className="text-gray-300 normal-case font-normal">
-                      (optional)
-                    </span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      className="text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
               <Button
                 type="button"
                 variant="outline"
-                className="text-sm border-gray-200 text-gray-600 hover:bg-gray-50 h-9"
+                className="text-sm border-gray-200 text-gray-600 h-9"
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                {isFilled ? "Close" : "Cancel"}
               </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-                className="text-sm bg-gray-900 hover:bg-black text-white h-9"
-              >
-                {saving && (
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                )}
-                Save Changes
-              </Button>
+              {!isFilled && (
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="text-sm bg-gray-900 hover:bg-black text-white h-9"
+                >
+                  {saving && (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  )}
+                  Save Changes
+                </Button>
+              )}
             </div>
           </form>
         </Form>
@@ -597,8 +704,7 @@ export function PositionModal({
 
 /*
 |─────────────────────────────────────────────────────────────────────────────
-| AssignEmployeeModal — assign an employee to a VACANT position slot
-| SG now read from position.salary_grade instead of item.salary_grade
+| AssignEmployeeModal
 |─────────────────────────────────────────────────────────────────────────────
 */
 
@@ -666,7 +772,9 @@ export function AssignEmployeeModal({
         start_date: data.start_date,
         is_primary: true,
       });
-      toast.success(`Employee assigned to slot ${position.item_number}.`);
+      toast.success(
+        `Employee assigned to slot ${position.position_slot_name ?? position.slot_number}.`,
+      );
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
@@ -676,7 +784,6 @@ export function AssignEmployeeModal({
     }
   };
 
-  // SG and step now read from the position, not the parent item
   const sgLabel = position?.salary_grade?.salary_grade
     ? `SG ${position.salary_grade.salary_grade}`
     : "—";
@@ -694,7 +801,8 @@ export function AssignEmployeeModal({
             </span>
             Assign Employee
             <span className="font-mono text-indigo-600 ml-1">
-              — Slot {position?.item_number}
+              —{" "}
+              {position?.position_slot_name ?? `Slot ${position?.slot_number}`}
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -704,7 +812,6 @@ export function AssignEmployeeModal({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="px-6 py-5 space-y-4"
           >
-            {/* Position info (read-only) */}
             <div className="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3 space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                 Position
@@ -718,7 +825,6 @@ export function AssignEmployeeModal({
               </p>
             </div>
 
-            {/* Employee search + select */}
             <FormField
               control={form.control}
               name="employee_id"
@@ -737,7 +843,7 @@ export function AssignEmployeeModal({
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search by name…"
-                      className="pl-8 h-8 text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1"
+                      className="pl-8 h-8 text-sm border-gray-200"
                     />
                   </div>
                   <Select
@@ -746,7 +852,7 @@ export function AssignEmployeeModal({
                     disabled={loadingEmployees}
                   >
                     <FormControl>
-                      <SelectTrigger className="text-sm border-gray-200 focus:ring-gray-300 focus:ring-1">
+                      <SelectTrigger className="text-sm border-gray-200">
                         <SelectValue
                           placeholder={
                             loadingEmployees ? "Loading..." : "Select employee"
@@ -783,7 +889,6 @@ export function AssignEmployeeModal({
               )}
             />
 
-            {/* Start date */}
             <FormField
               control={form.control}
               name="start_date"
@@ -796,7 +901,7 @@ export function AssignEmployeeModal({
                   <FormControl>
                     <Input
                       type="date"
-                      className="text-sm border-gray-200 focus-visible:ring-gray-300 focus-visible:ring-1"
+                      className="text-sm border-gray-200"
                       {...field}
                     />
                   </FormControl>
@@ -809,7 +914,7 @@ export function AssignEmployeeModal({
               <Button
                 type="button"
                 variant="outline"
-                className="text-sm border-gray-200 text-gray-600 hover:bg-gray-50 h-9"
+                className="text-sm border-gray-200 text-gray-600 h-9"
                 onClick={() => onOpenChange(false)}
               >
                 Cancel

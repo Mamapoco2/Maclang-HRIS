@@ -141,8 +141,11 @@ export default function UsersTable() {
                 className="border-gray-300"
               />
             </TableHead>
-            <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Email address
+            <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Username
+            </TableHead>
+            <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Email
             </TableHead>
             <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
               Status
@@ -157,7 +160,7 @@ export default function UsersTable() {
           {users.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={4}
+                colSpan={5}
                 className="py-14 text-center text-sm text-gray-400"
               >
                 No pending users found.
@@ -174,16 +177,22 @@ export default function UsersTable() {
                   : "hover:bg-gray-50"
               }`}
             >
-              <TableCell className="px-5 py-3">
-                <Checkbox
-                  checked={selected.includes(u.id)}
-                  onCheckedChange={() => toggleSelect(u.id)}
-                  aria-label={`Select ${u.email}`}
-                  className="border-gray-300"
-                />
+              <TableCell className="px-5 py-3 text-center">
+                <div className="flex justify-center">
+                  <Checkbox
+                    checked={selected.includes(u.id)}
+                    onCheckedChange={() => toggleSelect(u.id)}
+                    aria-label={`Select ${u.email}`}
+                    className="border-gray-300"
+                  />
+                </div>
               </TableCell>
 
-              <TableCell className="py-3 text-sm text-gray-600">
+              <TableCell className="py-3 text-center text-sm text-gray-600">
+                {u.username}
+              </TableCell>
+
+              <TableCell className="py-3 text-center text-sm text-gray-600">
                 {u.email}
               </TableCell>
 
@@ -204,10 +213,10 @@ export default function UsersTable() {
                   onClick={() => handleActivate(u.id)}
                   disabled={activatingId === u.id || bulkActivating}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
-                             border border-gray-200 bg-white text-gray-700
-                             hover:bg-green-50 hover:border-green-300 hover:text-green-800
-                             disabled:opacity-40 disabled:cursor-not-allowed
-                             transition-colors"
+                     border border-gray-200 bg-white text-gray-700
+                     hover:bg-green-50 hover:border-green-300 hover:text-green-800
+                     disabled:opacity-40 disabled:cursor-not-allowed
+                     transition-colors"
                 >
                   {activatingId === u.id && (
                     <IconLoader2

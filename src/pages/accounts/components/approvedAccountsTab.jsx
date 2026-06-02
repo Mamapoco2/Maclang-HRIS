@@ -156,19 +156,22 @@ export default function ApprovedAccountsTab() {
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
-              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide px-5">
-                Name
+              <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide px-5">
+                Fullname
               </TableHead>
-              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide px-5">
+                Username
+              </TableHead>
+              <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Email
               </TableHead>
-              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Role
               </TableHead>
-              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Permissions
               </TableHead>
-              <TableHead className="text-right text-xs font-medium text-gray-500 uppercase tracking-wide pr-5">
+              <TableHead className="text-center text-xs font-medium text-gray-500 uppercase tracking-wide pr-5">
                 Actions
               </TableHead>
             </TableRow>
@@ -178,7 +181,7 @@ export default function ApprovedAccountsTab() {
             {accounts.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="py-14 text-center text-sm text-gray-400"
                 >
                   No approved accounts found.
@@ -190,48 +193,70 @@ export default function ApprovedAccountsTab() {
                   key={u.id}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  <TableCell className="py-3 px-5 font-medium text-sm text-gray-900">
-                    {u.name}
+                  <TableCell className="py-3 px-5 text-center font-medium text-sm text-gray-900">
+                    {u.name && u.name !== u.username ? (
+                      (() => {
+                        const parts = u.name.trim().split(" ");
+                        if (parts.length >= 2) {
+                          const last = parts[parts.length - 1];
+                          const first = parts.slice(0, -1).join(" ");
+                          return `${last}, ${first}`;
+                        }
+                        return u.name;
+                      })()
+                    ) : (
+                      <span className="italic text-gray-400 text-xs">
+                        No name
+                      </span>
+                    )}
                   </TableCell>
-                  <TableCell className="py-3 text-sm text-gray-500">
+
+                  <TableCell className="py-3 px-5 text-center font-medium text-sm text-gray-900">
+                    {u.username}
+                  </TableCell>
+
+                  <TableCell className="py-3 text-center text-sm text-gray-500">
                     {u.email}
                   </TableCell>
 
                   {/* ── Inline role dropdown ─────────────────────────── */}
-                  <TableCell className="py-3">
-                    <Select
-                      value={getCurrentRole(u)}
-                      onValueChange={(role) => handleRoleChange(u.id, role)}
-                      disabled={!!roleSaving[u.id]}
-                    >
-                      <SelectTrigger
-                        className={`h-7 w-36 text-xs border-gray-200 focus:ring-0 focus:ring-offset-0 ${
-                          getCurrentRole(u) !== "none"
-                            ? `${getRoleBadgeClass(getCurrentRole(u))} font-medium`
-                            : "text-gray-400"
-                        }`}
+                  <TableCell className="py-3 text-center">
+                    <div className="flex justify-center">
+                      <Select
+                        value={getCurrentRole(u)}
+                        onValueChange={(role) => handleRoleChange(u.id, role)}
+                        disabled={!!roleSaving[u.id]}
                       >
-                        <SelectValue placeholder="Assign role..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ASSIGNABLE_ROLES.map((r) => (
-                          <SelectItem
-                            key={r.value}
-                            value={r.value}
-                            className={`text-xs ${
-                              r.value === "none" ? "text-gray-400 italic" : ""
-                            }`}
-                          >
-                            {r.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger
+                          className={`h-7 w-36 text-xs border-gray-200 focus:ring-0 focus:ring-offset-0 ${
+                            getCurrentRole(u) !== "none"
+                              ? `${getRoleBadgeClass(getCurrentRole(u))} font-medium`
+                              : "text-gray-400"
+                          }`}
+                        >
+                          <SelectValue placeholder="Assign role..." />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                          {ASSIGNABLE_ROLES.map((r) => (
+                            <SelectItem
+                              key={r.value}
+                              value={r.value}
+                              className={`text-xs ${
+                                r.value === "none" ? "text-gray-400 italic" : ""
+                              }`}
+                            >
+                              {r.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </TableCell>
 
-                  <TableCell className="py-3">
+                  <TableCell className="py-3 text-center">
                     {u.permissions?.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap justify-center gap-1">
                         {u.permissions.slice(0, 3).map((p) => (
                           <span
                             key={p}
@@ -240,6 +265,7 @@ export default function ApprovedAccountsTab() {
                             {p}
                           </span>
                         ))}
+
                         {u.permissions.length > 3 && (
                           <span className="inline-block text-xs px-2 py-0.5 rounded-md text-gray-400 border border-gray-200">
                             +{u.permissions.length - 3} more
@@ -252,7 +278,8 @@ export default function ApprovedAccountsTab() {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="py-3 text-right pr-5">
+
+                  <TableCell className="py-3 text-center pr-5">
                     <Button
                       size="sm"
                       variant="outline"
