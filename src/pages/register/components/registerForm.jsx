@@ -4,9 +4,51 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Check, X } from "lucide-react";
 import { AuthContext } from "@/context/AuthContext";
 
+// ── Password rule definitions ──────────────────────────────────────────────
+const PASSWORD_RULES = [
+  {
+    id: "length",
+    label: "At least 8 characters",
+    test: (v) => v?.length >= 8,
+  },
+  {
+    id: "uppercase",
+    label: "Contains uppercase letter",
+    test: (v) => /[A-Z]/.test(v ?? ""),
+  },
+  {
+    id: "number",
+    label: "Contains a number",
+    test: (v) => /[0-9]/.test(v ?? ""),
+  },
+];
+
+// ── Small rule-row component ───────────────────────────────────────────────
+function RuleRow({ label, passed, touched }) {
+  if (!touched) return null; // hide until the user starts typing
+
+  return (
+    <li className="flex items-center gap-2 text-xs uppercase tracking-wide">
+      {passed ? (
+        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-500">
+          <Check className="w-2.5 h-2.5" strokeWidth={3} />
+        </span>
+      ) : (
+        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500/20 text-red-500">
+          <X className="w-2.5 h-2.5" strokeWidth={3} />
+        </span>
+      )}
+      <span className={passed ? "text-green-500" : "text-red-500"}>
+        {label}
+      </span>
+    </li>
+  );
+}
+
+// ── Main form ──────────────────────────────────────────────────────────────
 export default function RegisterForm() {
   const navigate = useNavigate();
   const { register: registerUser } = useContext(AuthContext);
@@ -18,10 +60,16 @@ export default function RegisterForm() {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, touchedFields },
   } = useForm({ mode: "onChange" });
 
-  const password = watch("password");
+  const password = watch("password") ?? "";
+  const passwordConfirm = watch("password_confirmation") ?? "";
+  const passwordTouched = !!touchedFields.password;
+  const confirmTouched = !!touchedFields.password_confirmation;
+
+  const confirmMatches =
+    passwordConfirm === password && passwordConfirm.length > 0;
 
   const onSubmit = async (data) => {
     setServerError("");
@@ -56,7 +104,7 @@ export default function RegisterForm() {
         </Label>
         <Input
           id="username"
-          type="text" // ✅ was type="username"
+          type="text"
           placeholder="Enter your username"
           autoComplete="username"
           className="bg-white/80 dark:bg-gray-800/80 uppercase"
@@ -65,7 +113,7 @@ export default function RegisterForm() {
             minLength: {
               value: 3,
               message: "Username must be at least 3 characters.",
-            }, // ✅ no email regex
+            },
           })}
         />
         {errors.username && (
@@ -137,10 +185,19 @@ export default function RegisterForm() {
             )}
           </button>
         </div>
-        {errors.password && (
-          <p className="text-xs text-red-500 uppercase tracking-wide">
-            {errors.password.message}
-          </p>
+
+        {/* ── Live password rule checklist ── */}
+        {passwordTouched && (
+          <ul className="mt-2 space-y-1 pl-0.5">
+            {PASSWORD_RULES.map((rule) => (
+              <RuleRow
+                key={rule.id}
+                label={rule.label}
+                passed={rule.test(password)}
+                touched={passwordTouched}
+              />
+            ))}
+          </ul>
         )}
       </div>
 
@@ -177,10 +234,16 @@ export default function RegisterForm() {
             )}
           </button>
         </div>
-        {errors.password_confirmation && (
-          <p className="text-xs text-red-500 uppercase tracking-wide">
-            {errors.password_confirmation.message}
-          </p>
+
+        {/* ── Passwords-match indicator ── */}
+        {confirmTouched && passwordConfirm.length > 0 && (
+          <ul className="mt-2 pl-0.5">
+            <RuleRow
+              label="Passwords match"
+              passed={confirmMatches}
+              touched={confirmTouched}
+            />
+          </ul>
         )}
       </div>
 

@@ -1,12 +1,15 @@
-// src/routes/protectedRoutes.jsx
 import { Navigate, Outlet } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/authContext";
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading, user } = useContext(AuthContext);
+  const { isAuthenticated, loading, user, sessionDisplaced } =
+    useContext(AuthContext);
 
-  if (loading) return null; // ← wait for syncUser to complete
+  if (loading) return null;
+
+  // Allow the modal to render on top of the current page
+  if (sessionDisplaced) return <Outlet />;
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 

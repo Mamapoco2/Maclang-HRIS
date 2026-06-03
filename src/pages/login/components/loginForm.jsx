@@ -83,6 +83,7 @@ export default function LoginForm() {
             type="text"
             autoComplete="username"
             placeholder="Enter your username"
+            className="uppercase"
             {...register("username")}
           />
           {errors.username && (

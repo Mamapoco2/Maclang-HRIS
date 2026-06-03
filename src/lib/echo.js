@@ -1,16 +1,13 @@
-// src/lib/echo.js
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
+import { getToken } from "@/lib/tokenStorage";
 
 window.Pusher = Pusher;
 
 let echoInstance = null;
 
 export function getEcho() {
-  //   console.log("getEcho called, key:", "wkovqmavktiku4lgolmh");
-
   if (!echoInstance) {
-    // console.log("Creating new Echo instance...");
     echoInstance = new Echo({
       broadcaster: "reverb",
       key: "wkovqmavktiku4lgolmh",
@@ -19,22 +16,23 @@ export function getEcho() {
       wssPort: 8080,
       forceTLS: false,
       enabledTransports: ["ws", "wss"],
+      authEndpoint: "http://localhost:8000/api/broadcasting/auth",
+      auth: {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
+      },
     });
-
-    // echoInstance.connector.pusher.connection.bind("connected", () => {
-    //   console.log("✅ WebSocket CONNECTED");
-    // });
-
-    // echoInstance.connector.pusher.connection.bind("disconnected", () => {
-    //   console.log("❌ WebSocket DISCONNECTED");
-    // });
-
-    // echoInstance.connector.pusher.connection.bind("error", (err) => {
-    //   console.log("❌ WebSocket ERROR:", err);
-    // });
   }
 
   return echoInstance;
+}
+
+export function resetEcho() {
+  if (echoInstance) {
+    echoInstance.disconnect();
+    echoInstance = null;
+  }
 }
 
 export default getEcho;

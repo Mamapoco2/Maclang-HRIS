@@ -8,6 +8,7 @@ export const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUserState] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionDisplaced, setSessionDisplaced] = useState(false);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -61,11 +62,17 @@ export const AuthProvider = ({ children }) => {
     const echo = getEcho();
     if (!echo) return;
 
-    const channel = echo.channel(`user.${user.id}`);
+    const channel = echo.private(`user.${user.id}`);
 
     channel.listen(".permissions.updated", (e) => {
       console.log("🔔 permissions.updated received — refreshing user", e);
       refreshUserRef.current();
+    });
+
+    channel.listen(".logged.in.elsewhere", () => {
+      clearAuth();
+      setUserState(null);
+      setSessionDisplaced(true);
     });
 
     return () => {
@@ -85,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false };
     }
   };
-  
+
   const register = async (username, email, password, password_confirmation) => {
     try {
       const res = await authService.register(
@@ -112,6 +119,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const dismissDisplaced = useCallback(() => {
+    setSessionDisplaced(true);
+  }, []);
+
   const hasPermission = useCallback(
     (permission) => user?.permissions?.includes(permission) ?? false,
     [user?.permissions],
@@ -135,6 +146,8 @@ export const AuthProvider = ({ children }) => {
         hasPermission,
         hasRole,
         isAuthenticated: !!user,
+        sessionDisplaced,
+        dismissDisplaced,
       }}
     >
       {children}
