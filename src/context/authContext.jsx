@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUserState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sessionDisplaced, setSessionDisplaced] = useState(false);
+  const [showOrientation, setShowOrientation] = useState(false);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -58,23 +59,18 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (!user?.id) return;
-
     const echo = getEcho();
     if (!echo) return;
-
     const channel = echo.private(`user.${user.id}`);
-
     channel.listen(".permissions.updated", (e) => {
-      console.log("🔔 permissions.updated received — refreshing user", e);
+      console.log("permissions.updated received — refreshing user", e);
       refreshUserRef.current();
     });
-
     channel.listen(".logged.in.elsewhere", () => {
       clearAuth();
       setUserState(null);
       setSessionDisplaced(true);
     });
-
     return () => {
       echo.leaveChannel(`user.${user.id}`);
     };
@@ -84,7 +80,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await authService.login(username, password);
       if (res?.success) {
+        setUser(res.user);
         setUserState(res.user);
+        if (res.user?.has_completed_orientation === false) {
+          setShowOrientation(true);
+        }
       }
       return res;
     } catch (err) {
@@ -116,12 +116,21 @@ export const AuthProvider = ({ children }) => {
     } finally {
       clearAuth();
       setUserState(null);
+      setShowOrientation(false);
     }
   };
 
-  const dismissDisplaced = useCallback(() => {
-    setSessionDisplaced(true);
+  const dismissOrientation = useCallback(async () => {
+    try {
+      await authService.completeOrientation();
+    } catch (err) {
+      console.error("Failed to mark orientation complete:", err);
+    } finally {
+      setShowOrientation(false);
+    }
   }, []);
+
+  const dismissDisplaced = useCallback(() => setSessionDisplaced(false), []);
 
   const hasPermission = useCallback(
     (permission) => user?.permissions?.includes(permission) ?? false,
@@ -148,6 +157,8 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         sessionDisplaced,
         dismissDisplaced,
+        showOrientation,
+        dismissOrientation,
       }}
     >
       {children}

@@ -1,19 +1,14 @@
 import { useContext, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2, Check, X } from "lucide-react";
+import { Eye, EyeOff, Loader2, Check, X, Clock } from "lucide-react";
 import { AuthContext } from "@/context/AuthContext";
 
-// ── Password rule definitions ──────────────────────────────────────────────
 const PASSWORD_RULES = [
-  {
-    id: "length",
-    label: "At least 8 characters",
-    test: (v) => v?.length >= 8,
-  },
+  { id: "length", label: "At least 8 characters", test: (v) => v?.length >= 8 },
   {
     id: "uppercase",
     label: "Contains uppercase letter",
@@ -26,10 +21,8 @@ const PASSWORD_RULES = [
   },
 ];
 
-// ── Small rule-row component ───────────────────────────────────────────────
 function RuleRow({ label, passed, touched }) {
-  if (!touched) return null; // hide until the user starts typing
-
+  if (!touched) return null;
   return (
     <li className="flex items-center gap-2 text-xs uppercase tracking-wide">
       {passed ? (
@@ -48,13 +41,12 @@ function RuleRow({ label, passed, touched }) {
   );
 }
 
-// ── Main form ──────────────────────────────────────────────────────────────
 export default function RegisterForm() {
-  const navigate = useNavigate();
   const { register: registerUser } = useContext(AuthContext);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [registered, setRegistered] = useState(false);
 
   const {
     register,
@@ -67,7 +59,6 @@ export default function RegisterForm() {
   const passwordConfirm = watch("password_confirmation") ?? "";
   const passwordTouched = !!touchedFields.password;
   const confirmTouched = !!touchedFields.password_confirmation;
-
   const confirmMatches =
     passwordConfirm === password && passwordConfirm.length > 0;
 
@@ -80,11 +71,36 @@ export default function RegisterForm() {
       data.password_confirmation,
     );
     if (res?.success) {
-      navigate("/login");
+      setRegistered(true);
     } else {
       setServerError(res?.error ?? "Registration failed. Please try again.");
     }
   };
+
+  if (registered) {
+    return (
+      <div className="flex flex-col items-center text-center py-4 space-y-4">
+        <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <Clock className="w-7 h-7 text-amber-500" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">
+            Account Pending Activation
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs">
+            Your account has been created. An HR administrator must activate it
+            before you can log in. Please check back later.
+          </p>
+        </div>
+        <Link
+          to="/login"
+          className="text-sm font-semibold text-blue-700 hover:underline uppercase tracking-wider"
+        >
+          Back to Login
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -94,7 +110,6 @@ export default function RegisterForm() {
         </div>
       )}
 
-      {/* Username */}
       <div className="space-y-1.5">
         <Label
           htmlFor="username"
@@ -123,7 +138,6 @@ export default function RegisterForm() {
         )}
       </div>
 
-      {/* Email */}
       <div className="space-y-1.5">
         <Label
           htmlFor="email"
@@ -152,7 +166,6 @@ export default function RegisterForm() {
         )}
       </div>
 
-      {/* Password */}
       <div className="space-y-1.5">
         <Label
           htmlFor="password"
@@ -185,8 +198,6 @@ export default function RegisterForm() {
             )}
           </button>
         </div>
-
-        {/* ── Live password rule checklist ── */}
         {passwordTouched && (
           <ul className="mt-2 space-y-1 pl-0.5">
             {PASSWORD_RULES.map((rule) => (
@@ -201,7 +212,6 @@ export default function RegisterForm() {
         )}
       </div>
 
-      {/* Confirm Password */}
       <div className="space-y-1.5">
         <Label
           htmlFor="password_confirmation"
@@ -234,8 +244,6 @@ export default function RegisterForm() {
             )}
           </button>
         </div>
-
-        {/* ── Passwords-match indicator ── */}
         {confirmTouched && passwordConfirm.length > 0 && (
           <ul className="mt-2 pl-0.5">
             <RuleRow

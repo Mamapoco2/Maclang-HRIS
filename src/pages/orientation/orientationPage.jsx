@@ -237,7 +237,6 @@ function ProgressHeader({
   const total = 5;
   const done = completedSections.size;
   const pct = Math.round((done / total) * 100);
-  const idx = SECTIONS.indexOf(section);
 
   return (
     <div
@@ -303,14 +302,13 @@ function ProgressHeader({
 }
 
 function StepNav({ section, dark }) {
-  const idx = SECTIONS.indexOf(section);
   return (
     <div className="flex items-center justify-center gap-1 mb-8">
       {SECTIONS.filter((s) => s !== "intro").map((s, i) => {
         const active = s === section;
         const past = SECTIONS.indexOf(s) < SECTIONS.indexOf(section);
         return (
-          <div key={s} className="flex items-center gap-1">
+          <div key={s} className="flex items-center gap-1 mt-5">
             <div
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                 active
@@ -511,7 +509,7 @@ function QuizSection({
           ))}
         </div>
       </div>
-      <div className={`px-8 pb-8 flex items-center justify-between`}>
+      <div className="px-8 pb-8 flex items-center justify-between">
         <button
           onClick={() => setCurrent((p) => p - 1)}
           disabled={current === 0}
@@ -543,7 +541,6 @@ function QuizSection({
 
 function VideoSection({ onComplete, completed, dark }) {
   const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [watched, setWatched] = useState(completed ? 100 : 0);
   const intervalRef = useRef(null);
 
@@ -569,9 +566,7 @@ function VideoSection({ onComplete, completed, dark }) {
     <div
       className={`rounded-2xl border overflow-hidden shadow-xl ${dark ? "bg-slate-800/50 border-white/10" : "bg-white border-slate-200"}`}
     >
-      <div
-        className={`relative bg-slate-900 aspect-video flex items-center justify-center overflow-hidden`}
-      >
+      <div className="relative bg-slate-900 aspect-video flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-900/40 via-slate-900 to-blue-900/40" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="grid grid-cols-8 grid-rows-5 w-full h-full opacity-10">
@@ -674,9 +669,8 @@ function VideoSection({ onComplete, completed, dark }) {
 function ContentSection({ completed, onUpdate, dark }) {
   const [open, setOpen] = useState(null);
 
-  const toggle = (id) => {
-    setOpen((p) => (p === id ? null : id));
-  };
+  const toggle = (id) => setOpen((p) => (p === id ? null : id));
+
   const markDone = (id) => {
     const next = new Set(completed);
     next.add(id);
@@ -722,7 +716,7 @@ function ContentSection({ completed, onUpdate, dark }) {
               className={`rounded-2xl border bg-gradient-to-br overflow-hidden transition-all duration-300 shadow-md ${topic.color} ${dark ? "" : "!bg-none border-slate-200"}`}
             >
               <button
-                className={`w-full flex items-center gap-4 p-5 text-left`}
+                className="w-full flex items-center gap-4 p-5 text-left"
                 onClick={() => toggle(topic.id)}
               >
                 <div
@@ -742,15 +736,9 @@ function ContentSection({ completed, onUpdate, dark }) {
                   />
                 )}
                 {isOpen ? (
-                  <ChevronDown
-                    size={16}
-                    className={dark ? "text-slate-400" : "text-slate-400"}
-                  />
+                  <ChevronDown size={16} className="text-slate-400" />
                 ) : (
-                  <ChevronRight
-                    size={16}
-                    className={dark ? "text-slate-400" : "text-slate-400"}
-                  />
+                  <ChevronRight size={16} className="text-slate-400" />
                 )}
               </button>
               {isOpen && (
@@ -785,15 +773,13 @@ function ContentSection({ completed, onUpdate, dark }) {
   );
 }
 
-function Certificate({ name, postScore, dark }) {
+function Certificate({ name, postScore, dark, onFinish }) {
   const date = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
   const certNum = `CERT-${Date.now().toString(36).toUpperCase().slice(-8)}`;
-
-  const handlePrint = () => window.print();
 
   return (
     <div className="space-y-6">
@@ -821,9 +807,7 @@ function Certificate({ name, postScore, dark }) {
           >
             This certifies that
           </p>
-          <h2
-            className={`text-4xl font-black tracking-tight mb-4 bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent`}
-          >
+          <h2 className="text-4xl font-black tracking-tight mb-4 bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
             {name || "Participant"}
           </h2>
           <p
@@ -837,48 +821,31 @@ function Certificate({ name, postScore, dark }) {
             Employee Orientation Program
           </h3>
           <div className="flex items-center justify-center gap-8 mb-8">
-            <div
-              className={`text-center p-4 rounded-2xl ${dark ? "bg-white/5 border border-white/10" : "bg-slate-50 border border-slate-200"}`}
-            >
-              <p
-                className={`text-xs font-semibold mb-1 ${dark ? "text-slate-400" : "text-slate-500"}`}
+            {[
+              { label: "Completion Date", value: date },
+              {
+                label: "Final Score",
+                value: postScore + "%",
+                accent: true,
+              },
+              { label: "Certificate No.", value: certNum, mono: true },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className={`text-center p-4 rounded-2xl ${dark ? "bg-white/5 border border-white/10" : "bg-slate-50 border border-slate-200"}`}
               >
-                Completion Date
-              </p>
-              <p
-                className={`text-sm font-black ${dark ? "text-white" : "text-slate-800"}`}
-              >
-                {date}
-              </p>
-            </div>
-            <div
-              className={`text-center p-4 rounded-2xl ${dark ? "bg-white/5 border border-white/10" : "bg-slate-50 border border-slate-200"}`}
-            >
-              <p
-                className={`text-xs font-semibold mb-1 ${dark ? "text-slate-400" : "text-slate-500"}`}
-              >
-                Final Score
-              </p>
-              <p
-                className={`text-2xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent`}
-              >
-                {postScore}%
-              </p>
-            </div>
-            <div
-              className={`text-center p-4 rounded-2xl ${dark ? "bg-white/5 border border-white/10" : "bg-slate-50 border border-slate-200"}`}
-            >
-              <p
-                className={`text-xs font-semibold mb-1 ${dark ? "text-slate-400" : "text-slate-500"}`}
-              >
-                Certificate No.
-              </p>
-              <p
-                className={`text-xs font-black font-mono ${dark ? "text-white" : "text-slate-800"}`}
-              >
-                {certNum}
-              </p>
-            </div>
+                <p
+                  className={`text-xs font-semibold mb-1 ${dark ? "text-slate-400" : "text-slate-500"}`}
+                >
+                  {item.label}
+                </p>
+                <p
+                  className={`${item.accent ? "text-2xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent" : `text-sm font-black ${item.mono ? "font-mono" : ""} ${dark ? "text-white" : "text-slate-800"}`}`}
+                >
+                  {item.value}
+                </p>
+              </div>
+            ))}
           </div>
           <div className="flex items-center justify-center gap-3">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent to-violet-400/30" />
@@ -889,9 +856,10 @@ function Certificate({ name, postScore, dark }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3 justify-center">
+
+      <div className="flex items-center gap-3 justify-center flex-wrap">
         <button
-          onClick={handlePrint}
+          onClick={() => window.print()}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all ${dark ? "border-white/10 hover:bg-white/5 text-slate-300" : "border-slate-200 hover:bg-slate-50 text-slate-700"}`}
         >
           <Printer size={14} /> Print Certificate
@@ -899,13 +867,23 @@ function Certificate({ name, postScore, dark }) {
         <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 transition-all">
           <Download size={14} /> Download PDF
         </button>
+        {/* ← This is the key button that closes the modal */}
+        {onFinish && (
+          <button
+            onClick={onFinish}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all"
+          >
+            <CheckCircle size={14} /> Done — Go to Dashboard
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export default function OrientationModule() {
+// onComplete is called when the user finishes (or skips from the modal)
+export default function OrientationModule({ onComplete }) {
   const dark = false;
   const [section, setSection] = useState("intro");
   const [name, setName] = useState("");
@@ -964,8 +942,6 @@ export default function OrientationModule() {
           dark={dark}
         />
       )}
-
-      {/* Dark mode toggle */}
 
       <div className="max-w-3xl mx-auto px-4">
         {/* ── INTRO ── */}
@@ -1213,9 +1189,7 @@ export default function OrientationModule() {
                   title="Final Assessment"
                   subtitle="5 questions — Passing score: 80%"
                   icon={CircleHelp}
-                  onComplete={(s) => {
-                    setPostScore(s);
-                  }}
+                  onComplete={(s) => setPostScore(s)}
                   dark={dark}
                   storedScore={postScore}
                 />
@@ -1236,7 +1210,7 @@ export default function OrientationModule() {
 
         {/* ── CERTIFICATE ── */}
         {section === "certificate" && (
-          <div>
+          <div className="pb-12">
             <StepNav section={section} dark={dark} />
             <div className="mb-6">
               <h2
@@ -1267,7 +1241,13 @@ export default function OrientationModule() {
                 </p>
               </div>
             ) : (
-              <Certificate name={name} postScore={postScore} dark={dark} />
+              // Pass onFinish so the "Done" button can close the modal
+              <Certificate
+                name={name}
+                postScore={postScore}
+                dark={dark}
+                onFinish={onComplete}
+              />
             )}
           </div>
         )}

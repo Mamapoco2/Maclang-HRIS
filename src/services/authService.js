@@ -23,6 +23,7 @@ const normalizeUser = (user) => ({
   departments: user.departments ?? [],
   division: user.division ?? null,
   position: user.position ?? null,
+  has_completed_orientation: user.has_completed_orientation ?? false, // ← added
 });
 
 const login = async (username, password) => {
@@ -50,6 +51,7 @@ const login = async (username, password) => {
     clearTimeout(timeout);
   }
 };
+
 const register = async (username, email, password, password_confirmation) => {
   try {
     const res = await api.post("/register", {
@@ -90,11 +92,25 @@ const me = async () => {
   }
 };
 
+const completeOrientation = async () => {
+  // ← added
+  try {
+    const res = await api.post("/orientation/complete");
+    return { success: true, data: res.data };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.message ?? "Failed to complete orientation.",
+    };
+  }
+};
+
 export default {
   login,
   register,
   logout,
   me,
+  completeOrientation, // ← added
   getCurrentUser: getUser,
   getToken,
 };
