@@ -4,6 +4,10 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "@/context/authContext";
+import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
+
 import MainLayout from "../layout/layout";
 import Dashboard from "../pages/dashboard/dashboard";
 import Employee from "../pages/employees/components/employeePage";
@@ -44,15 +48,23 @@ import TopPeformerDepartmentPage from "../pages/topPerformer/topDepartmentPerfor
 import TopPeformerHospitalPage from "../pages/topPerformer/topHospitalPerformer/topHospitalPerformerPage";
 import TrainingEffectivenessPage from "../pages/trainings/trainingEffectiveness/trainingEffectivenessPage";
 import CosPage from "../pages/positions/CosPositionsPage";
-import Consultant from "../pages/positions/ConsultantPositionsPage";
 import ConsultantPositionsPage from "../pages/positions/ConsultantPositionsPage";
 import OrientationPage from "../pages/orientation/orientationPage";
+
+function RootRedirect() {
+  const { isAuthenticated, loading } = useContext(AuthContext);
+  const firstAccessibleRoute = useFirstAccessibleRoute();
+
+  if (loading) return null;
+  if (isAuthenticated) return <Navigate to={firstAccessibleRoute} replace />;
+  return <Navigate to="/login" replace />;
+}
 
 function AppRoutes() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<RootRedirect />} />
 
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
