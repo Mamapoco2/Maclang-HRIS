@@ -28,6 +28,8 @@ import {
   Layers,
 } from "lucide-react";
 
+import authService from "@/services/authService";
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const LS_KEY = "orient_module_v1";
 const loadState = () => {
@@ -886,7 +888,11 @@ function Certificate({ name, postScore, dark, onFinish }) {
 export default function OrientationModule({ onComplete }) {
   const dark = false;
   const [section, setSection] = useState("intro");
-  const [name, setName] = useState("");
+  const storedUser = authService.getCurrentUser();
+  const derivedName = [storedUser?.first_name, storedUser?.last_name]
+    .filter(Boolean)
+    .join(" ");
+  const [name, setName] = useState(derivedName);
 
   const saved = loadState();
   const [preScore, setPreScore] = useState(saved.preScore ?? null);

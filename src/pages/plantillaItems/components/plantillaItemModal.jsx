@@ -32,6 +32,17 @@ import {
 } from "../../../services/plantillaService";
 import api from "@/api/api";
 
+const ROLE_OPTIONS = [
+  "CHIEF",
+  "DIRECTOR",
+  "ASSISTANT DIRECTOR",
+  "OFFICER IN CHARGE",
+  "CHAIRMAN",
+  "HEAD",
+  "SUPERVISOR",
+  "STAFF",
+];
+
 /*
 |─────────────────────────────────────────────────────────────────────────────
 | AddItemModal
@@ -43,59 +54,42 @@ const itemDefaults = {
   title: "",
   description: "",
   approved_slots: 1,
+  display_department_id: "",
 };
 
 function AddItemForm({ open, onOpenChange, onSuccess }) {
   const form = useForm({ defaultValues: itemDefaults });
   const [saving, setSaving] = useState(false);
-  const [existingItems, setExistingItems] = useState([]);
-  const [loadingItems, setLoadingItems] = useState(false);
-  const [selectedExistingItem, setSelectedExistingItem] = useState("");
+  const [departments, setDepartments] = useState([]);
+  const [loadingDepts, setLoadingDepts] = useState(false);
+  const [deptSearch, setDeptSearch] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    setLoadingItems(true);
-    plantillaItemService
-      .getPlantillaItems()
-      .then((data) => {
-        setExistingItems(Array.isArray(data) ? data : []);
+
+    setLoadingDepts(true);
+    api
+      .get("/departments")
+      .then((res) => {
+        const data = res.data;
+        setDepartments(Array.isArray(data) ? data : (data.data ?? []));
       })
-      .catch((err) => console.error("Failed to load items:", err))
-      .finally(() => setLoadingItems(false));
+      .catch(console.error)
+      .finally(() => setLoadingDepts(false));
   }, [open]);
 
   useEffect(() => {
     if (open) {
       form.reset(itemDefaults);
-      setSelectedExistingItem("");
+      setDeptSearch("");
     }
   }, [open]);
 
-  const handleSubmit = async (data) => {
-    // ── Add a slot to an existing item (by base_item_number)
-    if (selectedExistingItem) {
-      setSaving(true);
-      try {
-        await api.post("/plantilla-positions", {
-          base_item_number: selectedExistingItem,
-          title:
-            existingItems.find(
-              (i) =>
-                String(i.base_item_number) === String(selectedExistingItem),
-            )?.title ?? "",
-        });
-        toast.success("Slot added to existing plantilla item.");
-        onOpenChange(false);
-        onSuccess?.();
-      } catch (err) {
-        toast.error(err?.response?.data?.message ?? "Something went wrong.");
-      } finally {
-        setSaving(false);
-      }
-      return;
-    }
+  const filteredDepts = departments.filter((d) =>
+    d.name.toLowerCase().includes(deptSearch.toLowerCase()),
+  );
 
-    // ── Create a brand-new item + slots
+  const handleSubmit = async (data) => {
     setSaving(true);
     try {
       await plantillaItemService.createPlantillaItem({
@@ -103,6 +97,9 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
         title: data.title,
         description: data.description,
         approved_slots: Number(data.approved_slots),
+        display_department_id: data.display_department_id
+          ? Number(data.display_department_id)
+          : null,
       });
       toast.success("Plantilla item added and slots provisioned.");
       onOpenChange(false);
@@ -131,164 +128,165 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
             onSubmit={form.handleSubmit(handleSubmit)}
             className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto"
           >
-            {/* Select existing item to add a slot */}
-            <div>
-              <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-2">
-                Add Slot to Existing Item
-              </FormLabel>
-              <Select
-                value={selectedExistingItem}
-                onValueChange={setSelectedExistingItem}
-                disabled={loadingItems}
-              >
-                <SelectTrigger className="text-sm border-gray-200">
-                  <SelectValue
-                    placeholder={
-                      loadingItems
-                        ? "Loading items..."
-                        : "Choose to add slot to existing item"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {existingItems.length === 0 ? (
-                    <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                      No existing items found.
-                    </div>
-                  ) : (
-                    existingItems.map((item) => (
-                      <SelectItem
-                        key={item.base_item_number}
-                        value={String(item.base_item_number)}
-                      >
-                        <span className="font-mono text-xs mr-2">
-                          #{item.base_item_number}
-                        </span>
-                        {item.title}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+            <FormField
+              control={form.control}
+              name="base_item_number"
+              rules={{ required: "Item number is required" }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Item Number
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. 8"
+                      className="font-mono text-sm border-gray-200"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
 
-            {!selectedExistingItem && (
-              <>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-400">
-                      or create new item
+            <FormField
+              control={form.control}
+              name="title"
+              rules={{ required: "Title is required" }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Position Title
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. NURSE I"
+                      className="text-sm border-gray-200"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.value.toUpperCase())
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Description{" "}
+                    <span className="text-gray-300 normal-case font-normal">
+                      (optional)
                     </span>
-                  </div>
-                </div>
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Brief description..."
+                      className="text-sm border-gray-200 resize-none"
+                      rows={2}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="base_item_number"
-                  rules={{ required: "Item number is required" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                        Item Number
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g. 8"
-                          className="font-mono text-sm border-gray-200"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+            <FormField
+              control={form.control}
+              name="approved_slots"
+              rules={{
+                required: "Approved slots is required",
+                min: { value: 1, message: "Must be at least 1" },
+                max: { value: 99, message: "Cannot exceed 99" },
+              }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Approved Slots
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={99}
+                      placeholder="1"
+                      className="font-mono text-sm border-gray-200"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Salary Grade and Step are set per slot after creation.
+                  </p>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="title"
-                  rules={{ required: "Title is required" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                        Position Title
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g. NURSE I"
-                          className="text-sm border-gray-200"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.value.toUpperCase())
+            <FormField
+              control={form.control}
+              name="display_department_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Department{" "}
+                    <span className="text-gray-300 normal-case font-normal">
+                      (optional)
+                    </span>
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={loadingDepts}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="text-sm border-gray-200">
+                        <SelectValue
+                          placeholder={
+                            loadingDepts ? "Loading..." : "Select department"
                           }
                         />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                        Description{" "}
-                        <span className="text-gray-300 normal-case font-normal">
-                          (optional)
-                        </span>
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Brief description..."
-                          className="text-sm border-gray-200 resize-none"
-                          rows={2}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="approved_slots"
-                  rules={{
-                    required: "Approved slots is required",
-                    min: { value: 1, message: "Must be at least 1" },
-                    max: { value: 99, message: "Cannot exceed 99" },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                        Approved Slots
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={99}
-                          placeholder="1"
-                          className="font-mono text-sm border-gray-200"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        Salary Grade and Step are set per slot after creation.
-                      </p>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-60">
+                      <div className="px-2 py-1.5 sticky top-0 bg-white border-b border-gray-100">
+                        <div className="relative">
+                          <Search
+                            size={11}
+                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                          />
+                          <input
+                            placeholder="Search department…"
+                            value={deptSearch}
+                            onChange={(e) => setDeptSearch(e.target.value)}
+                            onKeyDown={(e) => e.stopPropagation()}
+                            className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400"
+                          />
+                        </div>
+                      </div>
+                      {filteredDepts.length === 0 ? (
+                        <div className="px-3 py-4 text-xs text-slate-400 text-center">
+                          No departments found.
+                        </div>
+                      ) : (
+                        filteredDepts.map((dept) => (
+                          <SelectItem key={dept.id} value={String(dept.id)}>
+                            {dept.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
 
             <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
               <Button
@@ -307,7 +305,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                 {saving && (
                   <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 )}
-                {selectedExistingItem ? "Add Slot" : "Add Item"}
+                Add Item
               </Button>
             </div>
           </form>
@@ -336,7 +334,8 @@ const positionDefaults = {
   salary_grade_id: "",
   step_increment_id: "",
   date_of_assumption: "",
-  department_ids: [],
+  role: "",
+  display_department_id: "",
 };
 
 export function PositionModal({
@@ -355,8 +354,8 @@ export function PositionModal({
   const [loadingSteps, setLoadingSteps] = useState(false);
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deptSearch, setDeptSearch] = useState("");
 
-  // status lives directly on the position row
   const isFilled = (position?.status ?? "").toUpperCase() === "FILLED";
 
   useEffect(() => {
@@ -380,24 +379,20 @@ export function PositionModal({
       .finally(() => setLoadingDepts(false));
   }, [open]);
 
-  // Pre-fill form — uses exact column names
   useEffect(() => {
     if (open && position) {
+      setDeptSearch("");
       form.reset({
         position_title: position.position_title ?? "",
         salary_grade_id: String(position.salary_grade_id ?? ""),
         step_increment_id: String(position.step_increment_id ?? ""),
         date_of_assumption: position.date_of_assumption ?? "",
-        department_ids: (
-          position.department_ids ??
-          item?.department_ids ??
-          []
-        ).map(String),
+        role: position.role ?? "",
+        display_department_id: String(position.display_department_id ?? ""),
       });
     }
   }, [open, position]);
 
-  // Load steps when SG changes
   const watchedSgId = form.watch("salary_grade_id");
   useEffect(() => {
     if (!watchedSgId) {
@@ -413,6 +408,10 @@ export function PositionModal({
       .finally(() => setLoadingSteps(false));
   }, [watchedSgId]);
 
+  const filteredDepts = departments.filter((d) =>
+    d.name.toLowerCase().includes(deptSearch.toLowerCase()),
+  );
+
   const handleSubmit = async (data) => {
     setSaving(true);
     try {
@@ -425,7 +424,10 @@ export function PositionModal({
           ? Number(data.step_increment_id)
           : null,
         date_of_assumption: data.date_of_assumption || null,
-        department_ids: data.department_ids?.map(Number) ?? [],
+        role: data.role || null,
+        display_department_id: data.display_department_id
+          ? Number(data.display_department_id)
+          : null,
       });
       toast.success(`Slot ${position.slot_number} updated.`);
       onSuccess?.();
@@ -433,21 +435,6 @@ export function PositionModal({
       toast.error(err?.response?.data?.message ?? "Failed to update slot.");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const watchedDeptIds = form.watch("department_ids") ?? [];
-
-  const toggleDept = (id) => {
-    const current = form.getValues("department_ids") ?? [];
-    const asStr = String(id);
-    if (current.includes(asStr)) {
-      form.setValue(
-        "department_ids",
-        current.filter((d) => d !== asStr),
-      );
-    } else {
-      form.setValue("department_ids", [...current, asStr]);
     }
   };
 
@@ -495,7 +482,6 @@ export function PositionModal({
               </div>
             ) : (
               <>
-                {/* Position Title */}
                 <FormField
                   control={form.control}
                   name="position_title"
@@ -519,48 +505,6 @@ export function PositionModal({
                   )}
                 />
 
-                {/* Departments */}
-                <div className="space-y-2">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400 block">
-                    Departments{" "}
-                    <span className="text-gray-300 normal-case font-normal">
-                      (select all that apply)
-                    </span>
-                  </FormLabel>
-                  {loadingDepts ? (
-                    <div className="text-xs text-gray-400 py-1">
-                      Loading departments…
-                    </div>
-                  ) : departments.length === 0 ? (
-                    <div className="text-xs text-gray-400 py-1">
-                      No departments found.
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                      {departments.map((dept) => {
-                        const selected = watchedDeptIds.includes(
-                          String(dept.id),
-                        );
-                        return (
-                          <button
-                            key={dept.id}
-                            type="button"
-                            onClick={() => toggleDept(dept.id)}
-                            className={`text-xs px-3 py-1 rounded-full border transition-colors whitespace-nowrap ${
-                              selected
-                                ? "bg-indigo-600 text-white border-indigo-600"
-                                : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
-                            }`}
-                          >
-                            {dept.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Salary Grade */}
                 <FormField
                   control={form.control}
                   name="salary_grade_id"
@@ -598,7 +542,6 @@ export function PositionModal({
                   )}
                 />
 
-                {/* Step */}
                 <FormField
                   control={form.control}
                   name="step_increment_id"
@@ -647,7 +590,6 @@ export function PositionModal({
                   )}
                 />
 
-                {/* Date of Assumption */}
                 <FormField
                   control={form.control}
                   name="date_of_assumption"
@@ -666,6 +608,100 @@ export function PositionModal({
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                        Role{" "}
+                        <span className="text-gray-300 normal-case font-normal">
+                          (optional)
+                        </span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="text-sm border-gray-200">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ROLE_OPTIONS.map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {r}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="display_department_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                        Department{" "}
+                        <span className="text-gray-300 normal-case font-normal">
+                          (optional)
+                        </span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={loadingDepts}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="text-sm border-gray-200">
+                            <SelectValue
+                              placeholder={
+                                loadingDepts
+                                  ? "Loading..."
+                                  : "Select department"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60">
+                          <div className="px-2 py-1.5 sticky top-0 bg-white border-b border-gray-100">
+                            <div className="relative">
+                              <Search
+                                size={11}
+                                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                              />
+                              <input
+                                placeholder="Search department…"
+                                value={deptSearch}
+                                onChange={(e) => setDeptSearch(e.target.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400"
+                              />
+                            </div>
+                          </div>
+                          {filteredDepts.length === 0 ? (
+                            <div className="px-3 py-4 text-xs text-slate-400 text-center">
+                              No departments found.
+                            </div>
+                          ) : (
+                            filteredDepts.map((dept) => (
+                              <SelectItem key={dept.id} value={String(dept.id)}>
+                                {dept.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )}

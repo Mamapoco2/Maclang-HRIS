@@ -252,12 +252,12 @@ export default function EmployeePage() {
             )}
           </div>
 
-          <Button
+          {/* <Button
             onClick={handleAdd}
             className="h-9 px-4 text-sm bg-gray-900 hover:bg-gray-800 text-white rounded-lg gap-1.5 font-medium"
           >
             <Plus size={14} /> Add Employee
-          </Button>
+          </Button> */}
         </div>
       </div>
 

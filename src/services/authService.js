@@ -15,6 +15,8 @@ const normalizeUser = (user) => ({
   approval_status: user.approval_status,
   roles: user.roles ?? [],
   permissions: user.permissions ?? [],
+  given_name: user.given_name ?? null,
+  middle_name: user.middle_name ?? null,
   first_name: user.first_name ?? null,
   last_name: user.last_name ?? null,
   avatar_url: user.avatar_url ?? null,
@@ -23,7 +25,7 @@ const normalizeUser = (user) => ({
   departments: user.departments ?? [],
   division: user.division ?? null,
   position: user.position ?? null,
-  has_completed_orientation: user.has_completed_orientation ?? false, // ← added
+  has_completed_orientation: user.has_completed_orientation ?? false,
 });
 
 const login = async (username, password) => {
@@ -52,9 +54,20 @@ const login = async (username, password) => {
   }
 };
 
-const register = async (username, email, password, password_confirmation) => {
+const register = async (
+  given_name,
+  middle_name,
+  last_name,
+  username,
+  email,
+  password,
+  password_confirmation,
+) => {
   try {
     const res = await api.post("/register", {
+      given_name,
+      middle_name: middle_name || null,
+      last_name,
       username,
       email,
       password,
@@ -93,7 +106,6 @@ const me = async () => {
 };
 
 const completeOrientation = async () => {
-  // ← added
   try {
     const res = await api.post("/orientation/complete");
     return { success: true, data: res.data };
@@ -110,7 +122,7 @@ export default {
   register,
   logout,
   me,
-  completeOrientation, // ← added
+  completeOrientation,
   getCurrentUser: getUser,
   getToken,
 };

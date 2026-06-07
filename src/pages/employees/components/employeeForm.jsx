@@ -21,7 +21,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// ─── Normalize employment_type from API to match form option values ───────────
 const normalizeEmployeeType = (raw) => {
   const map = {
     plantilla: "Plantilla",
@@ -32,8 +31,6 @@ const normalizeEmployeeType = (raw) => {
   return map[(raw ?? "").toLowerCase().trim()] ?? raw ?? "Plantilla";
 };
 
-// ─── Build a human-readable label for a plantilla position ───────────────────
-// Uses position_slot_name (e.g. "22" or "23-1") + position_title / title
 const positionLabel = (pos) => {
   if (!pos) return "";
   const slot = pos.position_slot_name ?? pos.item_number ?? "";
@@ -90,7 +87,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       formData.department.includes(String(d.id)),
   );
 
-  // ─── Fetch COS + Consultant positions on mount ────────────────────────────
   useEffect(() => {
     employeeService
       .getCosPositions()
@@ -103,7 +99,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       .catch(() => setConsultantPositions([]));
   }, []);
 
-  // ─── Fetch plantilla positions + departments on mount ─────────────────────
   useEffect(() => {
     const fetchAndInit = async () => {
       try {
@@ -115,7 +110,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         const deptList = dept.data ?? dept;
         const validDeptIds = deptList.map((d) => String(d.id));
         setDepartments(deptList);
-        // getAssignablePositions now always returns a plain array
         setPositions(Array.isArray(positionList) ? positionList : []);
 
         if (!employee) return;
@@ -151,7 +145,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           position?.salaryGrade?.annual_salary ??
           "";
 
-        // Build the display label from position_slot_name + position_title
         setSelectedPositionLabel(positionLabel(position));
 
         const toUpperArray = (val) =>
@@ -214,7 +207,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     employeeService.getAllEmployees().then((res) => setAllEmployees(res.data));
   }, []);
 
-  // ─── Load steps when position slot changes ────────────────────────────────
   useEffect(() => {
     if (
       !formData.plantillaPositionId ||
@@ -259,11 +251,9 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         });
       })
       .catch(() => setSteps([]));
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.plantillaPositionId, positions]);
 
-  // ─── Update salary + stepNumber when step changes ─────────────────────────
   useEffect(() => {
     if (!formData.stepIncrementId) return;
     const step = steps.find(
@@ -277,7 +267,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     }));
   }, [formData.stepIncrementId, steps]);
 
-  // ─── Clear fields when type changes (skip on initial mount) ──────────────
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -304,7 +293,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     }
   }, [formData.employeeType]);
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
   const handleChange = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value ?? "" }));
 
@@ -348,7 +336,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const removeParent = (index) =>
     setParents((prev) => prev.filter((_, i) => i !== index));
 
-  // ─── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     const up = (v) => (v ? String(v).toUpperCase() : "");
@@ -436,7 +423,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     (emp) => emp.id !== employee?.id,
   );
 
-  // ─── Derived display values ───────────────────────────────────────────────
   const selectedPosition =
     Array.isArray(positions) && positions.length > 0
       ? positions.find(
@@ -470,7 +456,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           ? (selectedConsultantPosition?.title ?? "")
           : "";
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <form
       onSubmit={handleSubmit}
@@ -1017,6 +1002,12 @@ function SearchableSelect({
 
   const toggleValue = (val) => {
     if (!multiple) {
+      // clicking same value = unselect
+      if (selectedValues.includes(val)) {
+        onChange("");
+        setOpen(false);
+        return;
+      }
       onChange(val);
       setOpen(false);
       return;
@@ -1026,6 +1017,11 @@ function SearchableSelect({
     } else {
       onChange([...selectedValues, val]);
     }
+  };
+
+  const clearAll = (e) => {
+    e.stopPropagation();
+    onChange(multiple ? [] : "");
   };
 
   return (
@@ -1050,49 +1046,56 @@ function SearchableSelect({
             >
               {selectedLabels || (placeholder ?? "SELECT...")}
             </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50 flex-shrink-0" />
+            <ChevronsUpDown className="h-4 w-4 opacity-50 flex-shrink-0 ml-2" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
           className="p-0 w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))]"
           style={{ minWidth: "var(--radix-popover-trigger-width)" }}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
         >
-          <Command>
+          <Command className="max-h-[200px] overflow-hidden">
             <CommandInput
               placeholder={`Search ${label}...`}
               className="uppercase"
             />
             <CommandEmpty>NO RESULT FOUND.</CommandEmpty>
-            <CommandGroup className="max-h-60 overflow-y-auto">
-              {options.map((opt) => (
-                <CommandItem
-                  key={opt.value}
-                  value={opt.label}
-                  className={cn(
-                    "uppercase",
-                    opt.disabled &&
-                      "opacity-40 pointer-events-none cursor-not-allowed",
-                  )}
-                  disabled={opt.disabled}
-                  onSelect={() => !opt.disabled && toggleValue(opt.value)}
-                >
-                  <Check
+            <div
+              className="overflow-y-auto max-h-[140px] overscroll-contain"
+              onTouchMove={(e) => e.stopPropagation()}
+            >
+              <CommandGroup>
+                {options.map((opt) => (
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.label}
                     className={cn(
-                      "mr-2 h-4 w-4 flex-shrink-0",
-                      selectedValues.includes(opt.value)
-                        ? "opacity-100"
-                        : "opacity-0",
+                      "uppercase",
+                      opt.disabled &&
+                        "opacity-40 pointer-events-none cursor-not-allowed",
                     )}
-                  />
-                  {opt.label}
-                  {opt.disabled && (
-                    <span className="ml-auto text-[10px] text-slate-400 font-normal normal-case">
-                      Occupied
-                    </span>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+                    disabled={opt.disabled}
+                    onSelect={() => !opt.disabled && toggleValue(opt.value)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4 flex-shrink-0",
+                        selectedValues.includes(opt.value)
+                          ? "opacity-100"
+                          : "opacity-0",
+                      )}
+                    />
+                    {opt.label}
+                    {opt.disabled && (
+                      <span className="ml-auto text-[10px] text-slate-400 font-normal normal-case">
+                        Occupied
+                      </span>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </div>
           </Command>
         </PopoverContent>
       </Popover>

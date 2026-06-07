@@ -50,6 +50,11 @@ const STATUS_CONFIG = {
 // Sortable columns definition: label -> accessor function
 const COLUMNS = [
   {
+    label: "Username",
+    key: "username",
+    accessor: (emp) => emp.user?.username || "",
+  },
+  {
     label: "Last Name",
     key: "last_name",
     accessor: (emp) => emp.last_name || "",
@@ -141,6 +146,7 @@ export default function EmployeeTable({
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
       <table className="w-full text-sm">
         <colgroup>
+          <col className="w-36" />
           <col className="w-14" />
           <col className="w-44" />
           <col className="w-36" />
@@ -233,6 +239,11 @@ export default function EmployeeTable({
                     </div>
                   </td>
 
+                  <td className="py-3 px-4 text-center">
+                    <span className="text-[13px] text-gray-500 uppercase">
+                      {emp.user?.username || "—"}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 text-center">
                     <span className="text-[13px] text-gray-700 uppercase">
                       {emp.last_name || "—"}
