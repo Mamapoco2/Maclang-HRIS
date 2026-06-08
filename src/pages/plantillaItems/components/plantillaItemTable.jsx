@@ -1,4 +1,3 @@
-//src/pages/plantillaitems/components/plantillaitemTable.jsx
 import { useState, useEffect, Fragment } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";

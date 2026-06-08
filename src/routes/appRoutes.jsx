@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "@/context/authContext";
-import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleoute";
+import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
 
 import MainLayout from "../layout/layout";
 import Dashboard from "../pages/dashboard/dashboard";

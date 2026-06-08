@@ -2,7 +2,7 @@
 import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "@/context/authContext";
-import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleoute";
+import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
 
 const SUPER_ROLES = [
   "superadmin",
