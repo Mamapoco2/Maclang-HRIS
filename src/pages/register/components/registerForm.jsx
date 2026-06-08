@@ -64,7 +64,6 @@ export default function RegisterForm() {
     handleSubmit,
     watch,
     setValue,
-    setValue,
     formState: { errors, isSubmitting, touchedFields },
   } = useForm({ mode: "onChange" });
 

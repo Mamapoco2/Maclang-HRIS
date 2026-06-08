@@ -257,6 +257,7 @@ const NAV_MAIN = [
       },
       {
         title: "Accounts Management",
+        url: "/accounts",
       },
       {
         title: "Departments",
@@ -267,6 +268,7 @@ const NAV_MAIN = [
         items: [
           {
             title: "Plantilla",
+            url: "/plantillaItems",
           },
           {
             title: "Non-Plantilla",
@@ -354,20 +356,6 @@ const NAV_MAIN = [
       { title: "Leave Request", url: "/leaveRequest" },
       { title: "New Leave Request", url: "/newLeaveRequest" },
     ],
-  },
-
-  {
-    title: "Accounts",
-    url: "/accounts",
-    icon: IconUserCheck,
-    permission: "accounts.view",
-  },
-
-  {
-    title: "Plantilla Items",
-    url: "/plantillaItems",
-    icon: IconFileText,
-    permission: "plantilla_items.view",
   },
 
   {
