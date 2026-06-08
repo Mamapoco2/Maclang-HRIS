@@ -1,8 +1,8 @@
-// src/routes/publicRoute.jsx
+//src/routes/publicRoute.jsx
 import { Navigate, Outlet } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "@/context/authContext";
-import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
+import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleoute";
 
 export default function PublicRoute() {
   const { isAuthenticated, loading } = useContext(AuthContext);

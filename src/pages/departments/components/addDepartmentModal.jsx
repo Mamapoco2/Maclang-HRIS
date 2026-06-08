@@ -1,3 +1,4 @@
+// src/pages/departments/components/addDepartmentModal.jsx
 import { useEffect, useState } from "react";
 import api from "@/api/api";
 import {
@@ -123,9 +124,9 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
   const setUpper = (field, value) => set(field, value.toUpperCase());
 
   const getEmployeeName = (e) =>
-    [e.prefix, e.first_name, e.last_name, e.suffix, e.title]
+    `${[e.prefix, e.first_name, e.last_name, e.suffix]
       .filter(Boolean)
-      .join(" ");
+      .join(" ")}${e.title ? `, ${e.title}` : ""}`;
 
   const getRolePositions = (e) => {
     const rp = e.role_position;

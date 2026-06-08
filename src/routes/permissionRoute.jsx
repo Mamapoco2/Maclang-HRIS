@@ -1,8 +1,8 @@
-// src/routes/permissionRoute.jsx
+//src/routes/permissionRoute.jsx
 import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "@/context/authContext";
-import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
+import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleoute";
 
 const SUPER_ROLES = [
   "superadmin",

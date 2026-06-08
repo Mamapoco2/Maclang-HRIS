@@ -1,3 +1,4 @@
+//src/routes/appRoutes.jsx
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,7 +7,7 @@ import {
 } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "@/context/authContext";
-import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
+import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleoute";
 
 import MainLayout from "../layout/layout";
 import Dashboard from "../pages/dashboard/dashboard";

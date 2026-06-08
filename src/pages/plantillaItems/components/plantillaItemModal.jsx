@@ -1,3 +1,4 @@
+//src/pages/plantillaitems/plantillaitemModal.jsx
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
@@ -43,6 +44,54 @@ const ROLE_OPTIONS = [
   "STAFF",
 ];
 
+// Reusable searchable department dropdown content
+function DeptSelectContent({ departments, loading, search, onSearch }) {
+  const filtered = departments.filter((d) =>
+    d.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <SelectContent className="p-0 overflow-hidden">
+      <div className="px-2 py-1.5 bg-white border-b border-gray-100">
+        <div className="relative">
+          <Search
+            size={11}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            placeholder="Search department…"
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400"
+          />
+        </div>
+      </div>
+      <div className="overflow-y-auto max-h-44">
+        {loading ? (
+          <div className="px-3 py-4 text-xs text-slate-400 text-center">
+            Loading...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="px-3 py-4 text-xs text-slate-400 text-center">
+            No departments found.
+          </div>
+        ) : (
+          filtered.map((dept) => (
+            <SelectItem
+              key={dept.id}
+              value={String(dept.id)}
+              className="pl-3 [&>span:first-child]:hidden"
+            >
+              {dept.name}
+            </SelectItem>
+          ))
+        )}
+      </div>
+    </SelectContent>
+  );
+}
+
 /*
 |─────────────────────────────────────────────────────────────────────────────
 | AddItemModal
@@ -66,7 +115,6 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
 
   useEffect(() => {
     if (!open) return;
-
     setLoadingDepts(true);
     api
       .get("/departments")
@@ -84,10 +132,6 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
       setDeptSearch("");
     }
   }, [open]);
-
-  const filteredDepts = departments.filter((d) =>
-    d.name.toLowerCase().includes(deptSearch.toLowerCase()),
-  );
 
   const handleSubmit = async (data) => {
     setSaving(true);
@@ -222,7 +266,8 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                     />
                   </FormControl>
                   <p className="text-[11px] text-gray-400 mt-1">
-                    Salary Grade and Step are set per slot after creation.
+                    Salary Grade, Step, Role, and Department are set per slot
+                    after creation.
                   </p>
                   <FormMessage className="text-xs" />
                 </FormItem>
@@ -254,34 +299,12 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                         />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="max-h-60">
-                      <div className="px-2 py-1.5 sticky top-0 bg-white border-b border-gray-100">
-                        <div className="relative">
-                          <Search
-                            size={11}
-                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                          />
-                          <input
-                            placeholder="Search department…"
-                            value={deptSearch}
-                            onChange={(e) => setDeptSearch(e.target.value)}
-                            onKeyDown={(e) => e.stopPropagation()}
-                            className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400"
-                          />
-                        </div>
-                      </div>
-                      {filteredDepts.length === 0 ? (
-                        <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                          No departments found.
-                        </div>
-                      ) : (
-                        filteredDepts.map((dept) => (
-                          <SelectItem key={dept.id} value={String(dept.id)}>
-                            {dept.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
+                    <DeptSelectContent
+                      departments={departments}
+                      loading={loadingDepts}
+                      search={deptSearch}
+                      onSearch={setDeptSearch}
+                    />
                   </Select>
                   <FormMessage className="text-xs" />
                 </FormItem>
@@ -325,7 +348,7 @@ export default function PlantillaItemModal(props) {
 
 /*
 |─────────────────────────────────────────────────────────────────────────────
-| PositionModal
+| PositionModal — Edit Slot
 |─────────────────────────────────────────────────────────────────────────────
 */
 
@@ -394,6 +417,9 @@ export function PositionModal({
   }, [open, position]);
 
   const watchedSgId = form.watch("salary_grade_id");
+  const watchedRole = form.watch("role");
+  const isStaffRole = watchedRole === "STAFF";
+
   useEffect(() => {
     if (!watchedSgId) {
       setSteps([]);
@@ -407,10 +433,6 @@ export function PositionModal({
       .catch(console.error)
       .finally(() => setLoadingSteps(false));
   }, [watchedSgId]);
-
-  const filteredDepts = departments.filter((d) =>
-    d.name.toLowerCase().includes(deptSearch.toLowerCase()),
-  );
 
   const handleSubmit = async (data) => {
     setSaving(true);
@@ -479,6 +501,16 @@ export function PositionModal({
                       ` · Step ${position.step_increment.step}`}
                   </p>
                 )}
+                {position?.role && (
+                  <p className="text-xs text-emerald-700 font-semibold uppercase">
+                    Role: {position.role}
+                  </p>
+                )}
+                {position?.display_department?.name && (
+                  <p className="text-xs text-emerald-700">
+                    Department: {position.display_department.name}
+                  </p>
+                )}
               </div>
             ) : (
               <>
@@ -531,7 +563,11 @@ export function PositionModal({
                         </FormControl>
                         <SelectContent className="max-h-60">
                           {salaryGrades.map((sg) => (
-                            <SelectItem key={sg.id} value={String(sg.id)}>
+                            <SelectItem
+                              key={sg.id}
+                              value={String(sg.id)}
+                              className="pl-3 [&>span:first-child]:hidden"
+                            >
                               SG {sg.salary_grade}
                             </SelectItem>
                           ))}
@@ -570,7 +606,11 @@ export function PositionModal({
                         </FormControl>
                         <SelectContent className="max-h-60">
                           {steps.map((s) => (
-                            <SelectItem key={s.id} value={String(s.id)}>
+                            <SelectItem
+                              key={s.id}
+                              value={String(s.id)}
+                              className="pl-3 [&>span:first-child]:hidden"
+                            >
                               Step {s.step}
                               {s.monthly_salary != null && (
                                 <span className="ml-2 text-slate-400 text-xs">
@@ -635,7 +675,11 @@ export function PositionModal({
                         </FormControl>
                         <SelectContent>
                           {ROLE_OPTIONS.map((r) => (
-                            <SelectItem key={r} value={r}>
+                            <SelectItem
+                              key={r}
+                              value={r}
+                              className="pl-3 [&>span:first-child]:hidden"
+                            >
                               {r}
                             </SelectItem>
                           ))}
@@ -657,6 +701,13 @@ export function PositionModal({
                           (optional)
                         </span>
                       </FormLabel>
+                      {watchedRole && (
+                        <p className="text-[11px] text-indigo-500">
+                          {isStaffRole
+                            ? "This position will appear in the department's staff list as Vacant."
+                            : "This position will appear as a Vacant node in the org chart under this department."}
+                        </p>
+                      )}
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -673,34 +724,12 @@ export function PositionModal({
                             />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="max-h-60">
-                          <div className="px-2 py-1.5 sticky top-0 bg-white border-b border-gray-100">
-                            <div className="relative">
-                              <Search
-                                size={11}
-                                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                              />
-                              <input
-                                placeholder="Search department…"
-                                value={deptSearch}
-                                onChange={(e) => setDeptSearch(e.target.value)}
-                                onKeyDown={(e) => e.stopPropagation()}
-                                className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400"
-                              />
-                            </div>
-                          </div>
-                          {filteredDepts.length === 0 ? (
-                            <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                              No departments found.
-                            </div>
-                          ) : (
-                            filteredDepts.map((dept) => (
-                              <SelectItem key={dept.id} value={String(dept.id)}>
-                                {dept.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
+                        <DeptSelectContent
+                          departments={departments}
+                          loading={loadingDepts}
+                          search={deptSearch}
+                          onSearch={setDeptSearch}
+                        />
                       </Select>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -859,6 +888,16 @@ export function AssignEmployeeModal({
                 {sgLabel}
                 {stepLabel ? ` · ${stepLabel}` : ""}
               </p>
+              {position?.role && (
+                <p className="text-xs text-slate-500 uppercase font-semibold">
+                  {position.role}
+                </p>
+              )}
+              {position?.display_department?.name && (
+                <p className="text-xs text-indigo-500">
+                  {position.display_department.name}
+                </p>
+              )}
             </div>
 
             <FormField
@@ -912,7 +951,11 @@ export function AssignEmployeeModal({
                             .filter(Boolean)
                             .join(" ");
                           return (
-                            <SelectItem key={e.id} value={String(e.id)}>
+                            <SelectItem
+                              key={e.id}
+                              value={String(e.id)}
+                              className="pl-3 [&>span:first-child]:hidden"
+                            >
                               {name}
                             </SelectItem>
                           );
