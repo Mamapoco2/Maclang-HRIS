@@ -4,7 +4,12 @@ import {
   activateUser,
   bulkActivateUsers,
 } from "@/services/accountsService";
-import { IconLoader2, IconCheck, IconUserCheck } from "@tabler/icons-react";
+import {
+  IconLoader2,
+  IconCheck,
+  IconUserCheck,
+  IconSearch,
+} from "@tabler/icons-react";
 import {
   Table,
   TableBody,
@@ -23,6 +28,7 @@ export default function AccountApprovalPage() {
   const [activatingId, setActivatingId] = useState(null);
   const [selected, setSelected] = useState([]);
   const [bulkActivating, setBulkActivating] = useState(false);
+  const [search, setSearch] = useState("");
 
   const loadUsers = async (resetSelected = false) => {
     try {
@@ -83,6 +89,12 @@ export default function AccountApprovalPage() {
   const allSelected = users.length > 0 && selected.length === users.length;
   const someSelected = selected.length > 0 && !allSelected;
 
+  const filteredUsers = users.filter(
+    (u) =>
+      u.username?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
     <div className="p-6">
       <header className="mb-6">
@@ -98,14 +110,32 @@ export default function AccountApprovalPage() {
       <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-800">
-              Pending approval
-            </span>
-            {!loading && (
-              <span className="text-sm text-gray-400">
-                {users.length} user{users.length !== 1 ? "s" : ""}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-800">
+                Pending approval
               </span>
+              {!loading && (
+                <span className="text-sm text-gray-400">
+                  {users.length} user{users.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            {!loading && (
+              <div className="relative">
+                <IconSearch
+                  size={14}
+                  stroke={1.5}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by username or email..."
+                  className="h-8 pl-8 pr-3 text-xs rounded-md border border-gray-200 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 w-56"
+                />
+              </div>
             )}
           </div>
 
@@ -167,17 +197,19 @@ export default function AccountApprovalPage() {
             </TableHeader>
 
             <TableBody>
-              {users.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
                     className="py-14 text-center text-sm text-gray-400"
                   >
-                    No pending users found.
+                    {users.length === 0
+                      ? "No pending users found."
+                      : "No users match your search."}
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((u) => (
+                filteredUsers.map((u) => (
                   <TableRow
                     key={u.id}
                     className={`transition-colors ${

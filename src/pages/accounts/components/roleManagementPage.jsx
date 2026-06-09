@@ -24,7 +24,7 @@ import { AuthContext } from "@/context/AuthContext";
 import { getEcho } from "@/lib/echo";
 import PermissionsModal from "./permissionModal";
 import { toast } from "sonner";
-import { IconShieldCheck } from "@tabler/icons-react";
+import { IconShieldCheck, IconSearch } from "@tabler/icons-react";
 
 const ROLE_BADGE_STYLES = {
   admin: "bg-orange-50 text-orange-700 border-orange-200",
@@ -66,6 +66,7 @@ export default function RoleManagementPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [roleSaving, setRoleSaving] = useState({});
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     loadAccounts();
@@ -156,13 +157,29 @@ export default function RoleManagementPage() {
         </header>
 
         <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100">
-            <span className="text-sm font-medium text-gray-800">
-              Active accounts
-            </span>
-            <span className="text-sm text-gray-400">
-              {accounts.length} user{accounts.length !== 1 ? "s" : ""}
-            </span>
+          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-800">
+                Active accounts
+              </span>
+              <span className="text-sm text-gray-400">
+                {accounts.length} user{accounts.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="relative">
+              <IconSearch
+                size={14}
+                stroke={1.5}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, username or email..."
+                className="h-8 pl-8 pr-3 text-xs rounded-md border border-gray-200 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 w-64"
+              />
+            </div>
           </div>
 
           <Table>
@@ -200,113 +217,136 @@ export default function RoleManagementPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                accounts.map((u) => (
-                  <TableRow
-                    key={u.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <TableCell className="py-3 px-5 text-center font-medium text-sm text-gray-900">
-                      {u.name && u.name !== u.username ? (
-                        (() => {
-                          const parts = u.name.trim().split(" ");
-                          if (parts.length >= 2) {
-                            const last = parts[parts.length - 1];
-                            const first = parts.slice(0, -1).join(" ");
-                            return `${last}, ${first}`;
-                          }
-                          return u.name;
-                        })()
-                      ) : (
-                        <span className="italic text-gray-400 text-xs">
-                          No name
-                        </span>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="py-3 px-5 text-center font-medium text-sm text-gray-900">
-                      {u.username}
-                    </TableCell>
-
-                    <TableCell className="py-3 text-center text-sm text-gray-500">
-                      {u.email}
-                    </TableCell>
-
-                    <TableCell className="py-3 text-center">
-                      <div className="flex justify-center">
-                        <Select
-                          value={getCurrentRole(u)}
-                          onValueChange={(role) => handleRoleChange(u.id, role)}
-                          disabled={!!roleSaving[u.id]}
-                        >
-                          <SelectTrigger
-                            className={`h-7 w-36 text-xs border-gray-200 focus:ring-0 focus:ring-offset-0 ${
-                              getCurrentRole(u) !== "none"
-                                ? `${getRoleBadgeClass(getCurrentRole(u))} font-medium`
-                                : "text-gray-400"
-                            }`}
-                          >
-                            <SelectValue placeholder="Assign role..." />
-                          </SelectTrigger>
-
-                          <SelectContent>
-                            {ASSIGNABLE_ROLES.map((r) => (
-                              <SelectItem
-                                key={r.value}
-                                value={r.value}
-                                className={`text-xs ${
-                                  r.value === "none"
-                                    ? "text-gray-400 italic"
-                                    : ""
-                                }`}
-                              >
-                                {r.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="py-3 text-center">
-                      {u.permissions?.length > 0 ? (
-                        <div className="flex flex-wrap justify-center gap-1">
-                          {u.permissions.slice(0, 3).map((p) => (
-                            <span
-                              key={p}
-                              className="inline-block text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200"
-                            >
-                              {p}
-                            </span>
-                          ))}
-
-                          {u.permissions.length > 3 && (
-                            <span className="inline-block text-xs px-2 py-0.5 rounded-md text-gray-400 border border-gray-200">
-                              +{u.permissions.length - 3} more
+                (() => {
+                  const filteredAccounts = accounts.filter(
+                    (u) =>
+                      u.name?.toLowerCase().includes(search.toLowerCase()) ||
+                      u.username
+                        ?.toLowerCase()
+                        .includes(search.toLowerCase()) ||
+                      u.email?.toLowerCase().includes(search.toLowerCase()),
+                  );
+                  return filteredAccounts.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="py-14 text-center text-sm text-gray-400"
+                      >
+                        No accounts match your search.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredAccounts.map((u) => (
+                      <TableRow
+                        key={u.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <TableCell className="py-3 px-5 text-center font-medium text-sm text-gray-900">
+                          {u.name && u.name !== u.username ? (
+                            (() => {
+                              const parts = u.name.trim().split(" ");
+                              if (parts.length >= 2) {
+                                const last = parts[parts.length - 1];
+                                const first = parts.slice(0, -1).join(" ");
+                                return `${last}, ${first}`;
+                              }
+                              return u.name;
+                            })()
+                          ) : (
+                            <span className="italic text-gray-400 text-xs">
+                              No name
                             </span>
                           )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">
-                          None set
-                        </span>
-                      )}
-                    </TableCell>
+                        </TableCell>
 
-                    <TableCell className="py-3 text-center pr-5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedUser(u);
-                          setModalOpen(true);
-                        }}
-                        className="h-7 text-xs px-3 border-gray-200 text-gray-700 hover:bg-gray-50"
-                      >
-                        Edit permissions
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        <TableCell className="py-3 px-5 text-center font-medium text-sm text-gray-900">
+                          {u.username}
+                        </TableCell>
+
+                        <TableCell className="py-3 text-center text-sm text-gray-500">
+                          {u.email}
+                        </TableCell>
+
+                        <TableCell className="py-3 text-center">
+                          <div className="flex justify-center">
+                            <Select
+                              value={getCurrentRole(u)}
+                              onValueChange={(role) =>
+                                handleRoleChange(u.id, role)
+                              }
+                              disabled={!!roleSaving[u.id]}
+                            >
+                              <SelectTrigger
+                                className={`h-7 w-36 text-xs border-gray-200 focus:ring-0 focus:ring-offset-0 ${
+                                  getCurrentRole(u) !== "none"
+                                    ? `${getRoleBadgeClass(getCurrentRole(u))} font-medium`
+                                    : "text-gray-400"
+                                }`}
+                              >
+                                <SelectValue placeholder="Assign role..." />
+                              </SelectTrigger>
+
+                              <SelectContent>
+                                {ASSIGNABLE_ROLES.map((r) => (
+                                  <SelectItem
+                                    key={r.value}
+                                    value={r.value}
+                                    className={`text-xs ${
+                                      r.value === "none"
+                                        ? "text-gray-400 italic"
+                                        : ""
+                                    }`}
+                                  >
+                                    {r.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="py-3 text-center">
+                          {u.permissions?.length > 0 ? (
+                            <div className="flex flex-wrap justify-center gap-1">
+                              {u.permissions.slice(0, 3).map((p) => (
+                                <span
+                                  key={p}
+                                  className="inline-block text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200"
+                                >
+                                  {p}
+                                </span>
+                              ))}
+
+                              {u.permissions.length > 3 && (
+                                <span className="inline-block text-xs px-2 py-0.5 rounded-md text-gray-400 border border-gray-200">
+                                  +{u.permissions.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">
+                              None set
+                            </span>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="py-3 text-center pr-5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedUser(u);
+                              setModalOpen(true);
+                            }}
+                            className="h-7 text-xs px-3 border-gray-200 text-gray-700 hover:bg-gray-50"
+                          >
+                            Edit permissions
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  );
+                })()
               )}
             </TableBody>
           </Table>
