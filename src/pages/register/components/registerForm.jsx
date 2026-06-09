@@ -265,7 +265,7 @@ export default function RegisterForm() {
             type="email"
             placeholder="you@example.com"
             autoComplete="email"
-            className="bg-white/80 dark:bg-gray-800/80 h-10 uppercase"
+            className="bg-white/80 dark:bg-gray-800/80 h-10"
             {...register("email", {
               required: "Email is required.",
               pattern: {
