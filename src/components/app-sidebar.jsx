@@ -89,6 +89,12 @@ const NAV_MAIN = [
           },
         ],
       },
+      {
+        title: "Employees",
+        url: "/employees",
+        icon: IconUsers,
+        permission: "employees.view",
+      },
     ],
   },
   {
@@ -309,26 +315,10 @@ const NAV_MAIN = [
   },
 
   {
-    title: "Employees",
-    url: "/employees",
-    icon: IconUsers,
-    permission: "employees.view",
-  },
-
-  {
     title: "Analytics",
     url: "/analytics",
     icon: IconChartBar,
     permission: "analytics.view",
-  },
-
-  {
-    title: "Trainings",
-    icon: IconSchool,
-    items: [
-      { title: "Training", url: "/trainings" },
-      { title: "Skill Gap Analysis Test", url: "/skillGapAnalysis" },
-    ],
   },
 
   {

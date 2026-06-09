@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2,
@@ -88,50 +89,166 @@ function buildColorMap(departments) {
   return map;
 }
 
+function groupByType(departments) {
+  const groups = {};
+  departments.forEach((dept) => {
+    const type = dept.type?.trim() || "Uncategorized";
+    if (!groups[type]) groups[type] = [];
+    groups[type].push(dept);
+  });
+
+  return Object.entries(groups).sort(([a], [b]) => {
+    if (a === "Uncategorized") return 1;
+    if (b === "Uncategorized") return -1;
+    return a.localeCompare(b);
+  });
+}
+
+// ── Per-section pagination ────────────────────────────────────────────────────
+
+function SectionPagination({ page, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-end gap-1 mt-3">
+      <button
+        onClick={() => onPageChange((p) => Math.max(1, p - 1))}
+        disabled={page === 1}
+        className="flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground transition hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ChevronLeft size={13} />
+      </button>
+
+      {Array.from({ length: totalPages }, (_, i) => i + 1)
+        .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+        .reduce((acc, n, idx, arr) => {
+          if (idx > 0 && n - arr[idx - 1] > 1) acc.push("...");
+          acc.push(n);
+          return acc;
+        }, [])
+        .map((n, i) =>
+          n === "..." ? (
+            <span
+              key={`ellipsis-${i}`}
+              className="px-1 text-xs text-muted-foreground"
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={n}
+              onClick={() => onPageChange(n)}
+              className={`flex items-center justify-center w-7 h-7 rounded-md text-xs font-medium transition border ${
+                page === n
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {n}
+            </button>
+          ),
+        )}
+
+      <button
+        onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
+        disabled={page === totalPages}
+        className="flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground transition hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ChevronRight size={13} />
+      </button>
+    </div>
+  );
+}
+
+// ── Section component with its own page state ─────────────────────────────────
+
+function TypeSection({
+  type,
+  depts,
+  colorMap,
+  search,
+  onEdit,
+  onDelete,
+  pageSize,
+}) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(depts.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginated = depts.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const startItem = depts.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endItem = Math.min(safePage * pageSize, depts.length);
+
+  return (
+    <div className="space-y-3">
+      {/* Section header */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+            {type}
+          </span>
+          <span className="inline-flex items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-semibold px-2 py-0.5 min-w-[20px]">
+            {depts.length}
+          </span>
+        </div>
+        <div className="flex-1 h-px bg-slate-200" />
+        {depts.length > pageSize && (
+          <span className="text-[10px] text-slate-400 shrink-0">
+            {startItem}–{endItem} of {depts.length}
+          </span>
+        )}
+      </div>
+
+      {/* Cards grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {paginated.map((dept) => {
+          const colors = colorMap[dept.division?.id ?? "none"];
+          return (
+            <DepartmentCard
+              key={dept.id}
+              department={dept}
+              colors={colors}
+              searchQuery={search}
+              onEdit={() => onEdit(dept)}
+              onDelete={() => onDelete(dept)}
+            />
+          );
+        })}
+      </div>
+
+      {/* Per-section pagination */}
+      <SectionPagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
+    </div>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export default function DepartmentTiles({
   departments,
   loading,
   search,
-  page,
-  pageSize,
-  onPageChange,
   onEdit,
   onDelete,
   onClearSearch,
 }) {
+  const PAGE_SIZE = 8;
   const colorMap = buildColorMap(departments);
-  const totalPages = Math.max(1, Math.ceil(departments.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const paginated = departments.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize,
-  );
-  const startItem =
-    departments.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const endItem = Math.min(safePage * pageSize, departments.length);
+  const grouped = groupByType(departments);
 
   return (
-    <div className="space-y-5">
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {loading
-          ? Array.from({ length: pageSize }).map((_, i) => (
-              <Skeleton key={i} className="h-40 rounded-2xl" />
-            ))
-          : paginated.map((dept) => {
-              const colors = colorMap[dept.division?.id ?? "none"];
-              return (
-                <DepartmentCard
-                  key={dept.id}
-                  department={dept}
-                  colors={colors}
-                  searchQuery={search}
-                  onEdit={() => onEdit(dept)}
-                  onDelete={() => onDelete(dept)}
-                />
-              );
-            })}
-      </div>
+    <div className="space-y-8">
+      {/* Loading skeletons */}
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-2xl" />
+          ))}
+        </div>
+      )}
 
       {/* Empty state */}
       {!loading && departments.length === 0 && (
@@ -153,65 +270,20 @@ export default function DepartmentTiles({
         </div>
       )}
 
-      {/* Pagination */}
-      {!loading && departments.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border pt-4">
-          <span className="text-xs text-muted-foreground order-2 sm:order-1">
-            Showing {startItem}–{endItem} of {departments.length}
-          </span>
-
-          <div className="flex items-center gap-1 order-1 sm:order-2">
-            <button
-              onClick={() => onPageChange((p) => Math.max(1, p - 1))}
-              disabled={safePage === 1}
-              className="flex items-center justify-center w-8 h-8 rounded-md border border-border text-muted-foreground transition hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft size={14} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(
-                (n) =>
-                  n === 1 || n === totalPages || Math.abs(n - safePage) <= 1,
-              )
-              .reduce((acc, n, idx, arr) => {
-                if (idx > 0 && n - arr[idx - 1] > 1) acc.push("...");
-                acc.push(n);
-                return acc;
-              }, [])
-              .map((n, i) =>
-                n === "..." ? (
-                  <span
-                    key={`ellipsis-${i}`}
-                    className="px-1 text-xs text-muted-foreground"
-                  >
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={n}
-                    onClick={() => onPageChange(n)}
-                    className={`flex items-center justify-center w-8 h-8 rounded-md text-xs font-medium transition border ${
-                      safePage === n
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ),
-              )}
-
-            <button
-              onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage === totalPages}
-              className="flex items-center justify-center w-8 h-8 rounded-md border border-border text-muted-foreground transition hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Sections per type — each has its own pagination */}
+      {!loading &&
+        grouped.map(([type, depts]) => (
+          <TypeSection
+            key={type}
+            type={type}
+            depts={depts}
+            colorMap={colorMap}
+            search={search}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            pageSize={PAGE_SIZE}
+          />
+        ))}
     </div>
   );
 }
@@ -246,7 +318,6 @@ function Highlight({ text = "", query = "" }) {
 function DepartmentCard({ department, colors, onEdit, onDelete, searchQuery }) {
   const divisionName = department.division?.name ?? null;
   const code = department.code ?? null;
-  const type = department.type ?? null;
 
   return (
     <div
@@ -289,11 +360,6 @@ function DepartmentCard({ department, colors, onEdit, onDelete, searchQuery }) {
               className={`inline-flex self-start items-center rounded-md border px-2 py-0.5 text-[10px] font-mono tracking-wide font-medium ${colors.badge}`}
             >
               <Highlight text={code} query={searchQuery} />
-            </span>
-          )}
-          {type && (
-            <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
-              {type}
             </span>
           )}
         </div>

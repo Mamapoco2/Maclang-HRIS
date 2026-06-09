@@ -17,15 +17,12 @@ export default function DepartmentPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 16;
 
   const fetchDepartments = useCallback(async () => {
     setLoading(true);
     try {
       const data = await departmentService.getDepartments();
       setDepartments(Array.isArray(data) ? data : (data?.data ?? []));
-      setPage(1);
     } catch {
       setError("Failed to load departments.");
     } finally {
@@ -36,9 +33,6 @@ export default function DepartmentPage() {
   useEffect(() => {
     fetchDepartments();
   }, [fetchDepartments]);
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -59,7 +53,6 @@ export default function DepartmentPage() {
       await api.delete(`/departments/${deleteTarget.id}`);
       toast.success(`"${deleteTarget.name}" deleted.`);
       setDepartments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
-      setPage(1);
     } catch {
       toast.error("Failed to delete department.");
     } finally {
@@ -77,7 +70,7 @@ export default function DepartmentPage() {
   }
 
   return (
-    <div className=" bg-background p-4">
+    <div className="bg-background p-4">
       <div className="p-2 w-auto space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -132,9 +125,6 @@ export default function DepartmentPage() {
           departments={filtered}
           loading={loading}
           search={search}
-          page={page}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
           onEdit={setEditTarget}
           onDelete={(dept) => setDeleteTarget({ id: dept.id, name: dept.name })}
           onClearSearch={() => setSearch("")}

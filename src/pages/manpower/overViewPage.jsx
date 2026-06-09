@@ -112,7 +112,6 @@ export default function OverviewTab() {
     plantilla: 0,
     cos: 0,
     consultant: 0,
-    vacant: 0,
   });
   const [gender, setGender] = useState({ male: 0, female: 0 });
   const [loading, setLoading] = useState(true);
@@ -125,18 +124,16 @@ export default function OverviewTab() {
         setError(null);
 
         // Fetch manpower counts in parallel
-        const [plantilla, cos, consultant, vacant] = await Promise.all([
+        const [plantilla, cos, consultant] = await Promise.all([
           manpowerService.getPlantillaCount(),
           manpowerService.getCosCount(),
           manpowerService.getConsultantCount(),
-          manpowerService.getVacantCount(),
         ]);
 
         setCounts({
           plantilla: plantilla ?? 0,
           cos: cos ?? 0,
           consultant: consultant ?? 0,
-          vacant: vacant ?? 0,
         });
 
         // Fetch gender count
@@ -164,7 +161,6 @@ export default function OverviewTab() {
     { name: "Plantilla", value: counts.plantilla, color: "var(--chart-1)" },
     { name: "COS", value: counts.cos, color: "var(--chart-2)" },
     { name: "Consultant", value: counts.consultant, color: "var(--chart-3)" },
-    { name: "Vacant", value: counts.vacant, color: "var(--chart-4)" },
   ];
 
   if (error) {
@@ -202,7 +198,6 @@ export default function OverviewTab() {
           title="Total number of consultant employees"
           value={counts.consultant}
         />
-        <AnimatedSummaryCard title="Vacant positions" value={counts.vacant} />
         <GenderCard male={gender.male} female={gender.female} />
       </div>
 
