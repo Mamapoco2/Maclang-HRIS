@@ -95,6 +95,14 @@ const NAV_MAIN = [
         icon: IconUsers,
         permission: "employees.view",
       },
+      {
+        title: "Team",
+        url: "/team",
+      },
+      {
+        title: "Orientation Compliance Monitoring",
+        url: "/orientationMonitoring",
+      },
     ],
   },
   {
@@ -328,11 +336,11 @@ const NAV_MAIN = [
     permission: "team.view",
   },
 
-  {
-    title: "Orientation",
-    url: "/Orientation",
-    icon: IconCompass,
-  },
+  // {
+  //   title: "Orientation",
+  //   url: "/Orientation",
+  //   icon: IconCompass,
+  // },
 
   {
     title: "Leave",

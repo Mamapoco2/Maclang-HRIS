@@ -42,6 +42,7 @@ export default function EmployeePage() {
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState("");
 
   const [allDivisions, setAllDivisions] = useState([]);
   const [allDepartments, setAllDepartments] = useState([]);
@@ -54,16 +55,12 @@ export default function EmployeePage() {
   const searchRef = useRef(search);
   const divisionRef = useRef(divisionFilter);
   const departmentRef = useRef(departmentFilter);
+  const employmentTypeRef = useRef(employmentTypeFilter);
 
-  useEffect(() => {
-    searchRef.current = search;
-  }, [search]);
-  useEffect(() => {
-    divisionRef.current = divisionFilter;
-  }, [divisionFilter]);
-  useEffect(() => {
-    departmentRef.current = departmentFilter;
-  }, [departmentFilter]);
+  useEffect(() => { searchRef.current = search; }, [search]);
+  useEffect(() => { divisionRef.current = divisionFilter; }, [divisionFilter]);
+  useEffect(() => { departmentRef.current = departmentFilter; }, [departmentFilter]);
+  useEffect(() => { employmentTypeRef.current = employmentTypeFilter; }, [employmentTypeFilter]);
 
   useEffect(() => {
     Promise.all([
@@ -72,9 +69,7 @@ export default function EmployeePage() {
     ])
       .then(([divRes, deptRes]) => {
         setAllDivisions(Array.isArray(divRes) ? divRes : (divRes.data ?? []));
-        setAllDepartments(
-          Array.isArray(deptRes) ? deptRes : (deptRes.data ?? []),
-        );
+        setAllDepartments(Array.isArray(deptRes) ? deptRes : (deptRes.data ?? []));
       })
       .catch(console.error);
   }, []);
@@ -85,6 +80,7 @@ export default function EmployeePage() {
       searchValue = searchRef.current,
       division_id = divisionRef.current,
       department_id = departmentRef.current,
+      employment_type = employmentTypeRef.current,
     } = {}) => {
       setLoading(true);
       try {
@@ -94,6 +90,7 @@ export default function EmployeePage() {
           search: searchValue || undefined,
           division_id: division_id || undefined,
           department_id: department_id || undefined,
+          employment_type: employment_type || undefined,
         });
         setEmployees(res.data ?? []);
         setPagination({
@@ -112,12 +109,7 @@ export default function EmployeePage() {
   );
 
   useEffect(() => {
-    loadEmployees({
-      page: 1,
-      searchValue: "",
-      division_id: "",
-      department_id: "",
-    });
+    loadEmployees({ page: 1, searchValue: "", division_id: "", department_id: "", employment_type: "" });
   }, []);
 
   useEffect(() => {
@@ -135,9 +127,12 @@ export default function EmployeePage() {
     loadEmployees({ page: 1, department_id: departmentFilter });
   }, [departmentFilter]);
 
+  useEffect(() => {
+    loadEmployees({ page: 1, employment_type: employmentTypeFilter });
+  }, [employmentTypeFilter]);
+
   const visibleDepartments = divisionFilter
-    ? (allDivisions.find((d) => String(d.id) === String(divisionFilter))
-        ?.departments ?? [])
+    ? (allDivisions.find((d) => String(d.id) === String(divisionFilter))?.departments ?? [])
     : allDepartments;
 
   const handleDivisionChange = (val) => {
@@ -151,22 +146,25 @@ export default function EmployeePage() {
     setDepartmentFilter(val === "all" ? "" : val);
   };
 
+  const handleEmploymentTypeChange = (val) => {
+    const v = val === "all" ? "" : val;
+    setEmploymentTypeFilter(v);
+    employmentTypeRef.current = v;
+  };
+
   const clearFilters = () => {
     setSearch("");
     setDivisionFilter("");
     setDepartmentFilter("");
+    setEmploymentTypeFilter("");
     searchRef.current = "";
     divisionRef.current = "";
     departmentRef.current = "";
-    loadEmployees({
-      page: 1,
-      searchValue: "",
-      division_id: "",
-      department_id: "",
-    });
+    employmentTypeRef.current = "";
+    loadEmployees({ page: 1, searchValue: "", division_id: "", department_id: "", employment_type: "" });
   };
 
-  const hasFilters = search || divisionFilter || departmentFilter;
+  const hasFilters = search || divisionFilter || departmentFilter || employmentTypeFilter;
 
   const handleJumpPage = (e) => {
     e.preventDefault();
@@ -177,14 +175,8 @@ export default function EmployeePage() {
     }
   };
 
-  const handleAdd = () => {
-    setEditingEmployee(null);
-    setOpenForm(true);
-  };
-  const handleEdit = (emp) => {
-    setEditingEmployee(emp);
-    setOpenForm(true);
-  };
+  const handleAdd = () => { setEditingEmployee(null); setOpenForm(true); };
+  const handleEdit = (emp) => { setEditingEmployee(emp); setOpenForm(true); };
   const handleDelete = (id) => setDeleteEmployeeId(id);
   const handleView = (emp) => setViewEmployee(emp);
 
@@ -263,10 +255,7 @@ export default function EmployeePage() {
 
       {/* ── Filters ── */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Select
-          value={divisionFilter || "all"}
-          onValueChange={handleDivisionChange}
-        >
+        <Select value={divisionFilter || "all"} onValueChange={handleDivisionChange}>
           <SelectTrigger className="h-8 text-xs w-44 rounded-lg border-gray-200 bg-white text-gray-600">
             <SelectValue placeholder="All Divisions" />
           </SelectTrigger>
@@ -280,10 +269,7 @@ export default function EmployeePage() {
           </SelectContent>
         </Select>
 
-        <Select
-          value={departmentFilter || "all"}
-          onValueChange={handleDepartmentChange}
-        >
+        <Select value={departmentFilter || "all"} onValueChange={handleDepartmentChange}>
           <SelectTrigger className="h-8 text-xs w-48 rounded-lg border-gray-200 bg-white text-gray-600">
             <SelectValue placeholder="All Departments" />
           </SelectTrigger>
@@ -294,6 +280,18 @@ export default function EmployeePage() {
                 {d.name.toUpperCase()}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={employmentTypeFilter || "all"} onValueChange={handleEmploymentTypeChange}>
+          <SelectTrigger className="h-8 text-xs w-52 rounded-lg border-gray-200 bg-white text-gray-600">
+            <SelectValue placeholder="All Employment Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Employment Types</SelectItem>
+            <SelectItem value="non-plantilla">Non-Plantilla</SelectItem>
+            <SelectItem value="consultant">Consultant</SelectItem>
+            <SelectItem value="contract-of-service">Contract of Service</SelectItem>
           </SelectContent>
         </Select>
 
@@ -332,9 +330,7 @@ export default function EmployeePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                loadEmployees({ page: pagination.current_page - 1 })
-              }
+              onClick={() => loadEmployees({ page: pagination.current_page - 1 })}
               disabled={pagination.current_page === 1 || loading}
               className="h-8 px-3 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 gap-1"
             >
@@ -345,15 +341,11 @@ export default function EmployeePage() {
           <div className="flex items-center gap-1 flex-wrap justify-center">
             {pageRange().map((p, i) =>
               p === "..." ? (
-                <span key={`ellipsis-${i}`} className="px-1 text-gray-300">
-                  …
-                </span>
+                <span key={`ellipsis-${i}`} className="px-1 text-gray-300">…</span>
               ) : (
                 <button
                   key={p}
-                  onClick={() =>
-                    p !== pagination.current_page && loadEmployees({ page: p })
-                  }
+                  onClick={() => p !== pagination.current_page && loadEmployees({ page: p })}
                   disabled={loading}
                   className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
                     p === pagination.current_page
@@ -365,14 +357,9 @@ export default function EmployeePage() {
                 </button>
               ),
             )}
-            <span className="ml-2 text-gray-400">
-              ({pagination.total} total)
-            </span>
+            <span className="ml-2 text-gray-400">({pagination.total} total)</span>
             {pagination.last_page > 1 && (
-              <form
-                onSubmit={handleJumpPage}
-                className="flex items-center gap-1 ml-1"
-              >
+              <form onSubmit={handleJumpPage} className="flex items-center gap-1 ml-1">
                 <Input
                   type="number"
                   min={1}
@@ -398,12 +385,8 @@ export default function EmployeePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                loadEmployees({ page: pagination.current_page + 1 })
-              }
-              disabled={
-                pagination.current_page === pagination.last_page || loading
-              }
+              onClick={() => loadEmployees({ page: pagination.current_page + 1 })}
+              disabled={pagination.current_page === pagination.last_page || loading}
               className="h-8 px-3 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 gap-1"
             >
               Next <ChevronRight size={13} />
@@ -412,9 +395,7 @@ export default function EmployeePage() {
               variant="outline"
               size="sm"
               onClick={() => loadEmployees({ page: pagination.last_page })}
-              disabled={
-                pagination.current_page === pagination.last_page || loading
-              }
+              disabled={pagination.current_page === pagination.last_page || loading}
               className="h-8 w-8 p-0 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
             >
               <ChevronsRight size={14} />

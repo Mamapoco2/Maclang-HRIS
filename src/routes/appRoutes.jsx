@@ -51,6 +51,7 @@ import TrainingEffectivenessPage from "../pages/trainings/trainingEffectiveness/
 import CosPage from "../pages/positions/CosPositionsPage";
 import ConsultantPositionsPage from "../pages/positions/ConsultantPositionsPage";
 import OrientationPage from "../pages/orientation/orientationPage";
+import OrientationMonitoringPage from "../pages/orientation/monitoring/orientationMonitoring";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -161,6 +162,10 @@ function AppRoutes() {
             <Route path="/NewLeaveRequest" element={<NewLeaveRequest />} />
             <Route path="/leaveRequest" element={<LeaveRequest />} />
             <Route path="/Orientation" element={<OrientationPage />} />
+            <Route
+              path="/orientationMonitoring"
+              element={<OrientationMonitoringPage />}
+            />
 
             <Route
               path="/team"
