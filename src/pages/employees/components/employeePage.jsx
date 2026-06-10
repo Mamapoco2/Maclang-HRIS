@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -8,14 +6,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Plus,
+  Users,
   Search,
   X,
   ChevronLeft,
@@ -57,10 +50,18 @@ export default function EmployeePage() {
   const departmentRef = useRef(departmentFilter);
   const employmentTypeRef = useRef(employmentTypeFilter);
 
-  useEffect(() => { searchRef.current = search; }, [search]);
-  useEffect(() => { divisionRef.current = divisionFilter; }, [divisionFilter]);
-  useEffect(() => { departmentRef.current = departmentFilter; }, [departmentFilter]);
-  useEffect(() => { employmentTypeRef.current = employmentTypeFilter; }, [employmentTypeFilter]);
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
+  useEffect(() => {
+    divisionRef.current = divisionFilter;
+  }, [divisionFilter]);
+  useEffect(() => {
+    departmentRef.current = departmentFilter;
+  }, [departmentFilter]);
+  useEffect(() => {
+    employmentTypeRef.current = employmentTypeFilter;
+  }, [employmentTypeFilter]);
 
   useEffect(() => {
     Promise.all([
@@ -69,7 +70,9 @@ export default function EmployeePage() {
     ])
       .then(([divRes, deptRes]) => {
         setAllDivisions(Array.isArray(divRes) ? divRes : (divRes.data ?? []));
-        setAllDepartments(Array.isArray(deptRes) ? deptRes : (deptRes.data ?? []));
+        setAllDepartments(
+          Array.isArray(deptRes) ? deptRes : (deptRes.data ?? []),
+        );
       })
       .catch(console.error);
   }, []);
@@ -109,7 +112,13 @@ export default function EmployeePage() {
   );
 
   useEffect(() => {
-    loadEmployees({ page: 1, searchValue: "", division_id: "", department_id: "", employment_type: "" });
+    loadEmployees({
+      page: 1,
+      searchValue: "",
+      division_id: "",
+      department_id: "",
+      employment_type: "",
+    });
   }, []);
 
   useEffect(() => {
@@ -122,17 +131,16 @@ export default function EmployeePage() {
   useEffect(() => {
     loadEmployees({ page: 1, division_id: divisionFilter, department_id: "" });
   }, [divisionFilter]);
-
   useEffect(() => {
     loadEmployees({ page: 1, department_id: departmentFilter });
   }, [departmentFilter]);
-
   useEffect(() => {
     loadEmployees({ page: 1, employment_type: employmentTypeFilter });
   }, [employmentTypeFilter]);
 
   const visibleDepartments = divisionFilter
-    ? (allDivisions.find((d) => String(d.id) === String(divisionFilter))?.departments ?? [])
+    ? (allDivisions.find((d) => String(d.id) === String(divisionFilter))
+        ?.departments ?? [])
     : allDepartments;
 
   const handleDivisionChange = (val) => {
@@ -141,11 +149,8 @@ export default function EmployeePage() {
     setDepartmentFilter("");
     departmentRef.current = "";
   };
-
-  const handleDepartmentChange = (val) => {
+  const handleDepartmentChange = (val) =>
     setDepartmentFilter(val === "all" ? "" : val);
-  };
-
   const handleEmploymentTypeChange = (val) => {
     const v = val === "all" ? "" : val;
     setEmploymentTypeFilter(v);
@@ -161,10 +166,17 @@ export default function EmployeePage() {
     divisionRef.current = "";
     departmentRef.current = "";
     employmentTypeRef.current = "";
-    loadEmployees({ page: 1, searchValue: "", division_id: "", department_id: "", employment_type: "" });
+    loadEmployees({
+      page: 1,
+      searchValue: "",
+      division_id: "",
+      department_id: "",
+      employment_type: "",
+    });
   };
 
-  const hasFilters = search || divisionFilter || departmentFilter || employmentTypeFilter;
+  const hasFilters =
+    search || divisionFilter || departmentFilter || employmentTypeFilter;
 
   const handleJumpPage = (e) => {
     e.preventDefault();
@@ -175,8 +187,10 @@ export default function EmployeePage() {
     }
   };
 
-  const handleAdd = () => { setEditingEmployee(null); setOpenForm(true); };
-  const handleEdit = (emp) => { setEditingEmployee(emp); setOpenForm(true); };
+  const handleEdit = (emp) => {
+    setEditingEmployee(emp);
+    setOpenForm(true);
+  };
   const handleDelete = (id) => setDeleteEmployeeId(id);
   const handleView = (emp) => setViewEmployee(emp);
 
@@ -208,201 +222,221 @@ export default function EmployeePage() {
   };
 
   return (
-    <div className="p-6 space-y-4">
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
-            Employees
-          </h1>
-          {pagination.total > 0 && (
-            <p className="text-xs text-gray-400 mt-0.5">
-              {pagination.total} total records
-            </p>
-          )}
-        </div>
+    <div className="min-h-screen ">
+      {/* ── Sticky Header ── */}
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-screen mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-600 rounded-xl">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                Employees
+              </h1>
+              {pagination.total > 0 && (
+                <p className="text-xs text-gray-500 leading-tight">
+                  {pagination.total} total records
+                </p>
+              )}
+            </div>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search
-              size={13}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            />
-            <Input
+          {/* Search */}
+          <div className="flex items-center gap-2 flex-1 min-w-48 max-w-xs border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+            <input
+              className="bg-transparent text-sm flex-1 outline-none placeholder:text-gray-400 text-gray-800"
               placeholder="Search employee..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9 w-56 text-sm border-gray-200 bg-white rounded-lg placeholder:text-gray-400"
             />
             {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={12} />
+              <button onClick={() => setSearch("")}>
+                <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
               </button>
             )}
           </div>
-
-          {/* <Button
-            onClick={handleAdd}
-            className="h-9 px-4 text-sm bg-gray-900 hover:bg-gray-800 text-white rounded-lg gap-1.5 font-medium"
-          >
-            <Plus size={14} /> Add Employee
-          </Button> */}
         </div>
       </div>
 
-      {/* ── Filters ── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Select value={divisionFilter || "all"} onValueChange={handleDivisionChange}>
-          <SelectTrigger className="h-8 text-xs w-44 rounded-lg border-gray-200 bg-white text-gray-600">
-            <SelectValue placeholder="All Divisions" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Divisions</SelectItem>
-            {allDivisions.map((d) => (
-              <SelectItem key={d.id} value={String(d.id)}>
-                {d.name.toUpperCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* ── Content ── */}
+      <div className="max-w-screen mx-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* ── Filters ── */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={divisionFilter || "all"}
+              onValueChange={handleDivisionChange}
+            >
+              <SelectTrigger className="h-9 text-sm w-44 rounded-lg border-gray-200 bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500">
+                <SelectValue placeholder="All Divisions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Divisions</SelectItem>
+                {allDivisions.map((d) => (
+                  <SelectItem key={d.id} value={String(d.id)}>
+                    {d.name.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Select value={departmentFilter || "all"} onValueChange={handleDepartmentChange}>
-          <SelectTrigger className="h-8 text-xs w-48 rounded-lg border-gray-200 bg-white text-gray-600">
-            <SelectValue placeholder="All Departments" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            {visibleDepartments.map((d) => (
-              <SelectItem key={d.id ?? d.name} value={String(d.id)}>
-                {d.name.toUpperCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select
+              value={departmentFilter || "all"}
+              onValueChange={handleDepartmentChange}
+            >
+              <SelectTrigger className="h-9 text-sm w-48 rounded-lg border-gray-200 bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {visibleDepartments.map((d) => (
+                  <SelectItem key={d.id ?? d.name} value={String(d.id)}>
+                    {d.name.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Select value={employmentTypeFilter || "all"} onValueChange={handleEmploymentTypeChange}>
-          <SelectTrigger className="h-8 text-xs w-52 rounded-lg border-gray-200 bg-white text-gray-600">
-            <SelectValue placeholder="All Employment Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Employment Types</SelectItem>
-            <SelectItem value="non-plantilla">Non-Plantilla</SelectItem>
-            <SelectItem value="consultant">Consultant</SelectItem>
-            <SelectItem value="contract-of-service">Contract of Service</SelectItem>
-          </SelectContent>
-        </Select>
+            <Select
+              value={employmentTypeFilter || "all"}
+              onValueChange={handleEmploymentTypeChange}
+            >
+              <SelectTrigger className="h-9 text-sm w-52 rounded-lg border-gray-200 bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500">
+                <SelectValue placeholder="All Employment Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employment Types</SelectItem>
+                <SelectItem value="non-plantilla">Non-Plantilla</SelectItem>
+                <SelectItem value="consultant">Consultant</SelectItem>
+                <SelectItem value="contract-of-service">
+                  Contract of Service
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-          >
-            <X size={11} /> Clear
-          </button>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-4 h-4" /> Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Table ── */}
+        <EmployeeTable
+          employees={employees}
+          loading={loading}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onView={handleView}
+        />
+
+        {/* ── Pagination ── */}
+        {pagination.last_page > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-3 flex items-center justify-between gap-2 flex-wrap text-xs text-gray-500">
+            {/* Prev */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => loadEmployees({ page: 1 })}
+                disabled={pagination.current_page === 1 || loading}
+                className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                <ChevronsLeft size={14} />
+              </button>
+              <button
+                onClick={() =>
+                  loadEmployees({ page: pagination.current_page - 1 })
+                }
+                disabled={pagination.current_page === 1 || loading}
+                className="h-8 px-3 flex items-center gap-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft size={13} /> Prev
+              </button>
+            </div>
+
+            {/* Page numbers */}
+            <div className="flex items-center gap-1 flex-wrap justify-center">
+              {pageRange().map((p, i) =>
+                p === "..." ? (
+                  <span key={`ellipsis-${i}`} className="px-1 text-gray-300">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() =>
+                      p !== pagination.current_page &&
+                      loadEmployees({ page: p })
+                    }
+                    disabled={loading}
+                    className={`h-8 w-8 rounded-lg text-xs font-medium transition-colors ${
+                      p === pagination.current_page
+                        ? "bg-blue-600 text-white"
+                        : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+              <span className="ml-2 text-gray-400">
+                ({pagination.total} total)
+              </span>
+              {pagination.last_page > 1 && (
+                <form
+                  onSubmit={handleJumpPage}
+                  className="flex items-center gap-1 ml-1"
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    max={pagination.last_page}
+                    value={jumpPage}
+                    onChange={(e) => setJumpPage(e.target.value)}
+                    placeholder="Go to"
+                    className="h-8 w-16 text-xs text-center rounded-lg border border-gray-200 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                  />
+                  <button
+                    type="submit"
+                    className="h-8 px-3 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Go
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Next */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() =>
+                  loadEmployees({ page: pagination.current_page + 1 })
+                }
+                disabled={
+                  pagination.current_page === pagination.last_page || loading
+                }
+                className="h-8 px-3 flex items-center gap-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                Next <ChevronRight size={13} />
+              </button>
+              <button
+                onClick={() => loadEmployees({ page: pagination.last_page })}
+                disabled={
+                  pagination.current_page === pagination.last_page || loading
+                }
+                className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                <ChevronsRight size={14} />
+              </button>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* ── Table ── */}
-      <EmployeeTable
-        employees={employees}
-        loading={loading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onView={handleView}
-      />
-
-      {/* ── Pagination ── */}
-      {pagination.last_page > 0 && (
-        <div className="flex items-center justify-between gap-2 flex-wrap text-xs text-gray-500 pt-1">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadEmployees({ page: 1 })}
-              disabled={pagination.current_page === 1 || loading}
-              className="h-8 w-8 p-0 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
-            >
-              <ChevronsLeft size={14} />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadEmployees({ page: pagination.current_page - 1 })}
-              disabled={pagination.current_page === 1 || loading}
-              className="h-8 px-3 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 gap-1"
-            >
-              <ChevronLeft size={13} /> Prev
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-1 flex-wrap justify-center">
-            {pageRange().map((p, i) =>
-              p === "..." ? (
-                <span key={`ellipsis-${i}`} className="px-1 text-gray-300">…</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => p !== pagination.current_page && loadEmployees({ page: p })}
-                  disabled={loading}
-                  className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
-                    p === pagination.current_page
-                      ? "bg-gray-900 text-white"
-                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {p}
-                </button>
-              ),
-            )}
-            <span className="ml-2 text-gray-400">({pagination.total} total)</span>
-            {pagination.last_page > 1 && (
-              <form onSubmit={handleJumpPage} className="flex items-center gap-1 ml-1">
-                <Input
-                  type="number"
-                  min={1}
-                  max={pagination.last_page}
-                  value={jumpPage}
-                  onChange={(e) => setJumpPage(e.target.value)}
-                  placeholder="Go to"
-                  className="h-8 w-16 text-xs text-center rounded-lg border-gray-200"
-                />
-                <Button
-                  type="submit"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2.5 text-xs rounded-lg border-gray-200 text-gray-600 hover:bg-gray-50"
-                >
-                  Go
-                </Button>
-              </form>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadEmployees({ page: pagination.current_page + 1 })}
-              disabled={pagination.current_page === pagination.last_page || loading}
-              className="h-8 px-3 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 gap-1"
-            >
-              Next <ChevronRight size={13} />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadEmployees({ page: pagination.last_page })}
-              disabled={pagination.current_page === pagination.last_page || loading}
-              className="h-8 w-8 p-0 rounded-lg border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
-            >
-              <ChevronsRight size={14} />
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* ── Dialogs ── */}
       <Dialog open={openForm} onOpenChange={setOpenForm}>

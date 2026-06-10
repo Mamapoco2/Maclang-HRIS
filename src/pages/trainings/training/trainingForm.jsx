@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,31 +10,42 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { DateTimePicker } from "./datetimePicker";
 import api from "../../../api/api";
 
-// ── Helper: combine a date + 12h time parts into a single Date ───────────────
 function buildDateTime(date, hours, minutes, ampm) {
   if (!date) return null;
-  // Use explicit local year/month/day to avoid any UTC-to-local shift
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
+  const year = date.getFullYear(),
+    month = date.getMonth(),
+    day = date.getDate();
   let h = parseInt(hours, 10);
   if (ampm === "PM" && h < 12) h += 12;
   if (ampm === "AM" && h === 12) h = 0;
-  // Build entirely from local parts — no timezone drift possible
   return new Date(year, month, day, h, parseInt(minutes, 10), 0, 0);
 }
 
-// ── Helper: compute duration string from two Date objects ────────────────────
 function getDuration(start, end) {
   if (!start || !end) return "";
   const mins = (end - start) / 60000;
   if (mins <= 0) return "";
-  const d = Math.floor(mins / (24 * 60));
-  const h = Math.floor((mins % (24 * 60)) / 60);
-  const m = Math.floor(mins % 60);
+  const d = Math.floor(mins / (24 * 60)),
+    h = Math.floor((mins % (24 * 60)) / 60),
+    m = Math.floor(mins % 60);
   return [d > 0 ? `${d}d` : null, h > 0 ? `${h}h` : null, `${m}m`]
     .filter(Boolean)
     .join(" ");
+}
+
+const inputClass =
+  "w-full h-9 px-3 text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 transition-all";
+const labelClass =
+  "text-[10px] font-semibold text-gray-400 uppercase tracking-wider";
+
+function Field({ label, error, children }) {
+  return (
+    <div className="space-y-1.5">
+      {label && <label className={labelClass}>{label}</label>}
+      {children}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  );
 }
 
 export default function TrainingForm({ onSubmit }) {
@@ -48,21 +56,17 @@ export default function TrainingForm({ onSubmit }) {
     instructor: "",
     category: "",
     eventAddress: "",
-    // Store only the calendar date (no time baked in)
     startDate: null,
     endDate: null,
     trainingMode: "",
     maxParticipants: "",
   });
-
-  // Time parts stored separately — never merged back into the date during typing
   const [startHours, setStartHours] = useState("12");
   const [startMinutes, setStartMinutes] = useState("00");
   const [startAmPm, setStartAmPm] = useState("AM");
   const [endHours, setEndHours] = useState("12");
   const [endMinutes, setEndMinutes] = useState("00");
   const [endAmPm, setEndAmPm] = useState("AM");
-
   const [departments, setDepartments] = useState([]);
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -77,7 +81,6 @@ export default function TrainingForm({ onSubmit }) {
       .finally(() => setLoadingDepts(false));
   }, []);
 
-  // ── Compute final datetimes only when needed (no useEffect mutation) ──────
   const getFinalStart = () =>
     buildDateTime(form.startDate, startHours, startMinutes, startAmPm);
   const getFinalEnd = () =>
@@ -85,8 +88,8 @@ export default function TrainingForm({ onSubmit }) {
 
   const validate = () => {
     const e = {};
-    const start = getFinalStart();
-    const end = getFinalEnd();
+    const start = getFinalStart(),
+      end = getFinalEnd();
     if (!form.title.trim()) e.title = "Title is required.";
     if (!start) e.startDate = "Start date is required.";
     if (!end) e.endDate = "End date is required.";
@@ -95,23 +98,20 @@ export default function TrainingForm({ onSubmit }) {
     if (
       form.maxParticipants !== "" &&
       (isNaN(Number(form.maxParticipants)) || Number(form.maxParticipants) < 1)
-    ) {
+    )
       e.maxParticipants = "Must be a positive number.";
-    }
     return e;
   };
 
   const handleSubmit = async () => {
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
     setErrors({});
-
-    const start = getFinalStart();
-    const end = getFinalEnd();
-
+    const start = getFinalStart(),
+      end = getFinalEnd();
     try {
       setSubmitting(true);
       await onSubmit({
@@ -128,8 +128,6 @@ export default function TrainingForm({ onSubmit }) {
         maxParticipants:
           form.maxParticipants !== "" ? Number(form.maxParticipants) : 0,
       });
-
-      // Reset
       setForm({
         title: "",
         description: "",
@@ -155,7 +153,7 @@ export default function TrainingForm({ onSubmit }) {
     }
   };
 
-  const field = (key) => ({
+  const f = (key) => ({
     value: form[key],
     onChange: (e) => {
       setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -163,22 +161,29 @@ export default function TrainingForm({ onSubmit }) {
     },
   });
 
-  // For preview in the disabled duration field
-  const previewStart = getFinalStart();
-  const previewEnd = getFinalEnd();
+  const previewStart = getFinalStart(),
+    previewEnd = getFinalEnd();
 
   return (
-    <div className="space-y-3 max-w-md">
-      <div>
-        <Input placeholder="Training Title *" {...field("title")} />
-        {errors.title && (
-          <p className="text-xs text-red-500 mt-1">{errors.title}</p>
-        )}
-      </div>
+    <div className="space-y-4 max-w-md">
+      <Field label="Title *" error={errors.title}>
+        <input
+          className={inputClass}
+          placeholder="Training title"
+          {...f("title")}
+        />
+      </Field>
 
-      <Textarea placeholder="Description" {...field("description")} />
+      <Field label="Description">
+        <textarea
+          className={`${inputClass} h-auto py-2 resize-none`}
+          rows={3}
+          placeholder="Description"
+          {...f("description")}
+        />
+      </Field>
 
-      <div>
+      <Field label="Department" error={errors.department}>
         <Select
           value={form.department}
           onValueChange={(v) => {
@@ -188,11 +193,9 @@ export default function TrainingForm({ onSubmit }) {
           }}
           disabled={loadingDepts}
         >
-          <SelectTrigger>
+          <SelectTrigger className="h-9 text-sm border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500">
             <SelectValue
-              placeholder={
-                loadingDepts ? "Loading departments..." : "Select Department"
-              }
+              placeholder={loadingDepts ? "Loading..." : "Select Department"}
             />
           </SelectTrigger>
           <SelectContent>
@@ -203,106 +206,127 @@ export default function TrainingForm({ onSubmit }) {
             ))}
           </SelectContent>
         </Select>
-        {errors.department && (
-          <p className="text-xs text-red-500 mt-1">{errors.department}</p>
-        )}
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Instructor">
+          <input
+            className={inputClass}
+            placeholder="Instructor"
+            {...f("instructor")}
+          />
+        </Field>
+        <Field label="Category">
+          <input
+            className={inputClass}
+            placeholder="Category"
+            {...f("category")}
+          />
+        </Field>
       </div>
 
-      <Input placeholder="Instructor" {...field("instructor")} />
-      <Input placeholder="Category" {...field("category")} />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Mode of Training">
+          <Select
+            value={form.trainingMode}
+            onValueChange={(v) => setForm((p) => ({ ...p, trainingMode: v }))}
+          >
+            <SelectTrigger className="h-9 text-sm border-gray-200 bg-gray-50 rounded-lg">
+              <SelectValue placeholder="Select mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="online">Online</SelectItem>
+              <SelectItem value="face-to-face">Face to Face</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Max Participants" error={errors.maxParticipants}>
+          <input
+            type="number"
+            min={1}
+            className={inputClass}
+            placeholder="No limit"
+            {...f("maxParticipants")}
+          />
+        </Field>
+      </div>
 
-      <Select
-        value={form.trainingMode}
-        onValueChange={(v) => setForm((p) => ({ ...p, trainingMode: v }))}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select Mode of Training" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="online">Online</SelectItem>
-          <SelectItem value="face-to-face">Face to Face</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Input placeholder="Event Address" {...field("eventAddress")} />
-
-      <div>
-        <Input
-          type="number"
-          min={1}
-          placeholder="Max Participants (optional)"
-          {...field("maxParticipants")}
+      <Field label="Event Address">
+        <input
+          className={inputClass}
+          placeholder="Event address"
+          {...f("eventAddress")}
         />
-        {errors.maxParticipants && (
-          <p className="text-xs text-red-500 mt-1">{errors.maxParticipants}</p>
-        )}
-      </div>
+      </Field>
 
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <DateTimePicker
-            label="Start Date & Time *"
-            date={form.startDate}
-            setDate={(d) => {
-              // Store only the raw date — time is handled by the separate state
-              setForm((p) => ({ ...p, startDate: d }));
-              if (errors.startDate)
-                setErrors((p) => ({ ...p, startDate: null }));
-            }}
-            hours={startHours}
-            minutes={startMinutes}
-            ampm={startAmPm}
-            setHours={setStartHours}
-            setMinutes={(m) => setStartMinutes(String(m).padStart(2, "0"))}
-            setAmPm={setStartAmPm}
-          />
-          {errors.startDate && (
-            <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>
-          )}
-        </div>
-
-        <div className="flex-1">
-          <DateTimePicker
-            label="End Date & Time *"
-            date={form.endDate}
-            setDate={(d) => {
-              setForm((p) => ({ ...p, endDate: d }));
-              if (errors.endDate) setErrors((p) => ({ ...p, endDate: null }));
-            }}
-            hours={endHours}
-            minutes={endMinutes}
-            ampm={endAmPm}
-            setHours={setEndHours}
-            setMinutes={(m) => setEndMinutes(String(m).padStart(2, "0"))}
-            setAmPm={setEndAmPm}
-          />
-          {errors.endDate && (
-            <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>
-          )}
+      <div className="space-y-1.5">
+        <label className={labelClass}>Schedule</label>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <DateTimePicker
+              label="Start Date & Time *"
+              date={form.startDate}
+              setDate={(d) => {
+                setForm((p) => ({ ...p, startDate: d }));
+                if (errors.startDate)
+                  setErrors((p) => ({ ...p, startDate: null }));
+              }}
+              hours={startHours}
+              minutes={startMinutes}
+              ampm={startAmPm}
+              setHours={setStartHours}
+              setMinutes={(m) => setStartMinutes(String(m).padStart(2, "0"))}
+              setAmPm={setStartAmPm}
+            />
+            {errors.startDate && (
+              <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>
+            )}
+          </div>
+          <div className="flex-1">
+            <DateTimePicker
+              label="End Date & Time *"
+              date={form.endDate}
+              setDate={(d) => {
+                setForm((p) => ({ ...p, endDate: d }));
+                if (errors.endDate) setErrors((p) => ({ ...p, endDate: null }));
+              }}
+              hours={endHours}
+              minutes={endMinutes}
+              ampm={endAmPm}
+              setHours={setEndHours}
+              setMinutes={(m) => setEndMinutes(String(m).padStart(2, "0"))}
+              setAmPm={setEndAmPm}
+            />
+            {errors.endDate && (
+              <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>
+            )}
+          </div>
         </div>
       </div>
 
-      <Input
-        value={getDuration(previewStart, previewEnd)}
-        disabled
-        placeholder="Duration (auto-computed)"
-      />
+      <Field label="Duration (auto-computed)">
+        <input
+          className={`${inputClass} bg-gray-100 text-gray-400 cursor-not-allowed`}
+          value={getDuration(previewStart, previewEnd)}
+          disabled
+          placeholder="Auto-computed from dates"
+        />
+      </Field>
 
-      <Button
+      <button
         type="button"
         onClick={handleSubmit}
         disabled={submitting}
-        className="w-full"
+        className="w-full h-9 flex items-center justify-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
       >
         {submitting ? (
           <>
-            <IconLoader2 size={14} className="animate-spin mr-2" />
-            Adding...
+            <IconLoader2 size={14} className="animate-spin" /> Adding…
           </>
         ) : (
           "Add Training"
         )}
-      </Button>
+      </button>
     </div>
   );
 }

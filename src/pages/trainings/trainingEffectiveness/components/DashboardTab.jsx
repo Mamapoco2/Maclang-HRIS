@@ -20,21 +20,15 @@ import { BookOpen, CheckCircle, Award, TrendingUp, Users } from "lucide-react";
 
 const ICON_MAP = { BookOpen, CheckCircle, Award, TrendingUp, Users };
 
-// ── Chart configs ────────────────────────────────────────────
 const prePostConfig = {
   pre: { label: "Pre-Training", color: "var(--chart-2)" },
   post: { label: "Post-Training", color: "var(--chart-1)" },
 };
-
 const monthlyConfig = {
   enrolled: { label: "Enrolled", color: "var(--chart-2)" },
   completions: { label: "Completed", color: "var(--chart-1)" },
 };
-
-const gapConfig = {
-  gap: { label: "Avg Gap Score", color: "var(--chart-5)" },
-};
-
+const gapConfig = { gap: { label: "Avg Gap Score", color: "var(--chart-5)" } };
 const effectivenessConfig = {
   effectiveness: { label: "Effectiveness", color: "var(--chart-3)" },
 };
@@ -42,7 +36,6 @@ const effectivenessConfig = {
 export default function DashboardTab() {
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {KPI_DATA.map((k) => (
           <KPICard key={k.label} {...k} icon={ICON_MAP[k.icon]} />
@@ -50,7 +43,6 @@ export default function DashboardTab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pre vs Post — Gradient Bar */}
         <SectionCard
           title="Pre vs Post Training Score"
           subtitle="Department-wise skill level comparison"
@@ -86,7 +78,11 @@ export default function DashboardTab() {
                   />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} />
+              <CartesianGrid
+                vertical={false}
+                stroke="currentColor"
+                strokeOpacity={0.06}
+              />
               <XAxis
                 dataKey="dept"
                 tickLine={false}
@@ -111,7 +107,6 @@ export default function DashboardTab() {
           </ChartContainer>
         </SectionCard>
 
-        {/* Monthly Trends — Gradient Area */}
         <SectionCard
           title="Monthly Training Trends"
           subtitle="Enrollment vs completions over time"
@@ -153,7 +148,11 @@ export default function DashboardTab() {
                   />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} />
+              <CartesianGrid
+                vertical={false}
+                stroke="currentColor"
+                strokeOpacity={0.06}
+              />
               <XAxis
                 dataKey="month"
                 tickLine={false}
@@ -193,7 +192,6 @@ export default function DashboardTab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Skill Gap — Gradient Bar */}
         <SectionCard
           title="Skill Gap Reduction"
           subtitle="Quarterly progress on closing skill gaps"
@@ -214,7 +212,11 @@ export default function DashboardTab() {
                   />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} />
+              <CartesianGrid
+                vertical={false}
+                stroke="currentColor"
+                strokeOpacity={0.06}
+              />
               <XAxis
                 dataKey="month"
                 tickLine={false}
@@ -236,7 +238,6 @@ export default function DashboardTab() {
           </ChartContainer>
         </SectionCard>
 
-        {/* Effectiveness — Gradient Area */}
         <SectionCard
           title="Effectiveness Score Trend"
           subtitle="Monthly trainer & program effectiveness rating"
@@ -266,7 +267,11 @@ export default function DashboardTab() {
                   />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} />
+              <CartesianGrid
+                vertical={false}
+                stroke="currentColor"
+                strokeOpacity={0.06}
+              />
               <XAxis
                 dataKey="month"
                 tickLine={false}

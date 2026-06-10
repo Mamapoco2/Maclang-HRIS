@@ -4,11 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -18,13 +14,13 @@ import {
 } from "@/components/ui/select";
 import { IconLoader2 } from "@tabler/icons-react";
 import { DateTimePicker } from "./datetimePicker";
+import api from "../../../api/api";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function buildDateTime(date, hours, minutes, ampm) {
   if (!date) return null;
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
+  const year = date.getFullYear(),
+    month = date.getMonth(),
+    day = date.getDate();
   let h = parseInt(hours, 10);
   if (ampm === "PM" && h < 12) h += 12;
   if (ampm === "AM" && h === 12) h = 0;
@@ -35,34 +31,42 @@ function getDuration(start, end) {
   if (!start || !end) return "";
   const mins = (end - start) / 60000;
   if (mins <= 0) return "";
-  const d = Math.floor(mins / (24 * 60));
-  const h = Math.floor((mins % (24 * 60)) / 60);
-  const m = Math.floor(mins % 60);
+  const d = Math.floor(mins / (24 * 60)),
+    h = Math.floor((mins % (24 * 60)) / 60),
+    m = Math.floor(mins % 60);
   return [d > 0 ? `${d}d` : null, h > 0 ? `${h}h` : null, `${m}m`]
     .filter(Boolean)
     .join(" ");
 }
 
-// ✅ Auto-compute status from two Date objects
-function computeStatus(start, end) {
-  if (!start || !end) return "draft";
-  const now = new Date();
-  if (now < start) return "upcoming";
-  if (now >= start && now <= end) return "ongoing";
-  return "finished";
+function parseTimeFromDate(dateVal) {
+  if (!dateVal) return { hours: "12", minutes: "00", ampm: "AM" };
+  const d = new Date(dateVal);
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return {
+    hours: String(h).padStart(2, "0"),
+    minutes: String(m).padStart(2, "0"),
+    ampm,
+  };
 }
 
-const FormField = ({ label, error, children }) => (
-  <div className="space-y-1">
-    {label && (
-      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-        {label}
-      </p>
-    )}
-    {children}
-    {error && <p className="text-xs text-red-500">{error}</p>}
-  </div>
-);
+const inputClass =
+  "w-full h-9 px-3 text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 transition-all";
+const labelClass =
+  "text-[10px] font-semibold text-gray-400 uppercase tracking-wider";
+
+function Field({ label, error, children }) {
+  return (
+    <div className="space-y-1.5">
+      {label && <label className={labelClass}>{label}</label>}
+      {children}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}
 
 export default function EditTrainingModal({
   training,
@@ -70,359 +74,354 @@ export default function EditTrainingModal({
   onOpenChange,
   onSave,
 }) {
-  const [form, setForm] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
-
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    department: "",
+    instructor: "",
+    category: "",
+    eventAddress: "",
+    startDate: null,
+    endDate: null,
+    trainingMode: "",
+    maxParticipants: "",
+    status: "",
+    progress: 0,
+  });
   const [startHours, setStartHours] = useState("12");
   const [startMinutes, setStartMinutes] = useState("00");
   const [startAmPm, setStartAmPm] = useState("AM");
   const [endHours, setEndHours] = useState("12");
   const [endMinutes, setEndMinutes] = useState("00");
   const [endAmPm, setEndAmPm] = useState("AM");
+  const [departments, setDepartments] = useState([]);
+  const [loadingDepts, setLoadingDepts] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  // ── Initialize from training prop ────────────────────────────────────────
+  // Populate form when training changes
   useEffect(() => {
     if (!training) return;
     const start = training.startDate ? new Date(training.startDate) : null;
     const end = training.endDate ? new Date(training.endDate) : null;
+    const st = parseTimeFromDate(start);
+    const et = parseTimeFromDate(end);
 
-    if (start) {
-      const h = start.getHours();
-      setStartAmPm(h >= 12 ? "PM" : "AM");
-      setStartHours(String(h % 12 || 12));
-      setStartMinutes(String(start.getMinutes()).padStart(2, "0"));
-    } else {
-      setStartHours("12");
-      setStartMinutes("00");
-      setStartAmPm("AM");
-    }
-
-    if (end) {
-      const h = end.getHours();
-      setEndAmPm(h >= 12 ? "PM" : "AM");
-      setEndHours(String(h % 12 || 12));
-      setEndMinutes(String(end.getMinutes()).padStart(2, "0"));
-    } else {
-      setEndHours("12");
-      setEndMinutes("00");
-      setEndAmPm("AM");
-    }
-
-    setErrors({});
     setForm({
-      ...training,
-      startDate: start
-        ? new Date(start.getFullYear(), start.getMonth(), start.getDate())
-        : null,
-      endDate: end
-        ? new Date(end.getFullYear(), end.getMonth(), end.getDate())
-        : null,
-      status: training.status || "draft",
+      title: training.title ?? "",
+      description: training.description ?? "",
+      department: training.department ?? "",
+      instructor: training.instructor ?? "",
+      category: training.category ?? "",
+      eventAddress: training.eventAddress ?? training.event_address ?? "",
+      startDate: start,
+      endDate: end,
+      trainingMode: training.trainingMode ?? training.training_mode ?? "",
       maxParticipants:
-        training.maxParticipants > 0 ? String(training.maxParticipants) : "",
+        training.maxParticipants ?? training.max_participants ?? "",
+      status: training.status ?? "",
+      progress: training.progress ?? 0,
     });
+    setStartHours(st.hours);
+    setStartMinutes(st.minutes);
+    setStartAmPm(st.ampm);
+    setEndHours(et.hours);
+    setEndMinutes(et.minutes);
+    setEndAmPm(et.ampm);
   }, [training]);
 
-  if (!form) return null;
+  useEffect(() => {
+    setLoadingDepts(true);
+    api
+      .get("/departments")
+      .then((res) => setDepartments(res.data.data || res.data || []))
+      .catch(console.error)
+      .finally(() => setLoadingDepts(false));
+  }, []);
 
   const getFinalStart = () =>
     buildDateTime(form.startDate, startHours, startMinutes, startAmPm);
   const getFinalEnd = () =>
     buildDateTime(form.endDate, endHours, endMinutes, endAmPm);
 
-  // ✅ Called whenever date or time parts change — updates status automatically
-  const recomputeStatus = (start, end) => {
-    if (form.status === "cancelled") return; // don't override a manual cancel
-    const auto = computeStatus(start, end);
-    setForm((prev) => ({ ...prev, status: auto }));
-  };
-
   const validate = () => {
     const e = {};
+    const start = getFinalStart(),
+      end = getFinalEnd();
+    if (!form.title.trim()) e.title = "Title is required.";
+    if (!start) e.startDate = "Start date is required.";
+    if (!end) e.endDate = "End date is required.";
+    if (start && end && end <= start)
+      e.endDate = "End date must be after start date.";
     if (
       form.maxParticipants !== "" &&
       (isNaN(Number(form.maxParticipants)) || Number(form.maxParticipants) < 1)
-    ) {
+    )
       e.maxParticipants = "Must be a positive number.";
-    }
     return e;
   };
 
-  const handleSave = async () => {
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+  const handleSubmit = async () => {
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
     setErrors({});
-    const start = getFinalStart();
-    const end = getFinalEnd();
+    const start = getFinalStart(),
+      end = getFinalEnd();
     try {
-      setSaving(true);
+      setSubmitting(true);
       await onSave({
-        ...form,
+        id: training.id,
+        title: form.title,
+        description: form.description,
+        department: form.department,
+        instructor: form.instructor,
+        category: form.category,
+        eventAddress: form.eventAddress,
+        trainingMode: form.trainingMode,
         startDate: start,
         endDate: end,
         duration: getDuration(start, end),
         maxParticipants:
           form.maxParticipants !== "" ? Number(form.maxParticipants) : 0,
+        status: form.status,
+        progress: form.progress,
       });
-      onOpenChange(false);
+    } catch (err) {
+      console.error("Failed to update training:", err);
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  const previewStart = getFinalStart();
-  const previewEnd = getFinalEnd();
+  const f = (key) => ({
+    value: form[key],
+    onChange: (e) => {
+      setForm((p) => ({ ...p, [key]: e.target.value }));
+      if (errors[key]) setErrors((p) => ({ ...p, [key]: null }));
+    },
+  });
 
-  const inputClass =
-    "h-9 text-sm border-gray-200 bg-white rounded-lg focus:border-gray-400 placeholder:text-gray-400";
+  const previewStart = getFinalStart(),
+    previewEnd = getFinalEnd();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 rounded-xl overflow-hidden border-gray-200 gap-0">
-        <DialogHeader className="px-6 py-4 border-b border-gray-100">
-          <DialogTitle className="text-base font-semibold text-gray-900">
-            Edit Training
+      <DialogContent className="sm:max-w-lg rounded-2xl border border-gray-100 shadow-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-sm font-semibold text-gray-900">
+            Edit Training Program
           </DialogTitle>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Update the details for this training program.
-          </p>
         </DialogHeader>
 
-        <div className="px-6 py-4 space-y-3 max-h-[65vh] overflow-y-auto">
-          <FormField label="Title">
-            <Input
+        <div className="space-y-4">
+          <Field label="Title *" error={errors.title}>
+            <input
               className={inputClass}
               placeholder="Training title"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              {...f("title")}
             />
-          </FormField>
+          </Field>
 
-          <FormField label="Description">
-            <Textarea
-              className="text-sm border-gray-200 bg-white rounded-lg resize-none placeholder:text-gray-400"
+          <Field label="Description">
+            <textarea
+              className={`${inputClass} h-auto py-2 resize-none`}
               rows={3}
               placeholder="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
+              {...f("description")}
             />
-          </FormField>
+          </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Department">
-              <Input
-                className={inputClass}
-                placeholder="Department"
-                value={form.department}
-                onChange={(e) =>
-                  setForm({ ...form, department: e.target.value })
-                }
-              />
-            </FormField>
-            <FormField label="Instructor">
-              <Input
-                className={inputClass}
-                placeholder="Instructor"
-                value={form.instructor}
-                onChange={(e) =>
-                  setForm({ ...form, instructor: e.target.value })
-                }
-              />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Category">
-              <Input
-                className={inputClass}
-                placeholder="Category"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-              />
-            </FormField>
-            <FormField label="Max Participants" error={errors.maxParticipants}>
-              <Input
-                className={inputClass}
-                type="number"
-                min={1}
-                placeholder="No limit"
-                value={form.maxParticipants}
-                onChange={(e) => {
-                  setForm({ ...form, maxParticipants: e.target.value });
-                  if (errors.maxParticipants)
-                    setErrors((p) => ({ ...p, maxParticipants: null }));
-                }}
-              />
-            </FormField>
-          </div>
-
-          <FormField label="Event Address">
-            <Input
-              className={inputClass}
-              placeholder="Event address"
-              value={form.eventAddress}
-              onChange={(e) =>
-                setForm({ ...form, eventAddress: e.target.value })
-              }
-            />
-          </FormField>
-
-          <FormField label="Mode of Training">
+          <Field label="Department" error={errors.department}>
             <Select
-              value={form.trainingMode ?? ""}
-              onValueChange={(v) => setForm({ ...form, trainingMode: v })}
+              value={form.department}
+              onValueChange={(v) => {
+                setForm((p) => ({ ...p, department: v }));
+                if (errors.department)
+                  setErrors((p) => ({ ...p, department: null }));
+              }}
+              disabled={loadingDepts}
             >
-              <SelectTrigger className="h-9 text-sm border-gray-200 rounded-lg">
-                <SelectValue placeholder="Select mode" />
+              <SelectTrigger className="h-9 text-sm border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <SelectValue
+                  placeholder={
+                    loadingDepts ? "Loading..." : "Select Department"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="online">Online</SelectItem>
-                <SelectItem value="face-to-face">Face to Face</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.name}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </FormField>
+          </Field>
 
-          <FormField label="Schedule">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Instructor">
+              <input
+                className={inputClass}
+                placeholder="Instructor"
+                {...f("instructor")}
+              />
+            </Field>
+            <Field label="Category">
+              <input
+                className={inputClass}
+                placeholder="Category"
+                {...f("category")}
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Mode of Training">
+              <Select
+                value={form.trainingMode}
+                onValueChange={(v) =>
+                  setForm((p) => ({ ...p, trainingMode: v }))
+                }
+              >
+                <SelectTrigger className="h-9 text-sm border-gray-200 bg-gray-50 rounded-lg">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="online">Online</SelectItem>
+                  <SelectItem value="face-to-face">Face to Face</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Max Participants" error={errors.maxParticipants}>
+              <input
+                type="number"
+                min={1}
+                className={inputClass}
+                placeholder="No limit"
+                {...f("maxParticipants")}
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Status">
+              <Select
+                value={form.status}
+                onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}
+              >
+                <SelectTrigger className="h-9 text-sm border-gray-200 bg-gray-50 rounded-lg">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="ongoing">Ongoing</SelectItem>
+                  <SelectItem value="finished">Finished</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Progress (%)">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                className={inputClass}
+                placeholder="0"
+                value={form.progress}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, progress: Number(e.target.value) }))
+                }
+              />
+            </Field>
+          </div>
+
+          <Field label="Event Address">
+            <input
+              className={inputClass}
+              placeholder="Event address"
+              {...f("eventAddress")}
+            />
+          </Field>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Schedule</label>
             <div className="flex gap-2">
-              <DateTimePicker
-                label="Start Date & Time"
-                date={form.startDate}
-                setDate={(d) => {
-                  setForm((prev) => ({ ...prev, startDate: d }));
-                  // ✅ Re-compute status when start date changes
-                  const end = getFinalEnd();
-                  recomputeStatus(
-                    buildDateTime(d, startHours, startMinutes, startAmPm),
-                    end,
-                  );
-                }}
-                hours={startHours}
-                minutes={startMinutes}
-                ampm={startAmPm}
-                setHours={(h) => {
-                  setStartHours(h);
-                  recomputeStatus(
-                    buildDateTime(form.startDate, h, startMinutes, startAmPm),
-                    getFinalEnd(),
-                  );
-                }}
-                setMinutes={(m) => {
-                  const padded = String(m).padStart(2, "0");
-                  setStartMinutes(padded);
-                  recomputeStatus(
-                    buildDateTime(
-                      form.startDate,
-                      startHours,
-                      padded,
-                      startAmPm,
-                    ),
-                    getFinalEnd(),
-                  );
-                }}
-                setAmPm={(a) => {
-                  setStartAmPm(a);
-                  recomputeStatus(
-                    buildDateTime(form.startDate, startHours, startMinutes, a),
-                    getFinalEnd(),
-                  );
-                }}
-              />
-              <DateTimePicker
-                label="End Date & Time"
-                date={form.endDate}
-                setDate={(d) => {
-                  setForm((prev) => ({ ...prev, endDate: d }));
-                  // ✅ Re-compute status when end date changes
-                  recomputeStatus(
-                    getFinalStart(),
-                    buildDateTime(d, endHours, endMinutes, endAmPm),
-                  );
-                }}
-                hours={endHours}
-                minutes={endMinutes}
-                ampm={endAmPm}
-                setHours={(h) => {
-                  setEndHours(h);
-                  recomputeStatus(
-                    getFinalStart(),
-                    buildDateTime(form.endDate, h, endMinutes, endAmPm),
-                  );
-                }}
-                setMinutes={(m) => {
-                  const padded = String(m).padStart(2, "0");
-                  setEndMinutes(padded);
-                  recomputeStatus(
-                    getFinalStart(),
-                    buildDateTime(form.endDate, endHours, padded, endAmPm),
-                  );
-                }}
-                setAmPm={(a) => {
-                  setEndAmPm(a);
-                  recomputeStatus(
-                    getFinalStart(),
-                    buildDateTime(form.endDate, endHours, endMinutes, a),
-                  );
-                }}
-              />
+              <div className="flex-1">
+                <DateTimePicker
+                  label="Start Date & Time *"
+                  date={form.startDate}
+                  setDate={(d) => {
+                    setForm((p) => ({ ...p, startDate: d }));
+                    if (errors.startDate)
+                      setErrors((p) => ({ ...p, startDate: null }));
+                  }}
+                  hours={startHours}
+                  minutes={startMinutes}
+                  ampm={startAmPm}
+                  setHours={setStartHours}
+                  setMinutes={(m) =>
+                    setStartMinutes(String(m).padStart(2, "0"))
+                  }
+                  setAmPm={setStartAmPm}
+                />
+                {errors.startDate && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.startDate}
+                  </p>
+                )}
+              </div>
+              <div className="flex-1">
+                <DateTimePicker
+                  label="End Date & Time *"
+                  date={form.endDate}
+                  setDate={(d) => {
+                    setForm((p) => ({ ...p, endDate: d }));
+                    if (errors.endDate)
+                      setErrors((p) => ({ ...p, endDate: null }));
+                  }}
+                  hours={endHours}
+                  minutes={endMinutes}
+                  ampm={endAmPm}
+                  setHours={setEndHours}
+                  setMinutes={(m) => setEndMinutes(String(m).padStart(2, "0"))}
+                  setAmPm={setEndAmPm}
+                />
+                {errors.endDate && (
+                  <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>
+                )}
+              </div>
             </div>
-          </FormField>
+          </div>
 
-          <FormField label="Duration (auto-computed)">
-            <Input
-              className={`${inputClass} bg-gray-50 text-gray-400`}
+          <Field label="Duration (auto-computed)">
+            <input
+              className={`${inputClass} bg-gray-100 text-gray-400 cursor-not-allowed`}
               value={getDuration(previewStart, previewEnd)}
               disabled
               placeholder="Auto-computed from dates"
             />
-          </FormField>
+          </Field>
 
-          {/* ✅ Status — pre-filled automatically, still manually overridable */}
-          <FormField label="Status">
-            <Select
-              value={form.status}
-              onValueChange={(v) => setForm({ ...form, status: v })}
-            >
-              <SelectTrigger className="h-9 text-sm border-gray-200 rounded-lg">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="upcoming">Upcoming</SelectItem>
-                <SelectItem value="ongoing">Ongoing</SelectItem>
-                <SelectItem value="finished">Finished</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-gray-400 mt-1">
-              Auto-filled based on schedule. You can still override it manually.
-            </p>
-          </FormField>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="w-full h-9 flex items-center justify-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <IconLoader2 size={14} className="animate-spin" /> Saving…
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </button>
         </div>
-
-        <DialogFooter className="px-6 py-4 border-t border-gray-100 gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-            className="rounded-lg border-gray-200 text-gray-600 h-9"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-lg bg-gray-900 hover:bg-gray-800 text-white h-9 gap-1.5"
-          >
-            {saving && <IconLoader2 size={14} className="animate-spin" />}
-            {saving ? "Saving…" : "Save Changes"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

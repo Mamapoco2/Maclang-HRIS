@@ -1,14 +1,11 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { TableRow, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { IconEye } from "@tabler/icons-react";
+import { Eye } from "lucide-react";
 import { ViewMemberModal } from "./viewTeamModal";
 
 const STATUS_STYLES = {
-  ACTIVE: "bg-green-100 text-green-700 border-green-200",
+  ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
   INACTIVE: "bg-gray-100 text-gray-600 border-gray-200",
-  RESIGN: "bg-red-100 text-red-600 border-red-200",
+  RESIGN: "bg-red-50 text-red-700 border-red-200",
 };
 
 const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/147/147144.png";
@@ -24,59 +21,57 @@ export default function TeamTableRow({ member }) {
     : member.role_position || "—";
 
   const statusKey = member.employment_status?.toUpperCase() ?? "INACTIVE";
+  const statusStyle = STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500 border-gray-200";
 
   return (
     <>
-      <TableRow className="hover:bg-muted/40 transition-colors">
+      <tr className="hover:bg-gray-50 transition-colors">
         {/* Name */}
-        <TableCell className="py-2">
-          <div className="flex items-center">
+        <td className="px-4 py-2.5">
+          <div className="flex items-center gap-2.5">
             <img
               src={member.avatar_url || DEFAULT_AVATAR}
               alt={fullName}
               className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-100 shrink-0"
-              onError={(e) => {
-                e.target.src = DEFAULT_AVATAR;
-              }}
+              onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
             />
-            <span className="font-medium text-xs flex-1 text-center">
-              {fullName}
-            </span>
+            <span className="text-xs font-medium text-gray-900">{fullName}</span>
           </div>
-        </TableCell>
+        </td>
 
         {/* Role */}
-        <TableCell className="py-2 text-xs text-center">{roles}</TableCell>
+        <td className="px-4 py-2.5 text-xs text-gray-600">{roles}</td>
 
         {/* Division */}
-        <TableCell className="py-2 text-xs text-center">
-          {member.division?.name ?? "—"}
-        </TableCell>
+        <td className="px-4 py-2.5 text-xs text-gray-600">
+          {member.division?.name ? (
+            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium text-xs">
+              {member.division.name}
+            </span>
+          ) : (
+            <span className="text-gray-300">—</span>
+          )}
+        </td>
 
         {/* Status */}
-        <TableCell className="py-2 text-center">
-          <div className="flex justify-center">
-            <Badge
-              variant="outline"
-              className={`text-[10px] font-semibold capitalize px-2 py-0 ${STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500"}`}
-            >
-              {member.employment_status ?? "—"}
-            </Badge>
-          </div>
-        </TableCell>
+        <td className="px-4 py-2.5">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border capitalize ${statusStyle}`}
+          >
+            {member.employment_status ?? "—"}
+          </span>
+        </td>
 
         {/* Actions */}
-        <TableCell className="py-2 text-center">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-xs"
+        <td className="px-4 py-2.5">
+          <button
             onClick={() => setShowView(true)}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
           >
-            <IconEye size={12} className="mr-1" /> View
-          </Button>
-        </TableCell>
-      </TableRow>
+            <Eye className="w-3 h-3" /> View
+          </button>
+        </td>
+      </tr>
 
       <ViewMemberModal
         member={member}

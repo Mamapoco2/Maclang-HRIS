@@ -4,15 +4,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 
 const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/147/147144.png";
 
 const STATUS_STYLES = {
-  ACTIVE: "bg-green-100 text-green-700 border-green-200",
+  ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
   INACTIVE: "bg-gray-100 text-gray-600 border-gray-200",
-  RESIGN: "bg-red-100 text-red-600 border-red-200",
+  RESIGN: "bg-red-50 text-red-700 border-red-200",
 };
+
+function InfoField({ label, value, span = false }) {
+  return (
+    <div className={`bg-gray-50 rounded-lg p-3 ${span ? "col-span-2" : ""}`}>
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">
+        {label}
+      </p>
+      <p className="text-sm font-medium text-gray-800 break-words">{value || "—"}</p>
+    </div>
+  );
+}
 
 export function ViewMemberModal({ member, open, onOpenChange }) {
   const fullName =
@@ -30,64 +40,41 @@ export function ViewMemberModal({ member, open, onOpenChange }) {
       : "—";
 
   const statusKey = member.employment_status?.toUpperCase() ?? "INACTIVE";
+  const statusStyle = STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500 border-gray-200";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Member Details</DialogTitle>
+      <DialogContent className="max-w-md rounded-2xl border border-gray-100 shadow-xl p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-0">
+          <DialogTitle className="text-sm font-semibold text-gray-900">
+            Member Details
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
-          <div className="flex flex-col items-center gap-2 text-center">
+        <div className="px-6 pb-6 space-y-5 pt-4">
+          {/* Avatar + name block */}
+          <div className="flex flex-col items-center gap-2 text-center py-3 bg-gray-50 rounded-xl">
             <img
               src={member.avatar_url || DEFAULT_AVATAR}
               alt={fullName}
-              className="w-20 h-20 rounded-full object-cover ring-2 ring-gray-100"
-              onError={(e) => {
-                e.target.src = DEFAULT_AVATAR;
-              }}
+              className="w-16 h-16 rounded-full object-cover ring-2 ring-white shadow-sm"
+              onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
             />
-            <p className="font-semibold text-base">{fullName || "—"}</p>
-            <Badge
-              variant="outline"
-              className={`text-xs font-semibold ${STATUS_STYLES[statusKey] ?? ""}`}
+            <p className="font-semibold text-sm text-gray-900">{fullName || "—"}</p>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border capitalize ${statusStyle}`}
             >
               {member.employment_status ?? "—"}
-            </Badge>
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                Employee No.
-              </p>
-              <p className="font-medium">{member.employee_number ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                Employment Type
-              </p>
-              <p className="font-medium">{member.employment_type ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                Position
-              </p>
-              <p className="font-medium">{roles}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                Division
-              </p>
-              <p className="font-medium">{member.division?.name ?? "—"}</p>
-            </div>
-            <div className="col-span-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                Department(s)
-              </p>
-              <p className="font-medium">{departments}</p>
-            </div>
+          {/* Info grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <InfoField label="Employee No." value={member.employee_number} />
+            <InfoField label="Employment Type" value={member.employment_type} />
+            <InfoField label="Position" value={roles} />
+            <InfoField label="Division" value={member.division?.name} />
+            <InfoField label="Department(s)" value={departments} span />
           </div>
         </div>
       </DialogContent>

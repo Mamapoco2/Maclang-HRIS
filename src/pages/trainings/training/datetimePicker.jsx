@@ -4,7 +4,6 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 
 export function DateTimePicker({
@@ -30,23 +29,23 @@ export function DateTimePicker({
     return `${dateStr}, ${h}:${m} ${ampm}`;
   };
 
+  const selectClass =
+    "border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+
   return (
     <div className="flex-1">
       <Popover modal={true}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full text-left font-normal text-sm justify-start truncate"
-          >
+          <button className="w-full h-9 text-left text-sm px-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors truncate focus:outline-none focus:ring-2 focus:ring-blue-500">
             {displayValue()}
-          </Button>
+          </button>
         </PopoverTrigger>
 
         <PopoverContent
-          className="w-auto p-3"
+          className="w-auto p-3 rounded-xl border border-gray-100 shadow-lg"
           side="bottom"
           align="start"
-          avoidCollisions={true}
+          avoidCollisions
           sideOffset={4}
         >
           <Calendar
@@ -54,12 +53,7 @@ export function DateTimePicker({
             selected={date ?? undefined}
             onSelect={(d) => {
               if (!d) return;
-              const local = new Date(
-                d.getFullYear(),
-                d.getMonth(),
-                d.getDate(),
-              );
-              setDate(local);
+              setDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
             }}
           />
 
@@ -67,7 +61,7 @@ export function DateTimePicker({
             <select
               value={String(hours).padStart(2, "0")}
               onChange={(e) => setHours(e.target.value)}
-              className="border border-gray-200 rounded px-2 py-1.5 text-sm w-16 text-center bg-white"
+              className={`${selectClass} w-16`}
             >
               {Array.from({ length: 12 }, (_, i) => {
                 const val = String(i + 1).padStart(2, "0");
@@ -78,24 +72,21 @@ export function DateTimePicker({
                 );
               })}
             </select>
-
-            <span className="text-gray-400 font-semibold">:</span>
-
+            <span className="text-gray-300 font-semibold">:</span>
             <select
               value={String(minutes).padStart(2, "0")}
               onChange={(e) => setMinutes(e.target.value)}
-              className="border border-gray-200 rounded px-2 py-1.5 text-sm w-16 text-center bg-white"
+              className={`${selectClass} w-16`}
             >
               <option value="00">00</option>
               <option value="15">15</option>
               <option value="30">30</option>
               <option value="45">45</option>
             </select>
-
             <select
               value={ampm}
               onChange={(e) => setAmPm(e.target.value)}
-              className="border border-gray-200 rounded px-2 py-1.5 text-sm w-16 text-center bg-white"
+              className={`${selectClass} w-16`}
             >
               <option value="AM">AM</option>
               <option value="PM">PM</option>

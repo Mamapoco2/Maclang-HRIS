@@ -42,11 +42,11 @@ export default function TrainingEffectivenessModule() {
       <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 px-6 py-3">
         <div className="max-w-screen mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <BookOpen size={16} className="text-white" />
+            <div className="p-2 bg-blue-600 rounded-xl flex items-center justify-center">
+              <BookOpen size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-slate-800 dark:text-white">
+              <h1 className="text-lg font-bold text-gray-900 leading-tight dark:text-white">
                 Training Effectiveness
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">

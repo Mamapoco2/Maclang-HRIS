@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useContext } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { employeeService } from "../../../services/employeeService";
 import { AuthContext } from "@/context/authContext";
@@ -7,6 +6,36 @@ import { getEcho } from "../../../lib/echo";
 import TeamTableHeader from "./TeamTableHeader";
 import DepartmentTeamCard from "./departmentTeamCard";
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function TeamSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
+          {/* Card header */}
+          <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-b border-gray-100">
+            <div className="w-3.5 h-3.5 bg-gray-200 rounded" />
+            <div className="h-3.5 w-32 bg-gray-200 rounded" />
+            <div className="h-3 w-16 bg-gray-100 rounded ml-1" />
+          </div>
+          {/* Rows */}
+          {Array.from({ length: 3 }).map((_, j) => (
+            <div key={j} className="flex items-center gap-4 px-5 py-3 border-b border-gray-50 last:border-0">
+              <div className="w-7 h-7 bg-gray-100 rounded-full shrink-0" />
+              <div className="h-3 flex-1 bg-gray-100 rounded" />
+              <div className="h-3 w-20 bg-gray-100 rounded" />
+              <div className="h-3 w-16 bg-gray-100 rounded" />
+              <div className="h-5 w-14 bg-gray-100 rounded-full" />
+              <div className="h-6 w-12 bg-gray-100 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function TeamTable() {
   const { user } = useContext(AuthContext);
   const [members, setMembers] = useState([]);
@@ -28,31 +57,22 @@ export default function TeamTable() {
     fetchMembers();
   }, [fetchMembers]);
 
-  // ✅ Realtime: listen for employee updates and activations
+  // Realtime: listen for employee updates
   useEffect(() => {
     const echo = getEcho();
     const channel = echo.channel("employees");
 
-    // Fired when an employee's department/details change
     const onEmployeeUpdated = (e) => {
       if (!e.employee) return;
       setMembers((prev) => {
         const exists = prev.some((m) => m.id === e.employee.id);
-        if (exists) {
-          return prev.map((m) =>
-            m.id === e.employee.id ? { ...m, ...e.employee } : m,
-          );
-        }
-        // New employee assigned to a dept — add to list
+        if (exists) return prev.map((m) => m.id === e.employee.id ? { ...m, ...e.employee } : m);
         return [e.employee, ...prev];
       });
     };
 
     channel.listen(".employee.updated", onEmployeeUpdated);
-
-    return () => {
-      channel.stopListening(".employee.updated", onEmployeeUpdated);
-    };
+    return () => channel.stopListening(".employee.updated", onEmployeeUpdated);
   }, []);
 
   const userDepartmentIds = useMemo(() => {
@@ -77,19 +97,14 @@ export default function TeamTable() {
 
   const groupedByDepartment = useMemo(() => {
     const map = new Map();
-
     myDepartmentMembers.forEach((member) => {
       const depts =
         Array.isArray(member.departments) && member.departments.length > 0
-          ? member.departments.filter((d) =>
-              userDepartmentIds.includes(String(d.id)),
-            )
+          ? member.departments.filter((d) => userDepartmentIds.includes(String(d.id)))
           : [{ id: "none", name: "No Department" }];
 
       depts.forEach((dept) => {
-        if (!map.has(dept.id)) {
-          map.set(dept.id, { name: dept.name, members: [] });
-        }
+        if (!map.has(dept.id)) map.set(dept.id, { name: dept.name, members: [] });
         map.get(dept.id).members.push(member);
       });
     });
@@ -104,38 +119,28 @@ export default function TeamTable() {
   }, [myDepartmentMembers, userDepartmentIds]);
 
   return (
-    <div className="w-full py-6 px-4">
-      <div className="max-w-full mx-auto space-y-4">
-        <TeamTableHeader
-          totalGroups={groupedByDepartment.length}
-          departmentName={primaryDepartmentName}
-        />
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-screen mx-auto px-6 py-4">
+          <TeamTableHeader
+            totalGroups={groupedByDepartment.length}
+            departmentName={primaryDepartmentName}
+          />
+        </div>
+      </div>
 
-        {loading && (
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-6 w-40 rounded" />
-                <div className="rounded-xl border overflow-hidden">
-                  {Array.from({ length: 3 }).map((_, j) => (
-                    <div key={j} className="flex gap-3 px-4 py-2.5 border-b">
-                      <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                      {Array.from({ length: 4 }).map((_, k) => (
-                        <Skeleton key={k} className="h-3.5 flex-1 rounded" />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Content */}
+      <div className="max-w-screen mx-auto px-4 sm:px-6 py-6 space-y-4">
+        {loading && <TeamSkeleton />}
 
         {!loading && groupedByDepartment.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground text-sm">
-            {userDepartmentIds.length === 0
-              ? "No department assigned to your account."
-              : "No team members found."}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="text-center py-16 text-gray-400 text-sm">
+              {userDepartmentIds.length === 0
+                ? "No department assigned to your account."
+                : "No team members found."}
+            </div>
           </div>
         )}
 

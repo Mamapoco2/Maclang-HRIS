@@ -571,7 +571,6 @@ function EmployeeDetailsSheet({ employee, onClose }) {
         </div>
 
         <div className="flex-1 p-6 space-y-6">
-          {/* Employee Info */}
           <section>
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Employee Information
@@ -599,7 +598,6 @@ function EmployeeDetailsSheet({ employee, onClose }) {
             </div>
           </section>
 
-          {/* Overall Progress */}
           <section>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -612,7 +610,6 @@ function EmployeeDetailsSheet({ employee, onClose }) {
             <ProgressBar value={employee.progress} showLabel={false} />
           </section>
 
-          {/* Modules */}
           <section>
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Orientation Modules
@@ -653,7 +650,6 @@ function EmployeeDetailsSheet({ employee, onClose }) {
             </div>
           </section>
 
-          {/* Timeline */}
           {employee.timeline.length > 0 && (
             <section>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -1139,10 +1135,10 @@ export default function OrientationMonitoring() {
   }
 
   return (
-    <div className="h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-screen mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-3">
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-screen mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600 rounded-xl">
               <GraduationCap className="w-5 h-5 text-white" />
@@ -1181,8 +1177,7 @@ export default function OrientationMonitoring() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-screen mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-screen mx-auto px-4 sm:px-6 py-6 space-y-5">
         <StatsCards employees={EMPLOYEES} />
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">

@@ -4,6 +4,25 @@ import { toast } from "sonner";
 import api from "../../../api/api";
 import { getEcho } from "../../../lib/echo";
 
+function AvatarWithFallback({ src, initials, name }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  if (src && !imgFailed) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        className="w-8 h-8 rounded-full object-cover shrink-0"
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[11px] font-semibold shrink-0">
+      {initials}
+    </div>
+  );
+}
+
 export function EnrolledParticipantsModal({
   training: initialTraining,
   onClose,
@@ -21,27 +40,21 @@ export function EnrolledParticipantsModal({
     if (!training?.id) return;
     const echo = getEcho();
     const channel = echo.channel("trainings");
-
     const handler = (e) => {
       if (e.training?.id !== training.id) return;
       setTraining((prev) => ({ ...prev, ...e.training }));
     };
-
     channel.listen(".participant.updated", handler);
     listenerRef.current = handler;
-
     return () => {
       channel.stopListening(".participant.updated", listenerRef.current);
     };
   }, [training?.id]);
 
   const participants = training?.participants ?? [];
-
-  const canMarkAttendance =
-    userRole === "HR" ||
-    userRole === "superAdmin" ||
-    userRole === "admin" ||
-    userRole === "hr";
+  const canMarkAttendance = ["HR", "superAdmin", "admin", "hr"].includes(
+    userRole,
+  );
 
   const markAttendance = async (participantId) => {
     if (markingId) return;
@@ -70,7 +83,6 @@ export function EnrolledParticipantsModal({
   const attendedPct =
     totalCount > 0 ? Math.round((attendedCount / totalCount) * 100) : 0;
 
-  // ── Resolve participant fields from multiple possible API shapes ───────────
   const resolveName = (p) =>
     p.name ||
     (p.first_name || p.last_name
@@ -82,21 +94,18 @@ export function EnrolledParticipantsModal({
       : null) ||
     p.full_name ||
     null;
-
   const resolveEmployeeNumber = (p) =>
     p.employeeNumber ||
     p.employee_number ||
     p.employee?.employee_number ||
     p.employee?.employeeNumber ||
     null;
-
   const resolveDepartment = (p) =>
     p.department ||
     p.department_name ||
     p.employee?.department ||
     p.employee?.department_name ||
     null;
-
   const resolveAvatar = (p) =>
     p.avatar_url ||
     p.avatar ||
@@ -110,7 +119,7 @@ export function EnrolledParticipantsModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-lg w-full max-w-sm mx-4 overflow-hidden border border-gray-200"
+        className="bg-white rounded-2xl border border-gray-100 shadow-xl w-full max-w-sm mx-4 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -123,10 +132,9 @@ export function EnrolledParticipantsModal({
               {training?.title}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-700 ring-1 ring-teal-200">
-              <IconUsers size={11} />
-              {totalCount}
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              <IconUsers size={11} /> {totalCount}
             </span>
             <button
               onClick={onClose}
@@ -137,27 +145,27 @@ export function EnrolledParticipantsModal({
           </div>
         </div>
 
-        {/* Attendance summary bar — HR & admins only */}
+        {/* Attendance summary */}
         {canMarkAttendance && (
-          <div className="flex items-center justify-between px-5 py-2 bg-teal-50 border-b border-teal-100">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-teal-700">
-              <IconCheck size={11} />
-              {attendedCount} of {totalCount} marked present
+          <div className="flex items-center justify-between px-5 py-2 bg-emerald-50 border-b border-emerald-100">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
+              <IconCheck size={11} /> {attendedCount} of {totalCount} marked
+              present
             </span>
-            <span className="text-[10px] text-teal-600 opacity-70">
+            <span className="text-[10px] text-emerald-600 opacity-70">
               {attendedPct}%
             </span>
           </div>
         )}
 
-        {/* Participant list */}
+        {/* List */}
         <div className="px-2 py-1 max-h-72 overflow-y-auto">
           {participants.length === 0 ? (
             <div className="text-center py-10 text-sm text-gray-400">
               No participants enrolled yet.
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-gray-50">
               {participants.map((p, i) => {
                 const name = resolveName(p) || `Participant ${i + 1}`;
                 const employeeNumber = resolveEmployeeNumber(p);
@@ -182,10 +190,8 @@ export function EnrolledParticipantsModal({
                       initials={initials}
                       name={name}
                     />
-
-                    {/* Name + employee number */}
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-medium text-gray-800 truncate">
+                      <p className="text-xs font-medium text-gray-800 truncate">
                         {name}
                       </p>
                       {employeeNumber && (
@@ -194,27 +200,22 @@ export function EnrolledParticipantsModal({
                         </p>
                       )}
                     </div>
-
-                    {/* Department badge */}
                     {department && (
-                      <span className="flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                      <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
                         {department}
                       </span>
                     )}
-
-                    {/* Attendance button — HR & admins only */}
                     {canMarkAttendance && (
-                      <div className="flex-shrink-0 w-[90px] flex justify-end">
+                      <div className="shrink-0 w-[90px] flex justify-end">
                         {isPresent ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md bg-teal-50 text-teal-700 ring-1 ring-teal-200">
-                            <IconCheck size={10} />
-                            Present
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <IconCheck size={10} /> Present
                           </span>
                         ) : (
                           <button
                             onClick={() => markAttendance(p.id ?? i)}
                             disabled={isMarking}
-                            className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md bg-gray-50 text-gray-600 ring-1 ring-gray-200 hover:bg-teal-50 hover:text-teal-700 hover:ring-teal-200 transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white text-gray-600 border border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors disabled:opacity-50"
                           >
                             {isMarking ? (
                               <IconLoader2 size={10} className="animate-spin" />
@@ -244,31 +245,12 @@ export function EnrolledParticipantsModal({
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
           >
             Close
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function AvatarWithFallback({ src, initials, name }) {
-  const [imgFailed, setImgFailed] = useState(false);
-  if (src && !imgFailed) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-        onError={() => setImgFailed(true)}
-      />
-    );
-  }
-  return (
-    <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[11px] font-semibold flex-shrink-0">
-      {initials}
     </div>
   );
 }

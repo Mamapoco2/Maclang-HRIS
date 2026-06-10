@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import {
   IconClipboardList,
   IconUsers,
@@ -27,9 +26,6 @@ import { AuthContext } from "@/context/authContext";
 import { getEcho } from "../../../lib/echo";
 
 // ── Fix: send dates as local datetime strings, not UTC ISO ──────────────────
-// JavaScript's Date.toISOString() always outputs UTC (e.g. PHT 1:00 PM → UTC 5:00 AM).
-// This helper formats the date using *local* parts so the backend receives the
-// exact wall-clock time the user picked, with no timezone shift.
 function toLocalISO(date) {
   if (!date) return null;
   const pad = (n) => String(n).padStart(2, "0");
@@ -81,41 +77,37 @@ const STAT_CARDS = [
     label: "Active Programs",
     sub: "total programs",
     icon: IconClipboardList,
-    iconColor: "text-blue-500",
-    iconBg: "bg-blue-50",
+    color: "text-blue-600 bg-blue-50",
   },
   {
     key: "totalEnrolled",
     label: "Total Enrolled",
     sub: "participants",
     icon: IconUsers,
-    iconColor: "text-teal-500",
-    iconBg: "bg-teal-50",
+    color: "text-emerald-600 bg-emerald-50",
   },
   {
     key: "certificatesIssued",
     label: "Certificates Issued",
     sub: "this year",
     icon: IconAward,
-    iconColor: "text-amber-500",
-    iconBg: "bg-amber-50",
+    color: "text-amber-600 bg-amber-50",
   },
   {
     key: "completed",
     label: "Completed",
     sub: "finished programs",
     icon: IconCircleCheck,
-    iconColor: "text-green-500",
-    iconBg: "bg-green-50",
+    color: "text-rose-600 bg-rose-50",
   },
 ];
 
 export default function TrainingPage() {
   const isEmployee = useIsEmployee();
-  const { user, hasPermission } = useContext(AuthContext); // ✅ pull hasPermission
+  const { user, hasPermission } = useContext(AuthContext);
 
-  const canView = hasPermission("trainings.view"); // ✅ see the table at all
-  const canManage = hasPermission("trainings.manage"); // ✅ add / edit / delete / assign
+  const canView = hasPermission("trainings.view");
+  const canManage = hasPermission("trainings.manage");
 
   const currentUserId = user?.id ?? null;
   const currentEmployeeId = user?.employee_id ?? null;
@@ -338,11 +330,13 @@ export default function TrainingPage() {
     }
   };
 
-  // ✅ No permission to view — render nothing
+  // No permission to view
   if (!canView) {
     return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-[40vh] gap-2 text-center">
-        <IconClipboardList size={32} className="text-gray-200" />
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-3 text-center p-6">
+        <div className="p-4 bg-gray-100 rounded-2xl">
+          <IconClipboardList size={32} className="text-gray-300" />
+        </div>
         <p className="text-sm font-medium text-gray-400">
           You don't have permission to view training programs.
         </p>
@@ -351,82 +345,89 @@ export default function TrainingPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
-          Training Management
-        </h1>
-        <p className="text-sm text-gray-400 mt-0.5">
-          {isEmployee
-            ? "Browse available training programs and join ones you're interested in."
-            : "Manage training programs, track employee progress, and issue certifications."}
-        </p>
-      </div>
-
-      {/* KPI Cards — only for non-employees with manage permission */}
-      {!isEmployee && canManage && (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {STAT_CARDS.map(
-            ({ key, label, sub, icon: Icon, iconColor, iconBg }) => (
-              <div
-                key={key}
-                className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4"
-              >
-                <div
-                  className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}
-                >
-                  <Icon size={18} className={iconColor} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 font-medium">{label}</p>
-                  <p className="text-2xl font-semibold text-gray-900 leading-tight">
-                    {stats[key]}
-                  </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    {stats[key] > 0 ? `+${stats[key]}` : "0"} {sub}
-                  </p>
-                </div>
-              </div>
-            ),
-          )}
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div>
-            <h2 className="text-m font-semibold text-gray-800">
-              Training Programs
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {trainings.length} program{trainings.length !== 1 ? "s" : ""}
-            </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* ── Sticky Header ── */}
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-screen mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-600 rounded-xl">
+              <IconClipboardList size={20} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                Training Management
+              </h1>
+              <p className="text-xs text-gray-500 leading-tight">
+                {isEmployee
+                  ? "Browse available training programs and join ones you're interested in."
+                  : "Manage training programs, track progress, and issue certifications."}
+              </p>
+            </div>
           </div>
 
-          {/* ✅ Add Program — only if canManage and not employee */}
+          {/* Add Program button */}
           {!isEmployee && canManage && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button
-                  size="sm"
-                  className="h-8 px-3 text-xs bg-gray-900 hover:bg-gray-800 text-white rounded-lg gap-1.5 font-medium"
-                >
-                  <IconPlus size={13} /> Add Program
-                </Button>
+                <button className="flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-2 transition-colors">
+                  <IconPlus size={15} /> Add Program
+                </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
+              <DialogContent className="sm:max-w-lg rounded-2xl border border-gray-100 shadow-xl">
                 <DialogHeader>
-                  <DialogTitle>Add Training Program</DialogTitle>
+                  <DialogTitle className="text-sm font-semibold text-gray-900">
+                    Add Training Program
+                  </DialogTitle>
                 </DialogHeader>
                 <TrainingForm onSubmit={handleAddTraining} />
               </DialogContent>
             </Dialog>
           )}
         </div>
+      </div>
 
-        <div>
+      {/* ── Content ── */}
+      <div className="max-w-screen mx-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* ── KPI Cards ── */}
+        {!isEmployee && canManage && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {STAT_CARDS.map(({ key, label, sub, icon: Icon, color }) => (
+              <div
+                key={key}
+                className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    {label}
+                  </p>
+                  <span className={`p-1.5 rounded-lg ${color}`}>
+                    <Icon size={16} />
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{stats[key]}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {stats[key] > 0 ? `+${stats[key]}` : "0"} {sub}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Training Programs Table card ── */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-800">
+                Training Programs
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {trainings.length} program{trainings.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+
           {loading ? (
-            <div className="flex justify-center py-12">
+            <div className="flex justify-center py-16">
               <IconLoader2 size={24} className="animate-spin text-gray-300" />
             </div>
           ) : (
@@ -434,7 +435,6 @@ export default function TrainingPage() {
               trainings={trainings}
               onSelect={setSelected}
               onView={handleViewTraining}
-              // ✅ Pass undefined for manage actions if user lacks permission
               onEdit={!isEmployee && canManage ? handleEditTraining : undefined}
               onDelete={
                 !isEmployee && canManage ? handleDeleteTraining : undefined
@@ -443,7 +443,7 @@ export default function TrainingPage() {
                 !isEmployee && canManage ? handleAssignPeople : undefined
               }
               isEmployee={isEmployee}
-              canManage={canManage} // ✅ pass down so table can hide assign button
+              canManage={canManage}
               onJoin={handleJoin}
               joiningId={joiningId}
               currentEmployeeId={currentEmployeeId}
@@ -452,13 +452,13 @@ export default function TrainingPage() {
         </div>
       </div>
 
+      {/* ── Modals ── */}
       <ViewTrainingModal
         training={selected}
         open={viewModalOpen}
         onOpenChange={setViewModalOpen}
       />
 
-      {/* ✅ Edit/Delete modals only mount if canManage */}
       {!isEmployee && canManage && (
         <>
           <EditTrainingModal
