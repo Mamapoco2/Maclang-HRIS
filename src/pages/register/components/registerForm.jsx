@@ -1,11 +1,21 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2, Check, X, Clock, Sparkles } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Check,
+  X,
+  Clock,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 import { AuthContext } from "@/context/AuthContext";
+import axios from "../../../api/api";
 
 const PASSWORD_RULES = [
   { id: "length", label: "At least 8 characters", test: (v) => v?.length >= 8 },
@@ -59,6 +69,10 @@ export default function RegisterForm() {
   const [serverError, setServerError] = useState("");
   const [registered, setRegistered] = useState(false);
 
+  const [usernameStatus, setUsernameStatus] = useState("idle");
+  const [usernameSuggestions, setUsernameSuggestions] = useState([]);
+  const usernameManuallyEdited = useRef(false);
+
   const {
     register,
     handleSubmit,
@@ -75,17 +89,61 @@ export default function RegisterForm() {
     passwordConfirm === password && passwordConfirm.length > 0;
 
   const givenName = watch("given_name") ?? "";
+  const middleName = watch("middle_name") ?? "";
   const lastName = watch("last_name") ?? "";
-  const generatedUsername = generateUsername(givenName, lastName);
+  const username = watch("username") ?? "";
 
   const syncUsername = () => {
+    if (usernameManuallyEdited.current) return;
+
     const gn = watch("given_name") ?? "";
     const ln = watch("last_name") ?? "";
-    setValue("username", generateUsername(gn, ln), { shouldValidate: true });
+    const generated = generateUsername(gn, ln);
+    setValue("username", generated, { shouldValidate: true });
+  };
+
+  useEffect(() => {
+    if (!username || username.trim().length < 2) {
+      setUsernameStatus("idle");
+      setUsernameSuggestions([]);
+      return;
+    }
+
+    setUsernameStatus("checking");
+
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await axios.post("/check-username", {
+          username,
+          given_name: givenName,
+          middle_name: middleName,
+          last_name: lastName,
+        });
+
+        setUsernameStatus(res.data.available ? "available" : "taken");
+        setUsernameSuggestions(res.data.suggestions || []);
+      } catch {
+        setUsernameStatus("idle");
+        setUsernameSuggestions([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [username, givenName, middleName, lastName]);
+
+  const handleSuggestionClick = (suggestion) => {
+    usernameManuallyEdited.current = true;
+    setValue("username", suggestion, { shouldValidate: true });
   };
 
   const onSubmit = async (data) => {
     setServerError("");
+
+    if (usernameStatus === "taken") {
+      setServerError("Please choose an available username before continuing.");
+      return;
+    }
+
     const res = await registerUser(
       data.given_name,
       data.middle_name,
@@ -184,7 +242,9 @@ export default function RegisterForm() {
               placeholder="e.g. Santos"
               autoComplete="additional-name"
               className="bg-white/80 dark:bg-gray-800/80 uppercase h-10"
-              {...register("middle_name")}
+              {...register("middle_name", {
+                onChange: () => syncUsername(),
+              })}
             />
           </div>
 
@@ -226,20 +286,62 @@ export default function RegisterForm() {
             type="text"
             readOnly
             tabIndex={-1}
-            value={generatedUsername}
             placeholder="Auto-generated from your name"
             className="bg-gray-50 dark:bg-gray-900/60 text-gray-600 dark:text-gray-400 cursor-default uppercase h-10"
             {...register("username", { required: "Username is required." })}
           />
-          {generatedUsername && (
+
+          {/* Status messages */}
+          {usernameStatus === "checking" && (
+            <p className="flex items-center gap-1.5 text-xs text-gray-400">
+              <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+              Checking availability...
+            </p>
+          )}
+
+          {usernameStatus === "available" && (
+            <p className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+              <Check className="w-3 h-3 shrink-0" strokeWidth={3} />
+              Username is available
+            </p>
+          )}
+
+          {usernameStatus === "taken" && (
+            <div className="space-y-2">
+              <p className="flex items-center gap-1.5 text-xs text-red-500">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                This username is already taken. Please choose one of the
+                suggestions below.
+              </p>
+              {usernameSuggestions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="flex items-center gap-1 text-xs text-gray-400">
+                    <Sparkles className="w-3 h-3 shrink-0" />
+                    Available:
+                  </span>
+                  {usernameSuggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => handleSuggestionClick(s)}
+                      className="text-xs font-medium px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {usernameStatus === "idle" && username.length >= 2 && (
             <p className="flex items-center gap-1.5 text-xs text-blue-500 dark:text-blue-400">
               <Sparkles className="w-3 h-3 shrink-0" />
               Auto-generated username:{" "}
-              <span className="font-semibold tracking-wide">
-                {generatedUsername}
-              </span>
+              <span className="font-semibold tracking-wide">{username}</span>
             </p>
           )}
+
           {errors.username && (
             <p className="text-xs text-red-500">{errors.username.message}</p>
           )}
@@ -377,7 +479,7 @@ export default function RegisterForm() {
 
       <Button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || usernameStatus === "taken"}
         className="w-full bg-blue-700 hover:bg-blue-600 text-white uppercase tracking-widest font-semibold h-11"
       >
         {isSubmitting ? (
