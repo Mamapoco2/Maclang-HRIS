@@ -1,4 +1,4 @@
-//src/pages/departments/components/editDepartmentModal.jsx
+// src/pages/departments/components/editDepartmentModal.jsx
 import { useEffect, useState } from "react";
 import api from "@/api/api";
 import {
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 const TYPE_OPTIONS = [
@@ -38,7 +38,14 @@ const HEAD_ROLES = [
   "SUPERVISOR",
 ];
 
-const STAFF_ROLES = ["STAFF"];
+const TYPE_BADGE = {
+  OFFICE: "bg-indigo-100 text-indigo-700",
+  DIRECTORATE: "bg-purple-100 text-purple-700",
+  DIVISION: "bg-teal-100 text-teal-700",
+  DEPARTMENT: "bg-blue-100 text-blue-700",
+  UNIT: "bg-emerald-100 text-emerald-700",
+  SECTION: "bg-violet-100 text-violet-700",
+};
 
 const fetchAllEmployees = async () => {
   let page = 1;
@@ -63,16 +70,23 @@ export default function EditDepartmentModal({
   department,
 }) {
   const [divisions, setDivisions] = useState([]);
+  const [allDepartments, setAllDepartments] = useState([]);
+  const [allDivisions, setAllDivisions] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loadingDivisions, setLoadingDivisions] = useState(false);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
   const [saving, setSaving] = useState(false);
   const [headSearch, setHeadSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [parentSearch, setParentSearch] = useState("");
 
   const [form, setForm] = useState({
     type: "",
     division_id: "",
+    parent_id: "",
+    parent_type: "", // "division" | "department"
     code: "",
     name: "",
     description: "",
@@ -82,6 +96,7 @@ export default function EditDepartmentModal({
 
   const [errors, setErrors] = useState({});
 
+  // Load dropdowns on open
   useEffect(() => {
     if (!open) return;
 
@@ -97,6 +112,21 @@ export default function EditDepartmentModal({
       .catch(() => toast.error("Failed to load divisions."))
       .finally(() => setLoadingDivisions(false));
 
+    setLoadingDepartments(true);
+    Promise.all([api.get("/departments"), api.get("/divisions")])
+      .then(([deptRes, divRes]) => {
+        const depts = Array.isArray(deptRes.data)
+          ? deptRes.data
+          : (deptRes.data?.data ?? []);
+        const divs = Array.isArray(divRes.data)
+          ? divRes.data
+          : (divRes.data?.data ?? []);
+        setAllDepartments(depts.filter((d) => d.id !== department?.id));
+        setAllDivisions(divs);
+      })
+      .catch(() => toast.error("Failed to load departments."))
+      .finally(() => setLoadingDepartments(false));
+
     setLoadingEmployees(true);
     fetchAllEmployees()
       .then(setEmployees)
@@ -104,28 +134,65 @@ export default function EditDepartmentModal({
       .finally(() => setLoadingEmployees(false));
   }, [open]);
 
+  // Prefill form from department prop
   useEffect(() => {
     if (open && department) {
+      // Determine which parent field is set and what type it is
+      const hasParentDivision = !!department.parent_division_id;
+      const hasParentDept = !!department.parent_id;
+
       setForm({
         type: department.type ?? "",
         division_id: department.division_id
           ? String(department.division_id)
           : "",
+        parent_id: hasParentDivision
+          ? String(department.parent_division_id)
+          : hasParentDept
+            ? String(department.parent_id)
+            : "",
+        parent_type: hasParentDivision
+          ? "division"
+          : hasParentDept
+            ? "department"
+            : "",
         code: department.code ?? "",
         name: department.name ?? "",
         description: department.description ?? "",
-        employee_head_id: department.employee_head_id
-          ? String(department.employee_head_id)
-          : "",
-        employee_ids: Array.isArray(department.employee_ids)
-          ? department.employee_ids.map(String)
-          : [],
+        employee_head_id: department.head_employee_id
+          ? String(department.head_employee_id)
+          : department.head?.id
+            ? String(department.head.id)
+            : "",
+        employee_ids: [],
       });
       setErrors({});
       setHeadSearch("");
       setEmployeeSearch("");
+      setParentSearch("");
     }
   }, [open, department]);
+
+  // Fetch currently assigned employees for this department
+  useEffect(() => {
+    if (!open || !department?.id) return;
+
+    setLoadingAssigned(true);
+    api
+      .get("/employees", {
+        params: { department_id: department.id, per_page: 999 },
+      })
+      .then((res) => {
+        const list =
+          res.data?.data ?? (Array.isArray(res.data) ? res.data : []);
+        setForm((prev) => ({
+          ...prev,
+          employee_ids: list.map((e) => String(e.id)),
+        }));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAssigned(false));
+  }, [open, department?.id]);
 
   const set = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -153,7 +220,7 @@ export default function EditDepartmentModal({
 
   const staffEmployees = employees.filter((e) => {
     const roles = getRolePositions(e);
-    return roles.some((r) => STAFF_ROLES.includes(r));
+    return !roles.some((r) => HEAD_ROLES.includes(r));
   });
 
   const filteredHeadEmployees = headEmployees.filter((e) =>
@@ -162,6 +229,30 @@ export default function EditDepartmentModal({
 
   const filteredEmployees = staffEmployees.filter((e) =>
     getEmployeeName(e).toLowerCase().includes(employeeSearch.toLowerCase()),
+  );
+
+  // Merge divisions + departments for parent dropdown
+  const normalizedDivisions = allDivisions.map((div) => ({
+    ...div,
+    type: div.type ?? "DIVISION",
+    _source: "division",
+  }));
+
+  const normalizedDepartments = allDepartments.map((d) => ({
+    ...d,
+    _source: "department",
+  }));
+
+  const allParents = [...normalizedDivisions, ...normalizedDepartments];
+
+  const filteredParents = allParents.filter((d) =>
+    `${d.name} ${d.code ?? ""}`
+      .toLowerCase()
+      .includes(parentSearch.toLowerCase()),
+  );
+
+  const selectedParent = allParents.find(
+    (d) => String(d.id) === form.parent_id && d._source === form.parent_type,
   );
 
   const handleSubmit = async () => {
@@ -181,13 +272,18 @@ export default function EditDepartmentModal({
       await api.put(`/departments/${department.id}`, {
         type: form.type,
         division_id: form.division_id,
+        // Send to correct column based on which type of parent was selected
+        parent_id:
+          form.parent_type === "department" ? form.parent_id || null : null,
+        parent_division_id:
+          form.parent_type === "division" ? form.parent_id || null : null,
         code: form.code.trim(),
         name: form.name.trim(),
         description: form.description.trim() || null,
-        employee_head_id: form.employee_head_id || null,
+        head_employee_id: form.employee_head_id || null,
         employee_ids: form.employee_ids.map(Number),
       });
-      toast.success("Department updated successfully.");
+      toast.success("Updated successfully.");
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -199,9 +295,7 @@ export default function EditDepartmentModal({
         });
         setErrors(mapped);
       } else {
-        toast.error(
-          err.response?.data?.message ?? "Failed to update department.",
-        );
+        toast.error(err.response?.data?.message ?? "Failed to update.");
       }
     } finally {
       setSaving(false);
@@ -213,48 +307,48 @@ export default function EditDepartmentModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit {typeLabel || "Department"}</DialogTitle>
         </DialogHeader>
 
-        {/* Division */}
-        <div className="space-y-1.5">
-          <Label>
-            Division <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            value={form.division_id}
-            onValueChange={(v) => set("division_id", v)}
-            disabled={loadingDivisions}
-          >
-            <SelectTrigger
-              className={errors.division_id ? "border-destructive" : ""}
-            >
-              <SelectValue
-                placeholder={
-                  loadingDivisions ? "Loading..." : "Select division"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {divisions.map((div) => (
-                <SelectItem
-                  key={div.id}
-                  value={String(div.id)}
-                  className="pl-3 [&>span:first-child]:hidden"
-                >
-                  {div.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.division_id && (
-            <p className="text-xs text-destructive">{errors.division_id}</p>
-          )}
-        </div>
-
         <div className="space-y-4 py-2">
+          {/* Division */}
+          <div className="space-y-1.5">
+            <Label>
+              Division <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={form.division_id}
+              onValueChange={(v) => set("division_id", v)}
+              disabled={loadingDivisions}
+            >
+              <SelectTrigger
+                className={errors.division_id ? "border-destructive" : ""}
+              >
+                <SelectValue
+                  placeholder={
+                    loadingDivisions ? "Loading..." : "Select division"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {divisions.map((div) => (
+                  <SelectItem
+                    key={div.id}
+                    value={String(div.id)}
+                    className="pl-3 [&>span:first-child]:hidden"
+                  >
+                    {div.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.division_id && (
+              <p className="text-xs text-destructive">{errors.division_id}</p>
+            )}
+          </div>
+
           {/* Type */}
           <div className="space-y-1.5">
             <Label>
@@ -280,6 +374,111 @@ export default function EditDepartmentModal({
             </Select>
             {errors.type && (
               <p className="text-xs text-destructive">{errors.type}</p>
+            )}
+          </div>
+
+          {/* Parent */}
+          <div className="space-y-1.5">
+            <Label>
+              Parent{" "}
+              <span className="text-xs text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </Label>
+
+            {selectedParent && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/40">
+                <span
+                  className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${TYPE_BADGE[selectedParent.type] ?? "bg-gray-100 text-gray-600"}`}
+                >
+                  {selectedParent.type}
+                </span>
+                <span className="text-sm font-medium flex-1 truncate">
+                  {selectedParent.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    set("parent_id", "");
+                    set("parent_type", "");
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+
+            {!selectedParent && (
+              <Select
+                value={form.parent_id}
+                onValueChange={(v) => {
+                  const found = allParents.find((d) => String(d.id) === v);
+                  set("parent_id", v);
+                  set("parent_type", found?._source ?? "");
+                }}
+                disabled={loadingDepartments}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loadingDepartments
+                        ? "Loading..."
+                        : "Select parent (optional)"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="p-0 overflow-hidden">
+                  <div className="px-2 py-1.5 bg-white border-b border-gray-100">
+                    <div className="relative">
+                      <Search
+                        size={11}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      />
+                      <input
+                        placeholder="Search division or department…"
+                        value={parentSearch}
+                        onChange={(e) => setParentSearch(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400 uppercase"
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto max-h-48">
+                    {loadingDepartments ? (
+                      <div className="px-3 py-4 text-xs text-slate-400 text-center">
+                        Loading...
+                      </div>
+                    ) : filteredParents.length === 0 ? (
+                      <div className="px-3 py-4 text-xs text-slate-400 text-center">
+                        No results found.
+                      </div>
+                    ) : (
+                      filteredParents.map((d) => (
+                        <SelectItem
+                          key={`${d._source}-${d.id}`}
+                          value={String(d.id)}
+                          className="pl-3 [&>span:first-child]:hidden"
+                        >
+                          <span className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${TYPE_BADGE[d.type] ?? "bg-gray-100 text-gray-600"}`}
+                            >
+                              {d.type}
+                            </span>
+                            <span className="truncate">{d.name}</span>
+                            {d.code && (
+                              <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                                {d.code}
+                              </span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))
+                    )}
+                  </div>
+                </SelectContent>
+              </Select>
             )}
           </div>
 
@@ -335,7 +534,7 @@ export default function EditDepartmentModal({
             />
           </div>
 
-          {/* Employee Head — only HEAD_ROLES */}
+          {/* Employee Head */}
           <div className="space-y-1.5">
             <Label>
               Employee Head{" "}
@@ -343,65 +542,92 @@ export default function EditDepartmentModal({
                 (Chief, Director, Head, etc.)
               </span>
             </Label>
-            <Select
-              value={form.employee_head_id}
-              onValueChange={(v) => set("employee_head_id", v)}
-              disabled={loadingEmployees}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    loadingEmployees ? "Loading..." : "Select employee head"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="uppercase p-0 overflow-hidden">
-                <div className="px-2 py-1.5 bg-white border-b border-gray-100">
-                  <div className="relative">
-                    <Search
-                      size={11}
-                      className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                    <input
-                      placeholder="Search employee…"
-                      value={headSearch}
-                      onChange={(e) => setHeadSearch(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400 uppercase"
-                    />
-                  </div>
-                </div>
-                <div className="overflow-y-auto max-h-44">
-                  {loadingEmployees ? (
-                    <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                      Loading...
-                    </div>
-                  ) : filteredHeadEmployees.length === 0 ? (
-                    <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                      No employees found.
-                    </div>
-                  ) : (
-                    filteredHeadEmployees.map((e) => (
-                      <SelectItem
-                        key={e.id}
-                        value={String(e.id)}
-                        className="pl-3 [&>span:first-child]:hidden"
-                      >
-                        <span className="flex flex-col">
-                          <span>{getEmployeeName(e)}</span>
-                          <span className="text-[10px] text-slate-400">
-                            {getRolePositions(e).join(", ")}
-                          </span>
-                        </span>
-                      </SelectItem>
-                    ))
+
+            {employees.find((e) => String(e.id) === form.employee_head_id) ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/40">
+                <span className="text-sm font-medium flex-1 truncate uppercase">
+                  {getEmployeeName(
+                    employees.find(
+                      (e) => String(e.id) === form.employee_head_id,
+                    ),
                   )}
-                </div>
-              </SelectContent>
-            </Select>
+                </span>
+                <span className="text-[10px] text-slate-400 shrink-0">
+                  {getRolePositions(
+                    employees.find(
+                      (e) => String(e.id) === form.employee_head_id,
+                    ),
+                  ).join(", ")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => set("employee_head_id", "")}
+                  className="text-muted-foreground hover:text-foreground shrink-0"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <Select
+                value={form.employee_head_id}
+                onValueChange={(v) => set("employee_head_id", v)}
+                disabled={loadingEmployees}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loadingEmployees ? "Loading..." : "Select employee head"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="uppercase p-0 overflow-hidden">
+                  <div className="px-2 py-1.5 bg-white border-b border-gray-100">
+                    <div className="relative">
+                      <Search
+                        size={11}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      />
+                      <input
+                        placeholder="Search employee…"
+                        value={headSearch}
+                        onChange={(e) => setHeadSearch(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400 uppercase"
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto max-h-44">
+                    {loadingEmployees ? (
+                      <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
+                        Loading...
+                      </div>
+                    ) : filteredHeadEmployees.length === 0 ? (
+                      <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
+                        No employees found.
+                      </div>
+                    ) : (
+                      filteredHeadEmployees.map((e) => (
+                        <SelectItem
+                          key={e.id}
+                          value={String(e.id)}
+                          className="pl-3 [&>span:first-child]:hidden"
+                        >
+                          <span className="flex flex-col">
+                            <span>{getEmployeeName(e)}</span>
+                            <span className="text-[10px] text-slate-400">
+                              {getRolePositions(e).join(", ")}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))
+                    )}
+                  </div>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          {/* Employees — only STAFF */}
+          {/* Employees */}
           <div className="space-y-1.5">
             <Label>
               Employees{" "}
@@ -409,92 +635,103 @@ export default function EditDepartmentModal({
                 (select all that apply)
               </span>
             </Label>
-            <Select
-              value=""
-              onValueChange={(v) => {
-                const strId = String(v);
-                setForm((prev) => ({
-                  ...prev,
-                  employee_ids: prev.employee_ids.includes(strId)
-                    ? prev.employee_ids.filter((e) => e !== strId)
-                    : [...prev.employee_ids, strId],
-                }));
-              }}
-              disabled={loadingEmployees}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    loadingEmployees
-                      ? "Loading..."
-                      : form.employee_ids.length > 0
-                        ? `${form.employee_ids.length} employee(s) selected`
-                        : "Select employees"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="uppercase p-0 overflow-hidden">
-                <div className="px-2 py-1.5 bg-white border-b border-gray-100">
-                  <div className="relative">
-                    <Search
-                      size={11}
-                      className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                    <input
-                      placeholder="Search employee…"
-                      value={employeeSearch}
-                      onChange={(e) => setEmployeeSearch(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400 uppercase"
-                    />
-                  </div>
-                </div>
-                <div className="overflow-y-auto max-h-44">
-                  {loadingEmployees ? (
-                    <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                      Loading...
-                    </div>
-                  ) : filteredEmployees.length === 0 ? (
-                    <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                      No employees found.
-                    </div>
-                  ) : (
-                    filteredEmployees.map((e) => {
-                      const selected = form.employee_ids.includes(String(e.id));
-                      return (
-                        <SelectItem
-                          key={e.id}
-                          value={String(e.id)}
-                          className="pl-3 [&>span:first-child]:hidden"
-                        >
-                          <span className="flex items-center gap-2">
-                            <span
-                              className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
-                                selected ? "bg-indigo-600" : "bg-gray-200"
-                              }`}
-                            />
-                            {getEmployeeName(e)}
-                          </span>
-                        </SelectItem>
-                      );
-                    })
-                  )}
-                </div>
-              </SelectContent>
-            </Select>
 
-            {/* Selected employee chips */}
+            {loadingAssigned ? (
+              <div className="px-3 py-3 text-xs text-slate-400 text-center border border-border rounded-lg">
+                Loading assigned employees...
+              </div>
+            ) : (
+              <Select
+                value=""
+                onValueChange={(v) => {
+                  const strId = String(v);
+                  setForm((prev) => ({
+                    ...prev,
+                    employee_ids: prev.employee_ids.includes(strId)
+                      ? prev.employee_ids.filter((e) => e !== strId)
+                      : [...prev.employee_ids, strId],
+                  }));
+                }}
+                disabled={loadingEmployees}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loadingEmployees
+                        ? "Loading..."
+                        : form.employee_ids.length > 0
+                          ? `${form.employee_ids.length} employee(s) selected`
+                          : "Select employees"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="uppercase p-0 overflow-hidden">
+                  <div className="px-2 py-1.5 bg-white border-b border-gray-100">
+                    <div className="relative">
+                      <Search
+                        size={11}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      />
+                      <input
+                        placeholder="Search employee…"
+                        value={employeeSearch}
+                        onChange={(e) => setEmployeeSearch(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400 uppercase"
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto max-h-44">
+                    {loadingEmployees ? (
+                      <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
+                        Loading...
+                      </div>
+                    ) : filteredEmployees.length === 0 ? (
+                      <div className="px-3 py-4 text-xs text-slate-400 text-center">
+                        No employees found.
+                      </div>
+                    ) : (
+                      filteredEmployees.map((e) => {
+                        const selected = form.employee_ids.includes(
+                          String(e.id),
+                        );
+                        return (
+                          <SelectItem
+                            key={e.id}
+                            value={String(e.id)}
+                            className="pl-3 [&>span:first-child]:hidden"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                                  selected ? "bg-indigo-600" : "bg-gray-200"
+                                }`}
+                              />
+                              {getEmployeeName(e)}
+                            </span>
+                          </SelectItem>
+                        );
+                      })
+                    )}
+                  </div>
+                </SelectContent>
+              </Select>
+            )}
+
             {form.employee_ids.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {form.employee_ids.map((id) => {
                   const emp = employees.find((e) => String(e.id) === id);
-                  if (!emp) return null;
                   return (
                     <span
                       key={id}
-                      className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase"
+                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full border uppercase ${
+                        emp
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                          : "bg-slate-50 text-slate-400 border-slate-200"
+                      }`}
                     >
-                      {getEmployeeName(emp)}
+                      {emp ? getEmployeeName(emp) : `Employee #${id}`}
                       <button
                         type="button"
                         onClick={() =>
@@ -505,7 +742,7 @@ export default function EditDepartmentModal({
                             ),
                           }))
                         }
-                        className="hover:text-indigo-900 leading-none"
+                        className="hover:opacity-70 leading-none"
                       >
                         ×
                       </button>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { departmentService } from "../../services/departmentServices";
+import { divisionService } from "../../services/divisionService";
 import { toast } from "sonner";
 import api from "@/api/api";
 import { Plus, Search } from "lucide-react";
@@ -7,32 +8,51 @@ import DepartmentTiles from "./components/DepartmentTiles";
 import AddDepartmentModal from "./components/addDepartmentModal";
 import EditDepartmentModal from "./components/Editdepartmentmodal";
 import DeleteDepartmentDialog from "./components/DeleteDepartmentDialog";
+import EditDivisionModal from "./components/EditDivisionModal";
+import DeleteDivisionDialog from "./components/DeleteDivisionDialog";
+import AddMCCOfficeModal from "./components/AddMCCOfficeModal";
 
 export default function DepartmentPage() {
   const [departments, setDepartments] = useState([]);
+  const [divisions, setDivisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Department modals
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddMCC, setShowAddMCC] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Division modals
+  const [editDivisionTarget, setEditDivisionTarget] = useState(null);
+  const [deleteDivisionTarget, setDeleteDivisionTarget] = useState(null);
+  const [deletingDivision, setDeletingDivision] = useState(false);
+
   const [search, setSearch] = useState("");
 
-  const fetchDepartments = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await departmentService.getDepartments();
-      setDepartments(Array.isArray(data) ? data : (data?.data ?? []));
+      const [deptData, divData] = await Promise.all([
+        departmentService.getDepartments(),
+        divisionService.getAll(),
+      ]);
+      setDepartments(
+        Array.isArray(deptData) ? deptData : (deptData?.data ?? []),
+      );
+      setDivisions(Array.isArray(divData) ? divData : []);
     } catch {
-      setError("Failed to load departments.");
+      setError("Failed to load data.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchDepartments();
-  }, [fetchDepartments]);
+    fetchAll();
+  }, [fetchAll]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -46,6 +66,8 @@ export default function DepartmentPage() {
     );
   }, [departments, search]);
 
+  // ── Department handlers ──────────────────────────────────────────────────
+
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -58,6 +80,33 @@ export default function DepartmentPage() {
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
+    }
+  };
+
+  // ── Division handlers ────────────────────────────────────────────────────
+
+  const handleDeleteDivisionConfirm = async () => {
+    if (!deleteDivisionTarget) return;
+    setDeletingDivision(true);
+    try {
+      await api.delete(`/divisions/${deleteDivisionTarget.id}`);
+      toast.success(`"${deleteDivisionTarget.name}" deleted.`);
+      // Null out division on affected departments locally
+      setDepartments((prev) =>
+        prev.map((d) =>
+          d.division?.id === deleteDivisionTarget.id
+            ? { ...d, division: null, division_id: null }
+            : d,
+        ),
+      );
+      setDivisions((prev) =>
+        prev.filter((d) => d.id !== deleteDivisionTarget.id),
+      );
+    } catch {
+      toast.error("Failed to delete division.");
+    } finally {
+      setDeletingDivision(false);
+      setDeleteDivisionTarget(null);
     }
   };
 
@@ -88,7 +137,6 @@ export default function DepartmentPage() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* Search */}
             <div className="relative flex-1 sm:w-64 sm:flex-none">
               <Search
                 size={15}
@@ -112,6 +160,14 @@ export default function DepartmentPage() {
             </div>
 
             <button
+              onClick={() => setShowAddMCC(true)}
+              className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 shadow-sm transition hover:bg-indigo-100 active:scale-95 whitespace-nowrap"
+            >
+              <Plus size={15} />
+              Add MCC Office
+            </button>
+
+            <button
               onClick={() => setShowAdd(true)}
               className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-95 whitespace-nowrap"
             >
@@ -123,38 +179,69 @@ export default function DepartmentPage() {
 
         <DepartmentTiles
           departments={filtered}
+          divisions={divisions}
           loading={loading}
           search={search}
           onEdit={setEditTarget}
           onDelete={(dept) => setDeleteTarget({ id: dept.id, name: dept.name })}
+          onEditDivision={setEditDivisionTarget}
+          onDeleteDivision={(div) =>
+            setDeleteDivisionTarget({ id: div.id, name: div.name })
+          }
           onClearSearch={() => setSearch("")}
         />
       </div>
 
+      {/* Department modals */}
       <AddDepartmentModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
         onSuccess={() => {
           setShowAdd(false);
-          fetchDepartments();
+          fetchAll();
         }}
       />
-
       <EditDepartmentModal
         open={!!editTarget}
         department={editTarget}
         onClose={() => setEditTarget(null)}
         onSuccess={() => {
           setEditTarget(null);
-          fetchDepartments();
+          fetchAll();
         }}
       />
-
       <DeleteDepartmentDialog
         target={deleteTarget}
         deleting={deleting}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Division modals */}
+      <EditDivisionModal
+        open={!!editDivisionTarget}
+        division={editDivisionTarget}
+        onClose={() => setEditDivisionTarget(null)}
+        onSuccess={() => {
+          setEditDivisionTarget(null);
+          fetchAll();
+        }}
+      />
+      <DeleteDivisionDialog
+        target={deleteDivisionTarget}
+        deleting={deletingDivision}
+        onConfirm={handleDeleteDivisionConfirm}
+        onCancel={() => setDeleteDivisionTarget(null)}
+      />
+
+      {/* MCC Office modal */}
+      <AddMCCOfficeModal
+        open={showAddMCC}
+        onClose={() => setShowAddMCC(false)}
+        onSuccess={() => {
+          setShowAddMCC(false);
+          fetchAll();
+        }}
       />
     </div>
   );
