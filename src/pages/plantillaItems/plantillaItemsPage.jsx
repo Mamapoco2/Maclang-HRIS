@@ -19,25 +19,29 @@ const STAT_CARDS = [
     label: "Total Items",
     key: "total_items",
     icon: LayoutList,
-    cls: "text-blue-500 bg-blue-50",
+    iconCls: "text-blue-600",
+    bgCls: "bg-blue-50",
   },
   {
     label: "Filled",
     key: "filled",
     icon: CheckCircle2,
-    cls: "text-emerald-500 bg-emerald-50",
+    iconCls: "text-emerald-600",
+    bgCls: "bg-emerald-50",
   },
   {
     label: "Vacant",
     key: "vacant",
     icon: CircleDashed,
-    cls: "text-amber-500 bg-amber-50",
+    iconCls: "text-amber-500",
+    bgCls: "bg-amber-50",
   },
   {
     label: "Unfilled",
     key: "unfilled",
     icon: AlertCircle,
-    cls: "text-red-500 bg-red-50",
+    iconCls: "text-red-500",
+    bgCls: "bg-red-50",
   },
 ];
 
@@ -86,77 +90,93 @@ export default function PlantillaItemsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-5">
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* ── Header bar ── */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0">
+            <LayoutList size={20} strokeWidth={2} className="text-white" />
+          </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
+            <h1 className="text-sm font-semibold text-gray-900 leading-tight">
               Plantilla Positions
             </h1>
-            <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              Manage plantilla items, slots, and assignments
+            </p>
+          </div>
+        </div>
+
+        <Button
+          onClick={() => setShowAddItem(true)}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm h-9 px-4 shrink-0"
+        >
+          <Plus size={14} className="mr-1.5" />
+          Add Item
+        </Button>
+      </div>
+
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 py-5">
+        {STAT_CARDS.map(({ label, key, icon: Icon, iconCls, bgCls }) => (
+          <div
+            key={key}
+            className="rounded-xl border border-gray-100 bg-white px-4 py-4 flex items-center gap-3"
+          >
+            <div
+              className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${bgCls}`}
+            >
+              <Icon size={16} strokeWidth={2} className={iconCls} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-2xl font-semibold text-gray-900 font-mono leading-none">
+                {loading ? "—" : stats[key]}
+              </div>
+              <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-widest font-medium truncate">
+                {label}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Table section ── */}
+      <div className="px-6 pb-8">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">
+              Plantilla Items
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
               {loading
                 ? "Loading…"
                 : search
                   ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search}"`
-                  : `${items.length} items · ${items.reduce((s, i) => s + (i.positions?.length ?? 0), 0)} total slots`}
+                  : `${items.length} item${items.length !== 1 ? "s" : ""} · ${items.reduce((s, i) => s + (i.positions?.length ?? 0), 0)} total slots`}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 sm:flex-none">
-              <Search
-                size={13}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-              />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search items…"
-                className="pl-8 h-9 w-full sm:w-52 text-sm border-gray-200"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            <Button
-              onClick={() => setShowAddItem(true)}
-              className="bg-gray-900 hover:bg-black text-white text-sm h-9 px-3 sm:px-4 shrink-0"
-            >
-              <Plus size={14} className="mr-1.5" />
-              Add Item
-            </Button>
+          <div className="relative">
+            <Search
+              size={13}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search items…"
+              className="pl-8 h-9 w-48 text-sm border-gray-200"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          {STAT_CARDS.map(({ label, key, icon: Icon, cls }) => (
-            <div
-              key={key}
-              className="rounded-lg border border-gray-200 bg-white px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-3 sm:gap-4"
-            >
-              <div className={`shrink-0 rounded-md p-2 sm:p-2.5 ${cls}`}>
-                <Icon size={16} strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900 font-mono leading-none">
-                  {stats[key]}
-                </div>
-                <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5 uppercase tracking-widest font-medium truncate">
-                  {label}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Table */}
         <PlantillaItemTable
           items={filtered}
           loading={loading}

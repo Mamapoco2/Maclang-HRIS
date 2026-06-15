@@ -52,6 +52,7 @@ import CosPage from "../pages/positions/CosPositionsPage";
 import ConsultantPositionsPage from "../pages/positions/ConsultantPositionsPage";
 import OrientationPage from "../pages/orientation/orientationPage";
 import OrientationMonitoringPage from "../pages/orientation/monitoring/orientationMonitoring";
+import TaskMonitoringPage from "../pages/taskMonitoring/taskMonitoringPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -272,6 +273,7 @@ function AppRoutes() {
               path="/ConsultantList"
               element={<ConsultantPositionsPage />}
             />
+            <Route path="task-monitoring" element={<TaskMonitoringPage />} />
           </Route>
         </Route>
       </Routes>

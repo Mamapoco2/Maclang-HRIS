@@ -67,6 +67,7 @@ export const AuthProvider = ({ children }) => {
       refreshUserRef.current();
     });
     channel.listen(".logged.in.elsewhere", () => {
+      resetEcho();
       clearAuth();
       setUserState(null);
       setSessionDisplaced(true);
@@ -125,6 +126,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
+      resetEcho();
       clearAuth();
       setUserState(null);
       setShowOrientation(false);

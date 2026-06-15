@@ -63,7 +63,7 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             onKeyDown={(e) => e.stopPropagation()}
-            className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-indigo-400"
+            className="w-full pl-7 pr-2 py-1 text-xs border border-gray-200 rounded-md outline-none focus:border-emerald-400"
           />
         </div>
       </div>
@@ -160,7 +160,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
       <DialogContent className="sm:max-w-[480px] bg-white border border-gray-200 shadow-lg p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-gray-100">
           <DialogTitle className="flex items-center gap-2.5 text-gray-900 font-semibold text-sm">
-            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-gray-100 text-gray-600">
+            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-emerald-50 text-emerald-600">
               <Plus size={13} />
             </span>
             Add Plantilla Item
@@ -323,7 +323,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
               <Button
                 type="submit"
                 disabled={saving}
-                className="text-sm bg-gray-900 hover:bg-black text-white h-9"
+                className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white h-9"
               >
                 {saving && (
                   <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -465,11 +465,11 @@ export function PositionModal({
       <DialogContent className="sm:max-w-[460px] bg-white border border-gray-200 shadow-lg p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-gray-100">
           <DialogTitle className="flex items-center gap-2.5 text-gray-900 font-semibold text-sm">
-            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-gray-100 text-gray-600">
+            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-emerald-50 text-emerald-600">
               <Pencil size={13} />
             </span>
             Edit Slot{" "}
-            <span className="font-mono text-indigo-600">
+            <span className="font-mono text-slate-500">
               {position?.position_slot_name ?? position?.slot_number}
             </span>
             {isFilled && (
@@ -702,7 +702,7 @@ export function PositionModal({
                         </span>
                       </FormLabel>
                       {watchedRole && (
-                        <p className="text-[11px] text-indigo-500">
+                        <p className="text-[11px] text-emerald-600">
                           {isStaffRole
                             ? "This position will appear in the department's staff list as Vacant."
                             : "This position will appear as a Vacant node in the org chart under this department."}
@@ -751,7 +751,7 @@ export function PositionModal({
                 <Button
                   type="submit"
                   disabled={saving}
-                  className="text-sm bg-gray-900 hover:bg-black text-white h-9"
+                  className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white h-9"
                 >
                   {saving && (
                     <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -861,11 +861,11 @@ export function AssignEmployeeModal({
       <DialogContent className="sm:max-w-[480px] bg-white border border-gray-200 shadow-lg p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-gray-100">
           <DialogTitle className="flex items-center gap-2.5 text-gray-900 font-semibold text-sm">
-            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-gray-100 text-gray-600">
+            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-emerald-50 text-emerald-600">
               <UserPlus size={13} />
             </span>
             Assign Employee
-            <span className="font-mono text-indigo-600 ml-1">
+            <span className="font-mono text-slate-500 ml-1">
               —{" "}
               {position?.position_slot_name ?? `Slot ${position?.slot_number}`}
             </span>
@@ -894,7 +894,7 @@ export function AssignEmployeeModal({
                 </p>
               )}
               {position?.display_department?.name && (
-                <p className="text-xs text-indigo-500">
+                <p className="text-xs text-emerald-600">
                   {position.display_department.name}
                 </p>
               )}
@@ -1001,7 +1001,7 @@ export function AssignEmployeeModal({
               <Button
                 type="submit"
                 disabled={saving}
-                className="text-sm bg-gray-900 hover:bg-black text-white h-9"
+                className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white h-9"
               >
                 {saving && (
                   <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />

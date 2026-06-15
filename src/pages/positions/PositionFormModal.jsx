@@ -14,25 +14,37 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
-const defaults = { title: "", description: "" };
+const defaults = { title: "", description: "", _label: "COS" };
 
 /**
- * Reusable add / edit modal for COS and Consultant positions.
+ * Add / edit modal for COS and Consultant positions.
  *
  * Props
  * ─────
- * open          boolean
- * onOpenChange  (v: boolean) => void
- * position      object | null   — when set, modal is in edit mode
- * service       { create, update }
- * label         string          — "COS" | "Consultant"
- * onSuccess     () => void
+ * open            boolean
+ * onOpenChange    (v: boolean) => void
+ * position        object | null   — when set, modal is in edit mode
+ * service         { create, update }  — resolved by parent (required)
+ * label           string          — "COS" | "Consultant"
+ * onSuccess       () => void
+ *
+ * When used from the unified PositionsPage in "add" mode, pass both
+ * cosService and consultantService so the user can pick the type inline.
+ * In that case, leave `service` and `label` undefined and let the modal
+ * manage the selection.
  */
 export default function PositionFormModal({
   open,
@@ -40,11 +52,29 @@ export default function PositionFormModal({
   position,
   service,
   label,
+  cosService,
+  consultantService,
   onSuccess,
 }) {
   const isEdit = !!position;
+  // If both services provided and we're adding, let user pick the type
+  const canPickType = !isEdit && !!cosService && !!consultantService && !service;
+
   const form = useForm({ defaultValues: defaults });
   const [saving, setSaving] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState("COS");
+
+  const resolvedLabel = isEdit
+    ? (label ?? (position?._type === "consultant" ? "Consultant" : "COS"))
+    : canPickType
+      ? selectedLabel
+      : (label ?? "COS");
+
+  const resolvedService = isEdit
+    ? service
+    : canPickType
+      ? (selectedLabel === "Consultant" ? consultantService : cosService)
+      : service;
 
   useEffect(() => {
     if (open) {
@@ -53,6 +83,7 @@ export default function PositionFormModal({
           ? { title: position.title ?? "", description: position.description ?? "" }
           : defaults,
       );
+      if (!isEdit) setSelectedLabel("COS");
     }
   }, [open, position]);
 
@@ -60,11 +91,11 @@ export default function PositionFormModal({
     setSaving(true);
     try {
       if (isEdit) {
-        await service.update(position.id, data);
-        toast.success(`${label} position updated.`);
+        await resolvedService.update(position.id, { title: data.title, description: data.description });
+        toast.success(`${resolvedLabel} position updated.`);
       } else {
-        await service.create(data);
-        toast.success(`${label} position created.`);
+        await resolvedService.create({ title: data.title, description: data.description });
+        toast.success(`${resolvedLabel} position created.`);
       }
       onOpenChange(false);
       onSuccess?.();
@@ -80,10 +111,10 @@ export default function PositionFormModal({
       <DialogContent className="sm:max-w-[460px] bg-white border border-gray-200 shadow-lg p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-gray-100">
           <DialogTitle className="flex items-center gap-2.5 text-gray-900 font-semibold text-sm">
-            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-gray-100 text-gray-600">
+            <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-50 text-blue-600">
               {isEdit ? <Pencil size={13} /> : <Plus size={13} />}
             </span>
-            {isEdit ? `Edit ${label} Position` : `Add ${label} Position`}
+            {isEdit ? `Edit ${resolvedLabel} Position` : `Add Position`}
           </DialogTitle>
         </DialogHeader>
 
@@ -92,6 +123,24 @@ export default function PositionFormModal({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="px-6 py-5 space-y-4"
           >
+            {/* Type selector — only shown when adding from the unified page */}
+            {canPickType && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Position Type
+                </p>
+                <Select value={selectedLabel} onValueChange={setSelectedLabel}>
+                  <SelectTrigger className="text-sm border-gray-200 h-9">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COS">COS</SelectItem>
+                    <SelectItem value="Consultant">Consultant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="title"
@@ -103,12 +152,10 @@ export default function PositionFormModal({
                   </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={`e.g. ${label === "COS" ? "DATA ENCODER I" : "IT CONSULTANT"}`}
+                      placeholder={`e.g. ${resolvedLabel === "COS" ? "DATA ENCODER I" : "IT CONSULTANT"}`}
                       className="text-sm border-gray-200"
                       {...field}
-                      onChange={(e) =>
-                        field.onChange(e.target.value.toUpperCase())
-                      }
+                      onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -123,9 +170,7 @@ export default function PositionFormModal({
                 <FormItem>
                   <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Description{" "}
-                    <span className="text-gray-300 normal-case font-normal">
-                      (optional)
-                    </span>
+                    <span className="text-gray-300 normal-case font-normal">(optional)</span>
                   </FormLabel>
                   <FormControl>
                     <Textarea
@@ -152,7 +197,7 @@ export default function PositionFormModal({
               <Button
                 type="submit"
                 disabled={saving}
-                className="text-sm bg-gray-900 hover:bg-black text-white h-9"
+                className="text-sm bg-blue-600 hover:bg-blue-700 text-white h-9"
               >
                 {saving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
                 {isEdit ? "Save Changes" : "Add Position"}
