@@ -72,11 +72,27 @@ export const plantillaPositionService = {
     return res.data;
   },
 
-  async addSlots(baseItemNumber, count) {
-    const res = await api.post("/plantilla-positions/add-slots", {
+  // FIX: Accept optional slot config so inherited SG/Step/role/dept are
+  // forwarded to the backend instead of being silently dropped.
+  async addSlots(baseItemNumber, count, slotConfig = {}) {
+    const payload = {
       base_item_number: baseItemNumber,
       count,
-    });
+    };
+
+    // Only include defined, non-null values so the backend can apply its own
+    // defaults for fields the caller didn't specify.
+    if (slotConfig.salary_grade_id != null)
+      payload.salary_grade_id = slotConfig.salary_grade_id;
+    if (slotConfig.step_increment_id != null)
+      payload.step_increment_id = slotConfig.step_increment_id;
+    if (slotConfig.role != null) payload.role = slotConfig.role;
+    if (slotConfig.display_department_id != null)
+      payload.display_department_id = slotConfig.display_department_id;
+    if (slotConfig.display_division_id != null)
+      payload.display_division_id = slotConfig.display_division_id;
+
+    const res = await api.post("/plantilla-positions/add-slots", payload);
     return res.data;
   },
 

@@ -91,6 +91,25 @@ const ROLE_OPTIONS = [
   "STAFF",
 ];
 
+const DEPT_TYPES = ["OFFICE", "DIRECTORATE", "DIVISION", "DEPARTMENT"];
+
+async function fetchAllUnits() {
+  const [divRes, deptRes] = await Promise.all([
+    api.get("/divisions"),
+    api.get("/departments"),
+  ]);
+  const divData = divRes.data;
+  const deptData = deptRes.data;
+  const divisions = Array.isArray(divData) ? divData : (divData.data ?? []);
+  const departments = (
+    Array.isArray(deptData) ? deptData : (deptData.data ?? [])
+  ).map((d) => ({
+    ...d,
+    type: "DEPARTMENT",
+  }));
+  return [...divisions, ...departments];
+}
+
 const PAGE_SIZE = 15;
 
 const addSlotDefaults = {
@@ -111,6 +130,39 @@ function sortItems(items) {
     if (bothNumeric) return numA - numB;
     return String(a.base_item_number).localeCompare(String(b.base_item_number));
   });
+}
+
+// FIX: Pick the most representative slot config from existing positions.
+// Previously only the first slot with SG+Step was used; now we pick the
+// most common SG/Step pair so inherited config is more reliable.
+function resolveInheritedConfig(positions = []) {
+  const configured = positions.filter(
+    (p) => p.salary_grade_id && p.step_increment_id,
+  );
+  if (configured.length === 0) return null;
+
+  // Count occurrences of each SG+Step pair and pick the most common one.
+  const freq = new Map();
+  for (const p of configured) {
+    const key = `${p.salary_grade_id}:${p.step_increment_id}`;
+    freq.set(key, (freq.get(key) ?? 0) + 1);
+  }
+  const topKey = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const best = configured.find(
+    (p) => `${p.salary_grade_id}:${p.step_increment_id}` === topKey,
+  );
+
+  return {
+    sg_id: String(best.salary_grade_id),
+    step_id: String(best.step_increment_id),
+    sg_label: best.salary_grade?.salary_grade
+      ? `SG ${best.salary_grade.salary_grade}`
+      : null,
+    step_label: best.step_increment?.step
+      ? `Step ${best.step_increment.step}`
+      : null,
+    monthly_salary: best.step_increment?.monthly_salary ?? null,
+  };
 }
 
 // ─── TableSkeleton ────────────────────────────────────────────────────────────
@@ -144,14 +196,45 @@ function StatusBadge({ status }) {
   );
 }
 
-// ─── DeptSelectContent ────────────────────────────────────────────────────────
+// ─── DeptSelectContent (Tabbed) ───────────────────────────────────────────────
 
 function DeptSelectContent({ departments, loading, search, onSearch }) {
-  const filtered = departments.filter((d) =>
-    d.name.toLowerCase().includes(search.toLowerCase()),
+  const [activeTab, setActiveTab] = useState(DEPT_TYPES[0]);
+
+  const filtered = departments.filter(
+    (d) =>
+      (d.type ?? "").toUpperCase() === activeTab &&
+      d.name.toLowerCase().includes(search.toLowerCase()),
   );
+
   return (
-    <SelectContent className="p-0 overflow-hidden">
+    <SelectContent className="p-0 overflow-hidden w-72">
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100 bg-gray-50">
+        {DEPT_TYPES.map((type) => (
+          <button
+            key={type}
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setActiveTab(type);
+            }}
+            className={`flex-1 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors ${
+              activeTab === type
+                ? "bg-white text-indigo-600 border-b-2 border-indigo-500"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {type === "DIRECTORATE"
+              ? "DIR."
+              : type === "DEPARTMENT"
+                ? "DEPT"
+                : type}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
       <div className="px-2 py-1.5 bg-white border-b border-gray-100">
         <div className="relative">
           <Search
@@ -159,7 +242,7 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
           />
           <input
-            placeholder="Search department…"
+            placeholder={`Search ${activeTab.toLowerCase()}…`}
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             onKeyDown={(e) => e.stopPropagation()}
@@ -167,6 +250,8 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
           />
         </div>
       </div>
+
+      {/* List */}
       <div className="overflow-y-auto max-h-44">
         {loading ? (
           <div className="px-3 py-4 text-xs text-slate-400 text-center">
@@ -174,7 +259,7 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
           </div>
         ) : filtered.length === 0 ? (
           <div className="px-3 py-4 text-xs text-slate-400 text-center">
-            No departments found.
+            No {activeTab.toLowerCase()}s found.
           </div>
         ) : (
           filtered.map((dept) => (
@@ -197,23 +282,8 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
 function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
   const form = useForm({ defaultValues: addSlotDefaults });
 
-  // Derive inherited SG/Step from the first existing slot that has them
-  const existingSlot = (item?.positions ?? []).find(
-    (p) => p.salary_grade_id && p.step_increment_id,
-  );
-  const inherited = existingSlot
-    ? {
-        sg_id: String(existingSlot.salary_grade_id),
-        sg_label: existingSlot.salary_grade?.salary_grade
-          ? `SG ${existingSlot.salary_grade.salary_grade}`
-          : null,
-        step_id: String(existingSlot.step_increment_id),
-        step_label: existingSlot.step_increment?.step
-          ? `Step ${existingSlot.step_increment.step}`
-          : null,
-        monthly_salary: existingSlot.step_increment?.monthly_salary ?? null,
-      }
-    : null;
+  // FIX: Use resolveInheritedConfig instead of picking just the first slot.
+  const inherited = resolveInheritedConfig(item?.positions ?? []);
 
   const [departments, setDepartments] = useState([]);
   const [salaryGrades, setSalaryGrades] = useState([]);
@@ -228,16 +298,11 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
     if (!open) return;
 
     setLoadingDepts(true);
-    api
-      .get("/departments")
-      .then((res) => {
-        const data = res.data;
-        setDepartments(Array.isArray(data) ? data : (data.data ?? []));
-      })
+    fetchAllUnits()
+      .then(setDepartments)
       .catch(console.error)
       .finally(() => setLoadingDepts(false));
 
-    // Only fetch SG/Step dropdowns when there's nothing to inherit
     if (!inherited) {
       setLoadingGrades(true);
       plantillaPositionService
@@ -255,7 +320,6 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
     }
   }, [open]);
 
-  // For the manual (no-inherit) path: fetch steps when SG changes
   const watchedSgId = form.watch("salary_grade_id");
   const watchedRole = form.watch("role");
   const isStaffRole = watchedRole === "STAFF";
@@ -278,10 +342,37 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
   const handleSubmit = async (data) => {
     setSaving(true);
     try {
+      // FIX: Build the slotConfig to pass to addSlots.
+      // If inherited config exists, use it automatically.
+      // If the user manually picked SG/Step (no inherited), use those.
+      const slotConfig = inherited
+        ? {
+            salary_grade_id: Number(inherited.sg_id),
+            step_increment_id: Number(inherited.step_id),
+            role: data.role || null,
+            display_department_id: data.display_department_id
+              ? Number(data.display_department_id)
+              : null,
+          }
+        : {
+            salary_grade_id: data.salary_grade_id
+              ? Number(data.salary_grade_id)
+              : null,
+            step_increment_id: data.step_increment_id
+              ? Number(data.step_increment_id)
+              : null,
+            role: data.role || null,
+            display_department_id: data.display_department_id
+              ? Number(data.display_department_id)
+              : null,
+          };
+
       await plantillaPositionService.addSlots(
         item.base_item_number,
         Number(data.slots_to_add),
+        slotConfig,
       );
+
       toast.success(
         `${data.slots_to_add} slot${Number(data.slots_to_add) > 1 ? "s" : ""} added successfully.`,
       );
@@ -316,7 +407,6 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
             onSubmit={form.handleSubmit(handleSubmit)}
             className="px-6 py-5 space-y-4 max-h-[78vh] overflow-y-auto"
           >
-            {/* Current slot summary */}
             <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                 Current Slots
@@ -349,7 +439,6 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
               </div>
             </div>
 
-            {/* Slots to add */}
             <FormField
               control={form.control}
               name="slots_to_add"
@@ -379,22 +468,26 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
               )}
             />
 
-            {/* SG + Step — inherited read-only display OR manual dropdowns */}
+            {/* FIX: Show inherited SG/Step as read-only display.
+                If no existing slot has SG+Step configured, show manual selects. */}
             {inherited ? (
-              <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 space-y-1">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                  SG - STEP
+              <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-4 py-3 space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">
+                  SG · Step — inherited from existing slots
                 </p>
-                <p className="text-sm font-mono font-semibold text-slate-700 uppercase">
+                <p className="text-sm font-mono font-semibold text-indigo-700">
                   {inherited.sg_label ?? "—"}
                   {inherited.step_label ? ` · ${inherited.step_label}` : ""}
                   {inherited.monthly_salary != null && (
-                    <span className="ml-2 text-xs text-slate-400 font-normal">
+                    <span className="ml-2 text-xs text-indigo-400 font-normal">
                       — ₱
                       {Number(inherited.monthly_salary).toLocaleString("en-PH")}
                       /mo
                     </span>
                   )}
+                </p>
+                <p className="text-[11px] text-indigo-400">
+                  New slots will automatically use this configuration.
                 </p>
               </div>
             ) : (
@@ -678,13 +771,19 @@ function PositionsSubTable({ item, onRefresh }) {
                       className="hover:bg-slate-50/60 transition-colors"
                     >
                       <TableCell className="text-center">
+                        {/* FIX: Display as base_item_number-slot_number (e.g. "3-1").
+                            position_slot_name from the backend contains the title-based
+                            name which belongs in the Position Title column, not here. */}
                         <div className="font-mono text-xs font-semibold text-indigo-600">
-                          {pos.position_slot_name ?? pos.slot_number}
+                          {item.base_item_number}-{pos.slot_number}
+                          {/* {pos.position_slot_name} */}
                         </div>
                       </TableCell>
 
                       <TableCell className="text-sm text-slate-600 text-center uppercase">
-                        {pos.position_title ?? (
+                        {/* FIX: Fall back to item.title when pos.position_title is empty,
+                            so every slot shows the position title even if not overridden. */}
+                        {pos.position_title ?? item.title ?? (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </TableCell>

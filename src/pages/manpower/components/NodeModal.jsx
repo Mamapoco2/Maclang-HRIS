@@ -1,3 +1,4 @@
+// src/pages/manpower/components/NodeModal.jsx
 import { useState, useMemo } from "react";
 import {
   Dialog,
@@ -11,54 +12,99 @@ import { FaIdBadge, FaChevronDown, FaChevronUp } from "react-icons/fa";
 const DEFAULT_IMG =
   "https://cdn3.iconfinder.com/data/icons/avatars-flat/33/man_5-1024.png";
 
-export default function NodeModal({ open, onClose, node }) {
-  const data = node?.data || {};
-  const borderColor = resolveBorderColor(data);
-  const staffRaw = data?.staff || [];
+const CARD_VISIBLE_ROLES = new Set([
+  "CHIEF",
+  "DIRECTOR",
+  "ASSISTANT DIRECTOR",
+  "OFFICER IN CHARGE",
+  "CHAIRMAN",
+  "HEAD",
+  "SUPERVISOR",
+]);
 
-  // =============================
-  // Build Full Name Properly
-  // =============================
-  const cleanPrefix = data.prefix ? data.prefix.replace(/\.$/, "") : null;
+function isStaffRole(role) {
+  if (!role) return true;
+  return !CARD_VISIBLE_ROLES.has(role.toUpperCase().trim());
+}
 
-  const fullName =
+function resolveTitle(title) {
+  if (!title) return null;
+  if (Array.isArray(title)) return title.filter(Boolean).join(", ") || null;
+  return String(title).trim() || null;
+}
+
+function buildPersonName(person) {
+  if (!person) return null;
+  const cleanPrefix = person.prefix ? person.prefix.replace(/\.$/, "") : null;
+  const title = resolveTitle(person.title);
+
+  return (
     [
       cleanPrefix ? cleanPrefix + "." : null,
-      data.first_name,
-      data.middle_name ? data.middle_name.charAt(0) + "." : null,
-      data.last_name,
+      person.first_name,
+      person.middle_name,
+      person.last_name,
     ]
       .filter(Boolean)
       .join(" ") +
-    (data.suffix ? ", " + data.suffix : "") +
-    (data.title ? ", " + data.title : "");
+    (person.suffix ? ", " + person.suffix : "") +
+    (title ? ", " + title : "")
+  ).trim();
+}
 
-  // =============================
-  // Normalize Staff
-  // =============================
-  const staff = staffRaw.map((s) => {
+export default function NodeModal({ open, onClose, node }) {
+  const data = node?.data || {};
+  const borderColor = resolveBorderColor(data);
+
+  // FIX: Vacant slots come embedded in the staff array from the backend
+  // (is_vacant_slot: true), not a separate vacantItems key.
+  const staffRaw = data?.staff || [];
+  const regularStaff = staffRaw.filter((s) => !s.is_vacant_slot);
+  const vacantSlots = staffRaw.filter((s) => s.is_vacant_slot);
+
+  const fullName =
+    buildPersonName(data) || data.name || data.full_name || "Vacant";
+
+  const staff = regularStaff.map((s) => {
     const normalized = s.employmentType
       ? s.employmentType.toLowerCase()
       : "vacant";
 
-    const staffName =
-      [
-        s?.prefix,
-        s?.first_name,
-        s?.middle_name ? s.middle_name.charAt(0) + "." : null,
-        s?.last_name,
-      ]
-        .filter(Boolean)
-        .join(" ") +
-      (s?.suffix ? ", " + s.suffix : "") +
-      (s?.title ? ", " + s.title : "");
+    const staffName = buildPersonName(s);
 
     return {
       ...s,
-      name: s.employeeId && staffName ? staffName : "Vacant",
+      name:
+        (s.employeeId || s.id) && staffName
+          ? staffName
+          : (s.name || s.full_name || "Vacant").replace(
+              /^Vacant\s*[—-]\s*/i,
+              "",
+            ),
       employmentTypeNormalized: normalized,
+      _isVacantPosition: false,
     };
   });
+
+  // FIX: Build vacantStaff from the embedded vacant slots in the staff array
+  const vacantStaff = vacantSlots.map((v) => ({
+    ...v,
+    name: (
+      v.name ||
+      v.positionTitle ||
+      v.position_title ||
+      v.title ||
+      "Vacant Position"
+    ).replace(/^Vacant\s*[—-]\s*/i, ""),
+    employmentTypeNormalized: "vacant",
+    role:
+      v.role || v.positionTitle || v.position_title || v.title || "Position",
+    employmentType: "Vacant",
+    image: null,
+    _isVacantPosition: true,
+  }));
+
+  const allMembers = [...staff, ...vacantStaff];
 
   const [showStaff, setShowStaff] = useState(false);
   const [filterType, setFilterType] = useState("All");
@@ -81,7 +127,6 @@ export default function NodeModal({ open, onClose, node }) {
 
     staff.forEach((s) => {
       const type = s.employmentTypeNormalized;
-
       if (type.includes("plantilla")) counts.Plantilla++;
       else if (type.includes("cos") || type.includes("contract"))
         counts["Contract of Service"]++;
@@ -89,8 +134,10 @@ export default function NodeModal({ open, onClose, node }) {
       else counts.Vacant++;
     });
 
+    counts.Vacant += vacantStaff.length;
+
     return counts;
-  }, [staff]);
+  }, [staff, vacantStaff]);
 
   const legendColors = {
     Plantilla: "bg-green-100 text-green-800",
@@ -100,18 +147,16 @@ export default function NodeModal({ open, onClose, node }) {
   };
 
   const filteredStaff = useMemo(() => {
-    if (filterType === "All") return staff;
+    if (filterType === "All") return allMembers;
 
-    return staff.filter((s) => {
+    return allMembers.filter((s) => {
+      if (s._isVacantPosition) return filterType === "Vacant";
+
       const type = s.employmentTypeNormalized;
-
       if (filterType === "Plantilla") return type.includes("plantilla");
-
       if (filterType === "Contract of Service")
         return type.includes("cos") || type.includes("contract");
-
       if (filterType === "Consultant") return type.includes("consultant");
-
       if (filterType === "Vacant")
         return (
           !type.includes("plantilla") &&
@@ -119,20 +164,18 @@ export default function NodeModal({ open, onClose, node }) {
           !type.includes("contract") &&
           !type.includes("consultant")
         );
-
       return true;
     });
-  }, [staff, filterType]);
+  }, [allMembers, filterType]);
 
-  // Resolve avatar — prefer data.image, fall back to DEFAULT_IMG
   const avatar = data.image || DEFAULT_IMG;
+  const hasMembers = allMembers.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-full max-w-[90vw] md:max-w-xl p-6 bg-white rounded-2xl shadow-xl">
         <div className="mx-auto w-full max-w-6xl">
           <DialogHeader className="flex flex-col items-center text-center space-y-3">
-            {/* Avatar — always shown, falls back to default */}
             <div
               className="rounded-full p-1 shadow-lg"
               style={{ backgroundColor: borderColor }}
@@ -164,9 +207,16 @@ export default function NodeModal({ open, onClose, node }) {
                 {data.employmentType}
               </div>
             )}
+
+            {(data.is_vacant_head || data.is_vacant_slot) && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                Vacant
+              </span>
+            )}
           </DialogHeader>
 
-          {staff.length > 0 && (
+          {hasMembers && (
             <>
               <div className="flex justify-center gap-2 overflow-x-auto py-2">
                 {[
@@ -187,7 +237,7 @@ export default function NodeModal({ open, onClose, node }) {
                     }`}
                   >
                     {type === "All"
-                      ? `All (${staff.length})`
+                      ? `All (${allMembers.length})`
                       : `${type}: ${staffCounts[type]}`}
                   </button>
                 ))}
@@ -208,55 +258,83 @@ export default function NodeModal({ open, onClose, node }) {
                       filteredStaff.length > 6 ? "max-h-64" : ""
                     }`}
                   >
-                    {filteredStaff.map((s, idx) => {
-                      let typeKey = "Vacant";
-                      const type = s.employmentTypeNormalized;
+                    {filteredStaff.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-gray-400">
+                        No members in this category.
+                      </div>
+                    ) : (
+                      filteredStaff.map((s, idx) => {
+                        let typeKey = "Vacant";
+                        if (!s._isVacantPosition) {
+                          const type = s.employmentTypeNormalized;
+                          if (type.includes("plantilla")) typeKey = "Plantilla";
+                          else if (
+                            type.includes("cos") ||
+                            type.includes("contract")
+                          )
+                            typeKey = "Contract of Service";
+                          else if (type.includes("consultant"))
+                            typeKey = "Consultant";
+                        }
 
-                      if (type.includes("plantilla")) typeKey = "Plantilla";
-                      else if (
-                        type.includes("cos") ||
-                        type.includes("contract")
-                      )
-                        typeKey = "Contract of Service";
-                      else if (type.includes("consultant"))
-                        typeKey = "Consultant";
+                        const staffAvatar = s._isVacantPosition
+                          ? null
+                          : s.image || DEFAULT_IMG;
 
-                      const staffAvatar = s.image || DEFAULT_IMG;
-
-                      return (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between px-2 py-2 hover:bg-gray-50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <img
-                              src={staffAvatar}
-                              alt={s.name}
-                              className="w-8 h-8 rounded-full object-cover"
-                              onError={(e) => {
-                                e.target.src = DEFAULT_IMG;
-                              }}
-                            />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">
-                                {s.name}
-                              </span>
-                              {s.role && (
-                                <span className="text-xs text-muted-foreground">
-                                  {s.role}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full ${legendColors[typeKey]}`}
+                        return (
+                          <div
+                            key={idx}
+                            className={`flex items-center justify-between px-2 py-2 hover:bg-gray-50 ${
+                              s._isVacantPosition ? "opacity-70" : ""
+                            }`}
                           >
-                            {s.employmentType || "Vacant"}
-                          </span>
-                        </div>
-                      );
-                    })}
+                            <div className="flex items-center gap-2">
+                              {staffAvatar ? (
+                                <img
+                                  src={staffAvatar}
+                                  alt={s.name}
+                                  className="w-8 h-8 rounded-full object-cover"
+                                  onError={(e) => {
+                                    e.target.src = DEFAULT_IMG;
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <span className="text-gray-400 text-xs font-bold">
+                                    ?
+                                  </span>
+                                </div>
+                              )}
+
+                              <div className="flex flex-col">
+                                <span
+                                  className={`text-sm font-medium ${
+                                    s._isVacantPosition
+                                      ? "text-gray-400 italic"
+                                      : ""
+                                  }`}
+                                >
+                                  {s.name}
+                                </span>
+                                {s.role && s.role.toUpperCase() !== "STAFF" && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {s.role}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full ${legendColors[typeKey]}`}
+                            >
+                              {s._isVacantPosition
+                                ? "Vacant"
+                                : s.employmentType || "Vacant"}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </div>

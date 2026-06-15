@@ -29,14 +29,17 @@ import NodeTemplate from "./NodeTemplate";
 import ReportGeneration from "./ReportGeneration";
 import api from "../../../api/api";
 
-function buildSafeTree(nodes, expanded = false) {
+function buildSafeTree(nodes, expanded = false, prefix = "") {
   if (!Array.isArray(nodes)) return [];
-  return nodes.map((node, index) => ({
-    ...node,
-    key: node.key ?? node.data?.employeeId ?? node.id ?? `node-${index}`,
-    expanded,
-    children: buildSafeTree(node.children ?? [], expanded),
-  }));
+  return nodes.map((node, index) => {
+    const uniqueKey = node.key ?? `${prefix}node-${index}`;
+    return {
+      ...node,
+      key: uniqueKey,
+      expanded,
+      children: buildSafeTree(node.children ?? [], expanded, uniqueKey + "-"),
+    };
+  });
 }
 
 function setAllExpanded(nodes, expanded) {
@@ -50,7 +53,7 @@ function setAllExpanded(nodes, expanded) {
 export default function OrgChart() {
   const [orgData, setOrgData] = useState([]);
   const [treeData, setTreeData] = useState([]);
-  const [chartKey, setChartKey] = useState(0); // ← force remount
+  const [chartKey, setChartKey] = useState(0);
   const [division, setDivision] = useState("All");
   const [department, setDepartment] = useState("All");
   const [departmentList, setDepartmentList] = useState([]);
@@ -82,7 +85,7 @@ export default function OrgChart() {
         const nodes = Array.isArray(res.data?.nodes) ? res.data.nodes : [];
         setOrgData(nodes);
         setTreeData(buildSafeTree(nodes, false));
-        setChartKey((k) => k + 1); // remount on new data
+        setChartKey((k) => k + 1);
       } catch (err) {
         console.error("Tree fetch error:", err);
         setOrgData([]);
@@ -96,7 +99,7 @@ export default function OrgChart() {
 
   const expandAll = useCallback(() => {
     setTreeData((prev) => setAllExpanded(prev, true));
-    setChartKey((k) => k + 1); // force PrimeReact to re-read expanded state
+    setChartKey((k) => k + 1);
   }, []);
 
   const collapseAll = useCallback(() => {

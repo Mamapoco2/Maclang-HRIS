@@ -44,14 +44,92 @@ const ROLE_OPTIONS = [
   "STAFF",
 ];
 
-// Reusable searchable department dropdown content
+const DEPT_TYPES = ["OFFICE", "DIRECTORATE", "DIVISION", "DEPARTMENT"];
+
+// Encode a unit (division or department) into a single select value so we
+// know which FK column to populate on submit: "department:12" or "division:3"
+function unitValue(unit) {
+  const prefix =
+    (unit?.type ?? "").toUpperCase() === "DEPARTMENT"
+      ? "department"
+      : "division";
+  return `${prefix}:${unit.id}`;
+}
+
+// Reverse of unitValue — turns the encoded select value into the payload
+// fields expected by the API (display_department_id / display_division_id).
+function parseDisplayTarget(value) {
+  const [type, id] = (value || "").split(":");
+  return {
+    display_department_id: type === "department" && id ? Number(id) : null,
+    display_division_id: type === "division" && id ? Number(id) : null,
+  };
+}
+
+// Given a position/item's saved display_department_id / display_division_id,
+// build the encoded select value used by the form.
+function buildDisplayTarget({ display_department_id, display_division_id }) {
+  if (display_department_id) return `department:${display_department_id}`;
+  if (display_division_id) return `division:${display_division_id}`;
+  return "";
+}
+
+// Fetch /divisions (has type field) + /departments (hardcoded type: DEPARTMENT), then combine
+async function fetchAllUnits() {
+  const [divRes, deptRes] = await Promise.all([
+    api.get("/divisions"),
+    api.get("/departments"),
+  ]);
+  const divData = divRes.data;
+  const deptData = deptRes.data;
+  const divisions = Array.isArray(divData) ? divData : (divData.data ?? []);
+  const departments = (
+    Array.isArray(deptData) ? deptData : (deptData.data ?? [])
+  ).map((d) => ({
+    ...d,
+    type: "DEPARTMENT",
+  }));
+  return [...divisions, ...departments];
+}
+
+// Reusable tabbed department dropdown content
 function DeptSelectContent({ departments, loading, search, onSearch }) {
-  const filtered = departments.filter((d) =>
-    d.name.toLowerCase().includes(search.toLowerCase()),
+  const [activeTab, setActiveTab] = useState(DEPT_TYPES[0]);
+
+  const filtered = departments.filter(
+    (d) =>
+      (d.type ?? "").toUpperCase() === activeTab &&
+      d.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
-    <SelectContent className="p-0 overflow-hidden">
+    <SelectContent className="p-0 overflow-hidden w-72">
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100 bg-gray-50">
+        {DEPT_TYPES.map((type) => (
+          <button
+            key={type}
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setActiveTab(type);
+            }}
+            className={`flex-1 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors ${
+              activeTab === type
+                ? "bg-white text-indigo-600 border-b-2 border-indigo-500"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {type === "DIRECTORATE"
+              ? "DIR."
+              : type === "DEPARTMENT"
+                ? "DEPT"
+                : type}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
       <div className="px-2 py-1.5 bg-white border-b border-gray-100">
         <div className="relative">
           <Search
@@ -59,7 +137,7 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
           />
           <input
-            placeholder="Search department…"
+            placeholder={`Search ${activeTab.toLowerCase()}…`}
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             onKeyDown={(e) => e.stopPropagation()}
@@ -67,6 +145,8 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
           />
         </div>
       </div>
+
+      {/* List */}
       <div className="overflow-y-auto max-h-44">
         {loading ? (
           <div className="px-3 py-4 text-xs text-slate-400 text-center">
@@ -74,13 +154,13 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
           </div>
         ) : filtered.length === 0 ? (
           <div className="px-3 py-4 text-xs text-slate-400 text-center">
-            No departments found.
+            No {activeTab.toLowerCase()}s found.
           </div>
         ) : (
           filtered.map((dept) => (
             <SelectItem
-              key={dept.id}
-              value={String(dept.id)}
+              key={`${dept.type}-${dept.id}`}
+              value={unitValue(dept)}
               className="pl-3 [&>span:first-child]:hidden"
             >
               {dept.name}
@@ -103,7 +183,7 @@ const itemDefaults = {
   title: "",
   description: "",
   approved_slots: 1,
-  display_department_id: "",
+  display_target: "",
 };
 
 function AddItemForm({ open, onOpenChange, onSuccess }) {
@@ -115,23 +195,48 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
 
   useEffect(() => {
     if (!open) return;
-    setLoadingDepts(true);
-    api
-      .get("/departments")
-      .then((res) => {
-        const data = res.data;
-        setDepartments(Array.isArray(data) ? data : (data.data ?? []));
-      })
-      .catch(console.error)
-      .finally(() => setLoadingDepts(false));
-  }, [open]);
+
+    const loadData = async () => {
+      try {
+        setLoadingDepts(true);
+
+        const [units, items] = await Promise.all([
+          fetchAllUnits(),
+          plantillaItemService.getPlantillaItems(),
+        ]);
+
+        setDepartments(units);
+
+        if (items.length > 0) {
+          const nextNumber =
+            Math.max(
+              ...items.map((item) => Number(item.base_item_number) || 0),
+            ) + 1;
+
+          form.setValue("base_item_number", String(nextNumber));
+        } else {
+          form.setValue("base_item_number", "1");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingDepts(false);
+      }
+    };
+
+    loadData();
+  }, [open, form]);
 
   useEffect(() => {
-    if (open) {
-      form.reset(itemDefaults);
-      setDeptSearch("");
-    }
-  }, [open]);
+    if (!open) return;
+
+    form.reset({
+      ...itemDefaults,
+      approved_slots: 1,
+    });
+
+    setDeptSearch("");
+  }, [open, form]);
 
   const handleSubmit = async (data) => {
     setSaving(true);
@@ -141,9 +246,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
         title: data.title,
         description: data.description,
         approved_slots: Number(data.approved_slots),
-        display_department_id: data.display_department_id
-          ? Number(data.display_department_id)
-          : null,
+        ...parseDisplayTarget(data.display_target),
       });
       toast.success("Plantilla item added and slots provisioned.");
       onOpenChange(false);
@@ -181,13 +284,11 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                   <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Item Number
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. 8"
-                      className="font-mono text-sm border-gray-200"
-                      {...field}
-                    />
-                  </FormControl>
+                  <Input
+                    readOnly
+                    className="font-mono text-sm border-gray-200 bg-slate-50"
+                    {...field}
+                  />
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -276,11 +377,11 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
 
             <FormField
               control={form.control}
-              name="display_department_id"
+              name="display_target"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Department{" "}
+                    Department / Division{" "}
                     <span className="text-gray-300 normal-case font-normal">
                       (optional)
                     </span>
@@ -358,7 +459,7 @@ const positionDefaults = {
   step_increment_id: "",
   date_of_assumption: "",
   role: "",
-  display_department_id: "",
+  display_target: "",
 };
 
 export function PositionModal({
@@ -392,12 +493,8 @@ export function PositionModal({
       .finally(() => setLoadingGrades(false));
 
     setLoadingDepts(true);
-    api
-      .get("/departments")
-      .then((res) => {
-        const data = res.data;
-        setDepartments(Array.isArray(data) ? data : (data.data ?? []));
-      })
+    fetchAllUnits()
+      .then(setDepartments)
       .catch(console.error)
       .finally(() => setLoadingDepts(false));
   }, [open]);
@@ -411,7 +508,7 @@ export function PositionModal({
         step_increment_id: String(position.step_increment_id ?? ""),
         date_of_assumption: position.date_of_assumption ?? "",
         role: position.role ?? "",
-        display_department_id: String(position.display_department_id ?? ""),
+        display_target: buildDisplayTarget(position),
       });
     }
   }, [open, position]);
@@ -447,9 +544,7 @@ export function PositionModal({
           : null,
         date_of_assumption: data.date_of_assumption || null,
         role: data.role || null,
-        display_department_id: data.display_department_id
-          ? Number(data.display_department_id)
-          : null,
+        ...parseDisplayTarget(data.display_target),
       });
       toast.success(`Slot ${position.slot_number} updated.`);
       onSuccess?.();
@@ -509,6 +604,11 @@ export function PositionModal({
                 {position?.display_department?.name && (
                   <p className="text-xs text-emerald-700">
                     Department: {position.display_department.name}
+                  </p>
+                )}
+                {position?.display_division?.name && (
+                  <p className="text-xs text-emerald-700">
+                    Division: {position.display_division.name}
                   </p>
                 )}
               </div>
@@ -692,11 +792,11 @@ export function PositionModal({
 
                 <FormField
                   control={form.control}
-                  name="display_department_id"
+                  name="display_target"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                        Department{" "}
+                        Department / Division{" "}
                         <span className="text-gray-300 normal-case font-normal">
                           (optional)
                         </span>
@@ -704,8 +804,8 @@ export function PositionModal({
                       {watchedRole && (
                         <p className="text-[11px] text-indigo-500">
                           {isStaffRole
-                            ? "This position will appear in the department's staff list as Vacant."
-                            : "This position will appear as a Vacant node in the org chart under this department."}
+                            ? "This position will appear in the selected department/division's staff list as Vacant."
+                            : "This position will appear as a Vacant node in the org chart under the selected department/division."}
                         </p>
                       )}
                       <Select
@@ -719,7 +819,7 @@ export function PositionModal({
                               placeholder={
                                 loadingDepts
                                   ? "Loading..."
-                                  : "Select department"
+                                  : "Select department or division"
                               }
                             />
                           </SelectTrigger>
@@ -896,6 +996,11 @@ export function AssignEmployeeModal({
               {position?.display_department?.name && (
                 <p className="text-xs text-indigo-500">
                   {position.display_department.name}
+                </p>
+              )}
+              {position?.display_division?.name && (
+                <p className="text-xs text-indigo-500">
+                  {position.display_division.name}
                 </p>
               )}
             </div>
