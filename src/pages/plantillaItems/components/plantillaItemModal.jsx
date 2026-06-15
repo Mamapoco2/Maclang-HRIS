@@ -46,8 +46,6 @@ const ROLE_OPTIONS = [
 
 const DEPT_TYPES = ["OFFICE", "DIRECTORATE", "DIVISION", "DEPARTMENT"];
 
-// Encode a unit (division or department) into a single select value so we
-// know which FK column to populate on submit: "department:12" or "division:3"
 function unitValue(unit) {
   const prefix =
     (unit?.type ?? "").toUpperCase() === "DEPARTMENT"
@@ -56,8 +54,6 @@ function unitValue(unit) {
   return `${prefix}:${unit.id}`;
 }
 
-// Reverse of unitValue — turns the encoded select value into the payload
-// fields expected by the API (display_department_id / display_division_id).
 function parseDisplayTarget(value) {
   const [type, id] = (value || "").split(":");
   return {
@@ -66,15 +62,12 @@ function parseDisplayTarget(value) {
   };
 }
 
-// Given a position/item's saved display_department_id / display_division_id,
-// build the encoded select value used by the form.
 function buildDisplayTarget({ display_department_id, display_division_id }) {
   if (display_department_id) return `department:${display_department_id}`;
   if (display_division_id) return `division:${display_division_id}`;
   return "";
 }
 
-// Fetch /divisions (has type field) + /departments (hardcoded type: DEPARTMENT), then combine
 async function fetchAllUnits() {
   const [divRes, deptRes] = await Promise.all([
     api.get("/divisions"),
@@ -92,7 +85,6 @@ async function fetchAllUnits() {
   return [...divisions, ...departments];
 }
 
-// Reusable tabbed department dropdown content
 function DeptSelectContent({ departments, loading, search, onSearch }) {
   const [activeTab, setActiveTab] = useState(DEPT_TYPES[0]);
 
@@ -104,7 +96,6 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
 
   return (
     <SelectContent className="p-0 overflow-hidden w-72">
-      {/* Tabs */}
       <div className="flex border-b border-gray-100 bg-gray-50">
         {DEPT_TYPES.map((type) => (
           <button
@@ -129,7 +120,6 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
         ))}
       </div>
 
-      {/* Search */}
       <div className="px-2 py-1.5 bg-white border-b border-gray-100">
         <div className="relative">
           <Search
@@ -146,7 +136,6 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
         </div>
       </div>
 
-      {/* List */}
       <div className="overflow-y-auto max-h-44">
         {loading ? (
           <div className="px-3 py-4 text-xs text-slate-400 text-center">
@@ -183,6 +172,8 @@ const itemDefaults = {
   title: "",
   description: "",
   approved_slots: 1,
+  salary_grade_id: "",
+  step_increment_id: "",
   display_target: "",
 };
 
@@ -192,6 +183,10 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
   const [departments, setDepartments] = useState([]);
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [deptSearch, setDeptSearch] = useState("");
+  const [salaryGrades, setSalaryGrades] = useState([]);
+  const [steps, setSteps] = useState([]);
+  const [loadingGrades, setLoadingGrades] = useState(false);
+  const [loadingSteps, setLoadingSteps] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -199,20 +194,22 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
     const loadData = async () => {
       try {
         setLoadingDepts(true);
+        setLoadingGrades(true);
 
-        const [units, items] = await Promise.all([
+        const [units, items, gradesRes] = await Promise.all([
           fetchAllUnits(),
           plantillaItemService.getPlantillaItems(),
+          plantillaItemService.getSalaryGrades(),
         ]);
 
         setDepartments(units);
+        setSalaryGrades(gradesRes.data ?? gradesRes);
 
         if (items.length > 0) {
           const nextNumber =
             Math.max(
               ...items.map((item) => Number(item.base_item_number) || 0),
             ) + 1;
-
           form.setValue("base_item_number", String(nextNumber));
         } else {
           form.setValue("base_item_number", "1");
@@ -221,6 +218,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
         console.error(err);
       } finally {
         setLoadingDepts(false);
+        setLoadingGrades(false);
       }
     };
 
@@ -229,14 +227,26 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
 
   useEffect(() => {
     if (!open) return;
-
-    form.reset({
-      ...itemDefaults,
-      approved_slots: 1,
-    });
-
+    form.reset({ ...itemDefaults, approved_slots: 1 });
     setDeptSearch("");
+    setSteps([]);
   }, [open, form]);
+
+  const watchedSgId = form.watch("salary_grade_id");
+
+  useEffect(() => {
+    if (!watchedSgId) {
+      setSteps([]);
+      return;
+    }
+    setLoadingSteps(true);
+    form.setValue("step_increment_id", "");
+    plantillaItemService
+      .getStepsBySalaryGrade(watchedSgId)
+      .then((res) => setSteps(res.data ?? res))
+      .catch(console.error)
+      .finally(() => setLoadingSteps(false));
+  }, [watchedSgId]);
 
   const handleSubmit = async (data) => {
     setSaving(true);
@@ -245,7 +255,13 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
         base_item_number: data.base_item_number,
         title: data.title,
         description: data.description,
-        approved_slots: Number(data.approved_slots),
+        slots: Number(data.approved_slots),
+        salary_grade_id: data.salary_grade_id
+          ? Number(data.salary_grade_id)
+          : null,
+        step_increment_id: data.step_increment_id
+          ? Number(data.step_increment_id)
+          : null,
         ...parseDisplayTarget(data.display_target),
       });
       toast.success("Plantilla item added and slots provisioned.");
@@ -367,9 +383,103 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                     />
                   </FormControl>
                   <p className="text-[11px] text-gray-400 mt-1">
-                    Salary Grade, Step, Role, and Department are set per slot
-                    after creation.
+                    Role and per-slot overrides can be set after creation.
                   </p>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="salary_grade_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Salary Grade{" "}
+                    <span className="text-gray-300 normal-case font-normal">
+                      (optional)
+                    </span>
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={loadingGrades}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="text-sm border-gray-200">
+                        <SelectValue
+                          placeholder={
+                            loadingGrades ? "Loading..." : "Select salary grade"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-60">
+                      {salaryGrades.map((sg) => (
+                        <SelectItem
+                          key={sg.id}
+                          value={String(sg.id)}
+                          className="pl-3 [&>span:first-child]:hidden"
+                        >
+                          SG {sg.salary_grade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="step_increment_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Step Increment{" "}
+                    <span className="text-gray-300 normal-case font-normal">
+                      (optional)
+                    </span>
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={loadingSteps || !watchedSgId}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="text-sm border-gray-200">
+                        <SelectValue
+                          placeholder={
+                            !watchedSgId
+                              ? "Select SG first"
+                              : loadingSteps
+                                ? "Loading..."
+                                : "Select step"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-60">
+                      {steps.map((s) => (
+                        <SelectItem
+                          key={s.id}
+                          value={String(s.id)}
+                          className="pl-3 [&>span:first-child]:hidden"
+                        >
+                          Step {s.step}
+                          {s.monthly_salary != null && (
+                            <span className="ml-2 text-slate-400 text-xs">
+                              — ₱
+                              {Number(s.monthly_salary).toLocaleString("en-PH")}
+                              /mo
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -876,6 +986,8 @@ export function PositionModal({
 const assignDefaults = {
   employee_id: "",
   start_date: "",
+  salary_grade_id: "",
+  step_increment_id: "",
 };
 
 export function AssignEmployeeModal({
@@ -892,8 +1004,14 @@ export function AssignEmployeeModal({
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [salaryGrades, setSalaryGrades] = useState([]);
+  const [steps, setSteps] = useState([]);
+  const [loadingGrades, setLoadingGrades] = useState(false);
+  const [loadingSteps, setLoadingSteps] = useState(false);
+
   useEffect(() => {
     if (!open) return;
+
     setLoadingEmployees(true);
     api
       .get("/employees")
@@ -903,14 +1021,38 @@ export function AssignEmployeeModal({
       })
       .catch(console.error)
       .finally(() => setLoadingEmployees(false));
+
+    setLoadingGrades(true);
+    plantillaItemService
+      .getSalaryGrades()
+      .then((res) => setSalaryGrades(res.data ?? res))
+      .catch(console.error)
+      .finally(() => setLoadingGrades(false));
   }, [open]);
 
   useEffect(() => {
     if (open) {
       form.reset(assignDefaults);
       setSearch("");
+      setSteps([]);
     }
   }, [open]);
+
+  const watchedSgId = form.watch("salary_grade_id");
+
+  useEffect(() => {
+    if (!watchedSgId) {
+      setSteps([]);
+      return;
+    }
+    setLoadingSteps(true);
+    form.setValue("step_increment_id", "");
+    plantillaItemService
+      .getStepsBySalaryGrade(watchedSgId)
+      .then((res) => setSteps(res.data ?? res))
+      .catch(console.error)
+      .finally(() => setLoadingSteps(false));
+  }, [watchedSgId]);
 
   const filteredEmployees = employees.filter((e) => {
     const fullName = [e.prefix, e.first_name, e.last_name, e.suffix]
@@ -935,6 +1077,12 @@ export function AssignEmployeeModal({
         employee_id: Number(data.employee_id),
         plantilla_position_id: position.id,
         start_date: data.start_date,
+        salary_grade_id: data.salary_grade_id
+          ? Number(data.salary_grade_id)
+          : null,
+        step_increment_id: data.step_increment_id
+          ? Number(data.step_increment_id)
+          : null,
         is_primary: true,
       });
       toast.success(
@@ -975,7 +1123,7 @@ export function AssignEmployeeModal({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="px-6 py-5 space-y-4"
+            className="px-6 py-5 space-y-4 max-h-[78vh] overflow-y-auto"
           >
             <div className="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3 space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
@@ -1066,6 +1214,101 @@ export function AssignEmployeeModal({
                           );
                         })
                       )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="salary_grade_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Salary Grade{" "}
+                    <span className="text-gray-300 normal-case font-normal">
+                      (optional)
+                    </span>
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={loadingGrades}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="text-sm border-gray-200">
+                        <SelectValue
+                          placeholder={
+                            loadingGrades ? "Loading..." : "Select salary grade"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-60">
+                      {salaryGrades.map((sg) => (
+                        <SelectItem
+                          key={sg.id}
+                          value={String(sg.id)}
+                          className="pl-3 [&>span:first-child]:hidden"
+                        >
+                          SG {sg.salary_grade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="step_increment_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Step Increment{" "}
+                    <span className="text-gray-300 normal-case font-normal">
+                      (optional)
+                    </span>
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={loadingSteps || !watchedSgId}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="text-sm border-gray-200">
+                        <SelectValue
+                          placeholder={
+                            !watchedSgId
+                              ? "Select SG first"
+                              : loadingSteps
+                                ? "Loading..."
+                                : "Select step"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-60">
+                      {steps.map((s) => (
+                        <SelectItem
+                          key={s.id}
+                          value={String(s.id)}
+                          className="pl-3 [&>span:first-child]:hidden"
+                        >
+                          Step {s.step}
+                          {s.monthly_salary != null && (
+                            <span className="ml-2 text-slate-400 text-xs">
+                              — ₱
+                              {Number(s.monthly_salary).toLocaleString("en-PH")}
+                              /mo
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage className="text-xs" />
