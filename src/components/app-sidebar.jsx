@@ -373,6 +373,12 @@ const NAV_MAIN = [
     icon: IconUsersGroup,
     permission: "manpower.view",
   },
+  {
+    title: "Task Monitoring",
+    url: "/task-monitoring",
+    icon: IconUsersGroup,
+    permission: "manpower.view",
+  },
 ];
 
 const NAV_SECONDARY = [

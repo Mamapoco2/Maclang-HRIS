@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, LayoutList } from "lucide-react";
+import { Plus, Search, LayoutList, UserCheck, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { cosPositionService } from "../../services/positionService";
 import PositionsTable from "./PositionsTable";
@@ -17,7 +17,6 @@ export default function CosPositionsPage() {
     setLoading(true);
     try {
       const data = await cosPositionService.getAll({ per_page: 500 });
-      // Laravel paginated response → data.data; or plain array
       setPositions(Array.isArray(data) ? data : (data.data ?? []));
     } catch {
       toast.error("Failed to load COS positions.");
@@ -40,16 +39,95 @@ export default function CosPositionsPage() {
     );
   }, [positions, search]);
 
+  const thisMonthCount = useMemo(() => {
+    const now = new Date();
+    return positions.filter((p) => {
+      if (!p.created_at) return false;
+      const d = new Date(p.created_at);
+      return (
+        d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      );
+    }).length;
+  }, [positions]);
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-5">
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* ── Header bar ── */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+            <LayoutList size={20} strokeWidth={2} className="text-white" />
+          </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
+            <h1 className="text-sm font-semibold text-gray-900 leading-tight">
               COS Positions
             </h1>
-            <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              Manage Contract of Service position titles
+            </p>
+          </div>
+        </div>
+
+        <Button
+          onClick={() => setShowAdd(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm h-9 px-4 shrink-0"
+        >
+          <Plus size={14} className="mr-1.5" />
+          Add Position
+        </Button>
+      </div>
+
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 px-6 py-5">
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-4 flex items-center gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+            <LayoutList size={16} strokeWidth={2} className="text-blue-600" />
+          </div>
+          <div>
+            <div className="text-2xl font-semibold text-gray-900 font-mono leading-none">
+              {loading ? "—" : positions.length}
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-widest font-medium">
+              Total Positions
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-4 flex items-center gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center">
+            <UserCheck size={16} strokeWidth={2} className="text-green-600" />
+          </div>
+          <div>
+            <div className="text-2xl font-semibold text-gray-900 font-mono leading-none">
+              {loading ? "—" : positions.length}
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-widest font-medium">
+              Active Positions
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-4 flex items-center gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+            <Clock size={16} strokeWidth={2} className="text-amber-500" />
+          </div>
+          <div>
+            <div className="text-2xl font-semibold text-gray-900 font-mono leading-none">
+              {loading ? "—" : thisMonthCount}
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-widest font-medium">
+              Added This Month
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Table section ── */}
+      <div className="px-6 pb-8">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">COS Positions</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
               {loading
                 ? "Loading…"
                 : search
@@ -58,57 +136,28 @@ export default function CosPositionsPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
-            <div className="relative flex-1 sm:flex-none">
-              <Search
-                size={13}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-              />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search positions…"
-                className="pl-8 h-9 w-full sm:w-52 text-sm border-gray-200"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            <Button
-              onClick={() => setShowAdd(true)}
-              className="bg-gray-900 hover:bg-black text-white text-sm h-9 px-3 sm:px-4 shrink-0"
-            >
-              <Plus size={14} className="mr-1.5" />
-              Add Position
-            </Button>
+          <div className="relative">
+            <Search
+              size={13}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search positions…"
+              className="pl-8 h-9 w-48 text-sm border-gray-200"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Stat card */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-          <div className="rounded-lg border border-gray-200 bg-white px-4 py-4 flex items-center gap-4">
-            <div className="shrink-0 rounded-md p-2.5 text-blue-500 bg-blue-50">
-              <LayoutList size={16} strokeWidth={2} />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900 font-mono leading-none">
-                {loading ? "—" : positions.length}
-              </div>
-              <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-widest font-medium">
-                Total Positions
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Table */}
         <PositionsTable
           positions={filtered}
           loading={loading}
@@ -119,7 +168,6 @@ export default function CosPositionsPage() {
         />
       </div>
 
-      {/* Add modal */}
       <PositionFormModal
         open={showAdd}
         onOpenChange={setShowAdd}
