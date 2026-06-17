@@ -47,7 +47,7 @@ export default function LeaveTable() {
   const updateStatus = (id, newStatus, e) => {
     e.stopPropagation();
     setRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: newStatus } : req))
+      prev.map((req) => (req.id === id ? { ...req, status: newStatus } : req)),
     );
   };
 
@@ -97,8 +97,8 @@ export default function LeaveTable() {
                       req.status === "pending"
                         ? "bg-orange-100 text-orange-700"
                         : req.status === "accepted"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
                     }`}
                   >
                     {req.status}
@@ -171,8 +171,8 @@ export default function LeaveTable() {
                           leave.status === "pending"
                             ? "bg-orange-100 text-orange-700"
                             : leave.status === "accepted"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
                         }`}
                       >
                         {leave.status}

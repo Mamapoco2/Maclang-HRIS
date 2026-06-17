@@ -9,9 +9,12 @@ import DepartmentTeamCard from "./departmentTeamCard";
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function TeamSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 ">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
+        <div
+          key={i}
+          className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-pulse"
+        >
           {/* Card header */}
           <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-b border-gray-100">
             <div className="w-3.5 h-3.5 bg-gray-200 rounded" />
@@ -20,7 +23,10 @@ function TeamSkeleton() {
           </div>
           {/* Rows */}
           {Array.from({ length: 3 }).map((_, j) => (
-            <div key={j} className="flex items-center gap-4 px-5 py-3 border-b border-gray-50 last:border-0">
+            <div
+              key={j}
+              className="flex items-center gap-4 px-5 py-3 border-b border-gray-50 last:border-0"
+            >
               <div className="w-7 h-7 bg-gray-100 rounded-full shrink-0" />
               <div className="h-3 flex-1 bg-gray-100 rounded" />
               <div className="h-3 w-20 bg-gray-100 rounded" />
@@ -66,7 +72,10 @@ export default function TeamTable() {
       if (!e.employee) return;
       setMembers((prev) => {
         const exists = prev.some((m) => m.id === e.employee.id);
-        if (exists) return prev.map((m) => m.id === e.employee.id ? { ...m, ...e.employee } : m);
+        if (exists)
+          return prev.map((m) =>
+            m.id === e.employee.id ? { ...m, ...e.employee } : m,
+          );
         return [e.employee, ...prev];
       });
     };
@@ -100,11 +109,14 @@ export default function TeamTable() {
     myDepartmentMembers.forEach((member) => {
       const depts =
         Array.isArray(member.departments) && member.departments.length > 0
-          ? member.departments.filter((d) => userDepartmentIds.includes(String(d.id)))
+          ? member.departments.filter((d) =>
+              userDepartmentIds.includes(String(d.id)),
+            )
           : [{ id: "none", name: "No Department" }];
 
       depts.forEach((dept) => {
-        if (!map.has(dept.id)) map.set(dept.id, { name: dept.name, members: [] });
+        if (!map.has(dept.id))
+          map.set(dept.id, { name: dept.name, members: [] });
         map.get(dept.id).members.push(member);
       });
     });
@@ -119,7 +131,7 @@ export default function TeamTable() {
   }, [myDepartmentMembers, userDepartmentIds]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-auto">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-screen mx-auto px-6 py-4">

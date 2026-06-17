@@ -5,7 +5,7 @@ import RoleManagementPage from "./RoleManagementPage";
 
 const TABS = [
   { id: "approval", label: "Account Approval", icon: UserCheck },
-  { id: "roles",    label: "Role Management",  icon: ShieldCheck },
+  { id: "roles", label: "Role Management", icon: ShieldCheck },
 ];
 
 export default function AccountsPage() {
@@ -18,9 +18,11 @@ export default function AccountsPage() {
         <div className="max-w-screen mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600 rounded-xl">
-              {active === "approval"
-                ? <UserCheck className="w-5 h-5 text-white" />
-                : <ShieldCheck className="w-5 h-5 text-white" />}
+              {active === "approval" ? (
+                <UserCheck className="w-5 h-5 text-white" />
+              ) : (
+                <ShieldCheck className="w-5 h-5 text-white" />
+              )}
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 leading-tight">
@@ -56,7 +58,7 @@ export default function AccountsPage() {
       {/* ── Content ── */}
       <div className="max-w-screen mx-auto px-4 sm:px-6 py-6">
         {active === "approval" && <AccountApprovalPage />}
-        {active === "roles"    && <RoleManagementPage />}
+        {active === "roles" && <RoleManagementPage />}
       </div>
     </div>
   );

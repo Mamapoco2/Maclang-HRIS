@@ -85,7 +85,7 @@ export default function DashboardPage({ onNavigate }) {
     .slice(0, 4);
 
   return (
-    <div className="p-5">
+    <div className="p-5 ">
       <PageHeader
         title="Leave Dashboard"
         description={`Here is what's happening today.`}

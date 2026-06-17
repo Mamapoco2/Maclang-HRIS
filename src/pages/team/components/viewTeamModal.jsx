@@ -19,7 +19,9 @@ function InfoField({ label, value, span = false }) {
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">
         {label}
       </p>
-      <p className="text-sm font-medium text-gray-800 break-words">{value || "—"}</p>
+      <p className="text-sm font-medium text-gray-800 break-words">
+        {value || "—"}
+      </p>
     </div>
   );
 }
@@ -40,7 +42,8 @@ export function ViewMemberModal({ member, open, onOpenChange }) {
       : "—";
 
   const statusKey = member.employment_status?.toUpperCase() ?? "INACTIVE";
-  const statusStyle = STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500 border-gray-200";
+  const statusStyle =
+    STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500 border-gray-200";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,9 +61,13 @@ export function ViewMemberModal({ member, open, onOpenChange }) {
               src={member.avatar_url || DEFAULT_AVATAR}
               alt={fullName}
               className="w-16 h-16 rounded-full object-cover ring-2 ring-white shadow-sm"
-              onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
+              onError={(e) => {
+                e.target.src = DEFAULT_AVATAR;
+              }}
             />
-            <p className="font-semibold text-sm text-gray-900">{fullName || "—"}</p>
+            <p className="font-semibold text-sm text-gray-900">
+              {fullName || "—"}
+            </p>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border capitalize ${statusStyle}`}
             >

@@ -14,7 +14,9 @@ export default function DepartmentTeamCard({ group }) {
       >
         <div className="flex items-center gap-2">
           <Building2 size={14} className="text-gray-400 shrink-0" />
-          <span className="font-semibold text-sm text-gray-800">{group.name}</span>
+          <span className="font-semibold text-sm text-gray-800">
+            {group.name}
+          </span>
           <span className="text-xs text-gray-400 font-normal">
             ({group.members.length}{" "}
             {group.members.length === 1 ? "member" : "members"})
@@ -32,14 +34,16 @@ export default function DepartmentTeamCard({ group }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {["Name", "Role", "Division", "Status", "Actions"].map((col) => (
-                  <th
-                    key={col}
-                    className="text-left px-4 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest"
-                  >
-                    {col}
-                  </th>
-                ))}
+                {["Name", "Role", "Division", "Status", "Actions"].map(
+                  (col) => (
+                    <th
+                      key={col}
+                      className="text-left px-4 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest"
+                    >
+                      {col}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">

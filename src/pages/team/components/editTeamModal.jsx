@@ -12,7 +12,7 @@ export function EditMemberModal({ member, open, onOpenChange, onUpdate }) {
     lastName: member.last_name ?? "",
     role: Array.isArray(member.role_position)
       ? member.role_position.join(", ")
-      : member.role_position ?? "",
+      : (member.role_position ?? ""),
     email: member.email ?? "",
   });
 

@@ -1,8 +1,16 @@
 import { useEffect, useState, useContext } from "react";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { getApprovedUsers, updateUserPermissions, updateUserRole } from "@/services/accountsService";
+import {
+  getApprovedUsers,
+  updateUserPermissions,
+  updateUserRole,
+} from "@/services/accountsService";
 import { AuthContext } from "@/context/AuthContext";
 import { getEcho } from "@/lib/echo";
 import PermissionsModal from "./permissionModal";
@@ -10,30 +18,36 @@ import { toast } from "sonner";
 import { IconSearch } from "@tabler/icons-react";
 
 const ROLE_BADGE_STYLES = {
-  admin:      "bg-orange-50 text-orange-700 border-orange-200",
-  director:   "bg-purple-50 text-purple-700 border-purple-200",
-  hr:         "bg-blue-50 text-blue-700 border-blue-200",
-  head:       "bg-emerald-50 text-emerald-700 border-emerald-200",
+  admin: "bg-orange-50 text-orange-700 border-orange-200",
+  director: "bg-purple-50 text-purple-700 border-purple-200",
+  hr: "bg-blue-50 text-blue-700 border-blue-200",
+  head: "bg-emerald-50 text-emerald-700 border-emerald-200",
   supervisor: "bg-amber-50 text-amber-700 border-amber-200",
-  staff:      "bg-gray-100 text-gray-600 border-gray-200",
+  staff: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
 const ASSIGNABLE_ROLES = [
-  { value: "none",       label: "No role" },
-  { value: "admin",      label: "Admin" },
-  { value: "director",   label: "Director" },
-  { value: "hr",         label: "HR" },
-  { value: "head",       label: "Head" },
+  { value: "none", label: "No role" },
+  { value: "admin", label: "Admin" },
+  { value: "director", label: "Director" },
+  { value: "hr", label: "HR" },
+  { value: "head", label: "Head" },
   { value: "supervisor", label: "Supervisor" },
-  { value: "staff",      label: "Staff" },
+  { value: "staff", label: "Staff" },
 ];
 
 function getRoleBadgeClass(role) {
-  return ROLE_BADGE_STYLES[role?.toLowerCase()] ?? "bg-gray-100 text-gray-600 border-gray-200";
+  return (
+    ROLE_BADGE_STYLES[role?.toLowerCase()] ??
+    "bg-gray-100 text-gray-600 border-gray-200"
+  );
 }
 
 function getCurrentRole(user) {
-  return user.roles?.find((r) => r.toLowerCase() !== "superadmin")?.toLowerCase() ?? "none";
+  return (
+    user.roles?.find((r) => r.toLowerCase() !== "superadmin")?.toLowerCase() ??
+    "none"
+  );
 }
 
 export default function RoleManagementPage() {
@@ -45,7 +59,9 @@ export default function RoleManagementPage() {
   const [roleSaving, setRoleSaving] = useState({});
   const [search, setSearch] = useState("");
 
-  useEffect(() => { loadAccounts(); }, []);
+  useEffect(() => {
+    loadAccounts();
+  }, []);
 
   useEffect(() => {
     const echo = getEcho();
@@ -59,7 +75,9 @@ export default function RoleManagementPage() {
     const data = await getApprovedUsers();
     if (data) {
       const filtered = data.filter(
-        (u) => !u.roles?.some((r) => r.toLowerCase() === "superadmin") && u.id !== currentUser?.id,
+        (u) =>
+          !u.roles?.some((r) => r.toLowerCase() === "superadmin") &&
+          u.id !== currentUser?.id,
       );
       setAccounts(filtered);
       setSelectedUser((prev) => {
@@ -100,7 +118,8 @@ export default function RoleManagementPage() {
         "Failed to update permissions.";
       toast.error(message);
     } finally {
-      setSaving(false); }
+      setSaving(false);
+    }
   };
 
   const filteredAccounts = accounts.filter(
@@ -117,12 +136,16 @@ export default function RoleManagementPage() {
         <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 flex-wrap">
           <div className="flex items-center gap-1.5 text-sm">
             <span className="font-medium text-gray-700">Active accounts</span>
-            <span className="text-gray-400">{accounts.length} user{accounts.length !== 1 ? "s" : ""}</span>
+            <span className="text-gray-400">
+              {accounts.length} user{accounts.length !== 1 ? "s" : ""}
+            </span>
           </div>
           <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500">
             <IconSearch size={13} className="text-gray-400 shrink-0" />
             <input
-              type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, username or email..."
               className="bg-transparent text-xs flex-1 outline-none placeholder:text-gray-400 text-gray-700 w-56"
             />
@@ -134,8 +157,18 @@ export default function RoleManagementPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {["Fullname", "Username", "Email", "Role", "Permissions", "Actions"].map((col) => (
-                  <th key={col} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                {[
+                  "Fullname",
+                  "Username",
+                  "Email",
+                  "Role",
+                  "Permissions",
+                  "Actions",
+                ].map((col) => (
+                  <th
+                    key={col}
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide"
+                  >
                     {col}
                   </th>
                 ))}
@@ -145,13 +178,19 @@ export default function RoleManagementPage() {
             <tbody className="divide-y divide-gray-50">
               {accounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-14 text-center text-sm text-gray-400">
+                  <td
+                    colSpan={6}
+                    className="py-14 text-center text-sm text-gray-400"
+                  >
                     No approved accounts found.
                   </td>
                 </tr>
               ) : filteredAccounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-14 text-center text-sm text-gray-400">
+                  <td
+                    colSpan={6}
+                    className="py-14 text-center text-sm text-gray-400"
+                  >
                     No accounts match your search.
                   </td>
                 </tr>
@@ -171,17 +210,26 @@ export default function RoleManagementPage() {
                   })();
 
                   return (
-                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={u.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       {/* Name */}
                       <td className="px-4 py-3 text-xs font-medium text-gray-800">
-                        {displayName ?? <span className="italic text-gray-400">No name</span>}
+                        {displayName ?? (
+                          <span className="italic text-gray-400">No name</span>
+                        )}
                       </td>
 
                       {/* Username */}
-                      <td className="px-4 py-3 text-xs font-medium text-gray-800">{u.username}</td>
+                      <td className="px-4 py-3 text-xs font-medium text-gray-800">
+                        {u.username}
+                      </td>
 
                       {/* Email */}
-                      <td className="px-4 py-3 text-xs text-gray-500">{u.email}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {u.email}
+                      </td>
 
                       {/* Role selector */}
                       <td className="px-4 py-3">
@@ -190,16 +238,22 @@ export default function RoleManagementPage() {
                           onValueChange={(role) => handleRoleChange(u.id, role)}
                           disabled={!!roleSaving[u.id]}
                         >
-                          <SelectTrigger className={`h-7 w-36 text-xs border focus:ring-0 focus:ring-offset-0 rounded-lg ${
-                            currentRole !== "none"
-                              ? `${getRoleBadgeClass(currentRole)} font-semibold`
-                              : "border-gray-200 text-gray-400 bg-gray-50"
-                          }`}>
+                          <SelectTrigger
+                            className={`h-7 w-36 text-xs border focus:ring-0 focus:ring-offset-0 rounded-lg ${
+                              currentRole !== "none"
+                                ? `${getRoleBadgeClass(currentRole)} font-semibold`
+                                : "border-gray-200 text-gray-400 bg-gray-50"
+                            }`}
+                          >
                             <SelectValue placeholder="Assign role…" />
                           </SelectTrigger>
                           <SelectContent>
                             {ASSIGNABLE_ROLES.map((r) => (
-                              <SelectItem key={r.value} value={r.value} className={`text-xs ${r.value === "none" ? "text-gray-400 italic" : ""}`}>
+                              <SelectItem
+                                key={r.value}
+                                value={r.value}
+                                className={`text-xs ${r.value === "none" ? "text-gray-400 italic" : ""}`}
+                              >
                                 {r.label}
                               </SelectItem>
                             ))}
@@ -212,7 +266,10 @@ export default function RoleManagementPage() {
                         {u.permissions?.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {u.permissions.slice(0, 3).map((p) => (
-                              <span key={p} className="text-[10px] px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">
+                              <span
+                                key={p}
+                                className="text-[10px] px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200"
+                              >
                                 {p}
                               </span>
                             ))}
@@ -223,14 +280,19 @@ export default function RoleManagementPage() {
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400 italic">None set</span>
+                          <span className="text-xs text-gray-400 italic">
+                            None set
+                          </span>
                         )}
                       </td>
 
                       {/* Action */}
                       <td className="px-4 py-3">
                         <button
-                          onClick={() => { setSelectedUser(u); setModalOpen(true); }}
+                          onClick={() => {
+                            setSelectedUser(u);
+                            setModalOpen(true);
+                          }}
                           className="px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
                         >
                           Edit permissions

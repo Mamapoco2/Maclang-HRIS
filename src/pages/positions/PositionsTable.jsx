@@ -67,8 +67,8 @@ export default function PositionsTable({
   showTypeColumn = false,
   cosService,
   consultantService,
-  service,        // legacy
-  label,          // legacy
+  service, // legacy
+  label, // legacy
   onRefresh,
 }) {
   const [page, setPage] = useState(1);
@@ -143,7 +143,10 @@ export default function PositionsTable({
                 <TableSkeleton cols={headers.length} />
               ) : paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={headers.length} className="text-center py-16">
+                  <TableCell
+                    colSpan={headers.length}
+                    className="text-center py-16"
+                  >
                     <div className="flex flex-col items-center gap-3 text-slate-400">
                       <ClipboardList size={36} className="opacity-30" />
                       <p className="text-sm font-medium">
@@ -218,7 +221,9 @@ export default function PositionsTable({
                   {Math.min(safePage * PAGE_SIZE, positions.length)}
                 </span>{" "}
                 of{" "}
-                <span className="font-medium text-gray-600">{positions.length}</span>{" "}
+                <span className="font-medium text-gray-600">
+                  {positions.length}
+                </span>{" "}
                 positions
               </p>
 
@@ -236,7 +241,9 @@ export default function PositionsTable({
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(
                     (p) =>
-                      p === 1 || p === totalPages || Math.abs(p - safePage) <= 1,
+                      p === 1 ||
+                      p === totalPages ||
+                      Math.abs(p - safePage) <= 1,
                   )
                   .reduce((acc, p, i, arr) => {
                     if (i > 0 && p - arr[i - 1] > 1) acc.push("…");
@@ -245,7 +252,10 @@ export default function PositionsTable({
                   }, [])
                   .map((p, idx) =>
                     p === "…" ? (
-                      <span key={`ellipsis-${idx}`} className="px-1 text-xs text-gray-400">
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-1 text-xs text-gray-400"
+                      >
                         …
                       </span>
                     ) : (
@@ -256,7 +266,8 @@ export default function PositionsTable({
                         onClick={() => setPage(p)}
                         className={cn(
                           "h-7 w-7 text-xs border-gray-200",
-                          safePage === p && "bg-blue-600 hover:bg-blue-700 border-blue-600",
+                          safePage === p &&
+                            "bg-blue-600 hover:bg-blue-700 border-blue-600",
                         )}
                       >
                         {p}
@@ -282,7 +293,9 @@ export default function PositionsTable({
       {/* Edit modal */}
       <PositionFormModal
         open={!!editPos}
-        onOpenChange={(v) => { if (!v) setEditPos(null); }}
+        onOpenChange={(v) => {
+          if (!v) setEditPos(null);
+        }}
         position={editPos}
         service={resolveService(editPos)}
         label={resolveLabel(editPos)}
@@ -295,7 +308,9 @@ export default function PositionsTable({
       {/* Delete dialog */}
       <DeletePositionDialog
         open={!!deletePos}
-        onOpenChange={(v) => { if (!v) setDeletePos(null); }}
+        onOpenChange={(v) => {
+          if (!v) setDeletePos(null);
+        }}
         position={deletePos}
         loading={deleting}
         onConfirm={handleDelete}

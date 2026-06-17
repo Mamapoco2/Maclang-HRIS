@@ -73,7 +73,7 @@ export default function DayView({ currentDate, getEventsForDay }) {
             const top = eventStartHour * hourHeight;
             const height = Math.max(
               (eventEndHour - eventStartHour) * hourHeight,
-              hourHeight / 2
+              hourHeight / 2,
             );
 
             return (

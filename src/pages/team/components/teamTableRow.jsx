@@ -21,7 +21,8 @@ export default function TeamTableRow({ member }) {
     : member.role_position || "—";
 
   const statusKey = member.employment_status?.toUpperCase() ?? "INACTIVE";
-  const statusStyle = STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500 border-gray-200";
+  const statusStyle =
+    STATUS_STYLES[statusKey] ?? "bg-gray-100 text-gray-500 border-gray-200";
 
   return (
     <>
@@ -33,9 +34,13 @@ export default function TeamTableRow({ member }) {
               src={member.avatar_url || DEFAULT_AVATAR}
               alt={fullName}
               className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-100 shrink-0"
-              onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
+              onError={(e) => {
+                e.target.src = DEFAULT_AVATAR;
+              }}
             />
-            <span className="text-xs font-medium text-gray-900">{fullName}</span>
+            <span className="text-xs font-medium text-gray-900">
+              {fullName}
+            </span>
           </div>
         </td>
 
