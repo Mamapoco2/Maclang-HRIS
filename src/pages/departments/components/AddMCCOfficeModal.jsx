@@ -27,7 +27,7 @@ export default function AddMCCOfficeModal({ open, onClose, onSuccess }) {
     try {
       await api.post("/divisions", {
         ...form,
-        parent_id: null, // Office is the root of the org
+        parent_id: null,
         type: "OFFICE",
       });
       toast.success(`"${form.name}" created as the Office.`);

@@ -82,7 +82,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     type: "",
     division_id: "",
     parent_id: "",
-    parent_type: "", // "division" | "department"
+    parent_type: "",
     code: "",
     name: "",
     description: "",
@@ -156,10 +156,15 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
 
   const setUpper = (field, value) => set(field, value.toUpperCase());
 
-  const getEmployeeName = (e) =>
-    `${[e.prefix, e.first_name, e.last_name, e.suffix]
+  const getEmployeeName = (e) => {
+    const baseName = [e.prefix, e.first_name, e.last_name, e.suffix]
       .filter(Boolean)
-      .join(" ")}${e.title ? `, ${e.title}` : ""}`;
+      .join(" ");
+    const title = Array.isArray(e.title)
+      ? e.title.filter(Boolean).join(", ")
+      : (e.title ?? "").toString().trim();
+    return title ? `${baseName}, ${title}` : baseName;
+  };
 
   const getRolePositions = (e) => {
     const rp = e.role_position;
@@ -186,7 +191,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     getEmployeeName(e).toLowerCase().includes(employeeSearch.toLowerCase()),
   );
 
-  // Merge divisions + departments for parent dropdown
   const normalizedDivisions = allDivisions.map((div) => ({
     ...div,
     type: div.type ?? "DIVISION",
@@ -227,7 +231,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
       await api.post("/departments", {
         type: form.type,
         division_id: form.division_id,
-        // Send to correct column based on which type of parent was selected
         parent_id:
           form.parent_type === "department" ? form.parent_id || null : null,
         parent_division_id:
@@ -270,7 +273,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Division */}
           <div className="space-y-1.5">
             <Label>
               Division <span className="text-destructive">*</span>
@@ -306,7 +308,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Type */}
           <div className="space-y-1.5">
             <Label>
               Type <span className="text-destructive">*</span>
@@ -334,7 +335,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Parent */}
           <div className="space-y-1.5">
             <Label>
               Parent{" "}
@@ -439,7 +439,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Code */}
           <div className="space-y-1.5">
             <Label>
               Code <span className="text-destructive">*</span>
@@ -456,7 +455,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Name */}
           <div className="space-y-1.5">
             <Label>
               Name <span className="text-destructive">*</span>
@@ -479,7 +477,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea
@@ -491,7 +488,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             />
           </div>
 
-          {/* Employee Head */}
           <div className="space-y-1.5">
             <Label>
               Employee Head{" "}
@@ -557,7 +553,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             </Select>
           </div>
 
-          {/* Employees — STAFF */}
           <div className="space-y-1.5">
             <Label>
               Employees{" "}

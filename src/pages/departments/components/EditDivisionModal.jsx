@@ -60,10 +60,15 @@ const fetchAllEmployees = async () => {
   return all;
 };
 
-const getEmployeeName = (e) =>
-  `${[e.prefix, e.first_name, e.last_name, e.suffix]
+const getEmployeeName = (e) => {
+  const baseName = [e.prefix, e.first_name, e.last_name, e.suffix]
     .filter(Boolean)
-    .join(" ")}${e.title ? `, ${e.title}` : ""}`;
+    .join(" ");
+  const title = Array.isArray(e.title)
+    ? e.title.filter(Boolean).join(", ")
+    : (e.title ?? "").toString().trim();
+  return title ? `${baseName}, ${title}` : baseName;
+};
 
 const getRolePositions = (e) => {
   const rp = e.role_position;
@@ -146,9 +151,6 @@ export default function EditDivisionModal({
 
   const setUpper = (field, value) => set(field, value.toUpperCase());
 
-  // Divisions that can be selected as parent:
-  // - cannot be itself
-  // - cannot be one of its own descendants (would create a cycle)
   const getDescendantIds = (rootId) => {
     const ids = new Set();
     let changed = true;
@@ -180,9 +182,6 @@ export default function EditDivisionModal({
       .includes(parentSearch.toLowerCase()),
   );
 
-  // Only employees holding a leadership role (Chief, Director, Assistant
-  // Director, Officer in Charge, Chairman, Head, Supervisor) can be set as
-  // the head of an Office/Division/Directorate.
   const headEmployees = employees.filter((e) => {
     const roles = getRolePositions(e);
     return roles.some((r) => HEAD_ROLES.includes(r));
@@ -281,7 +280,6 @@ export default function EditDivisionModal({
             )}
           </div>
 
-          {/* Parent Office/Division/Directorate */}
           <div className="space-y-1.5">
             <Label>
               Parent{" "}
@@ -383,7 +381,6 @@ export default function EditDivisionModal({
             </p>
           </div>
 
-          {/* Code */}
           <div className="space-y-1.5">
             <Label>
               Code <span className="text-destructive">*</span>
@@ -400,7 +397,6 @@ export default function EditDivisionModal({
             )}
           </div>
 
-          {/* Name */}
           <div className="space-y-1.5">
             <Label>
               Name <span className="text-destructive">*</span>
@@ -423,7 +419,6 @@ export default function EditDivisionModal({
             )}
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea
@@ -435,7 +430,6 @@ export default function EditDivisionModal({
             />
           </div>
 
-          {/* Head Employee */}
           <div className="space-y-1.5">
             <Label>
               {typeLabel || "Division"} Head{" "}

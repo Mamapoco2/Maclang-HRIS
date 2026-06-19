@@ -530,7 +530,6 @@ export default function DepartmentTiles({
 
       {!loading && (departments.length > 0 || divisions.length > 0) && (
         <>
-          {/* ── Division cards grouped by type (Offices / Directorates / Divisions) ── */}
           {divisions.length > 0 && (
             <div className="space-y-5">
               {divisionsByType.map(([type, divs]) => (
@@ -546,12 +545,10 @@ export default function DepartmentTiles({
             </div>
           )}
 
-          {/* ── Separator ── */}
           {divisions.length > 0 && departments.length > 0 && (
             <div className="h-px bg-border" />
           )}
 
-          {/* ── Department blocks grouped by division ── */}
           {departments.length > 0 &&
             orderedDivisions.map(({ div, depts }) => (
               <DivisionBlock

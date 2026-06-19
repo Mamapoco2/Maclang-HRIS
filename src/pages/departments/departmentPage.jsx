@@ -18,14 +18,14 @@ export default function DepartmentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Department modals
+  // ── Department modals ──────────────────────────────────────────────────
   const [showAdd, setShowAdd] = useState(false);
   const [showAddMCC, setShowAddMCC] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Division modals
+  // ── Division modals ──────────────────────────────────────────────────
   const [editDivisionTarget, setEditDivisionTarget] = useState(null);
   const [deleteDivisionTarget, setDeleteDivisionTarget] = useState(null);
   const [deletingDivision, setDeletingDivision] = useState(false);
@@ -91,7 +91,6 @@ export default function DepartmentPage() {
     try {
       await api.delete(`/divisions/${deleteDivisionTarget.id}`);
       toast.success(`"${deleteDivisionTarget.name}" deleted.`);
-      // Null out division on affected departments locally
       setDepartments((prev) =>
         prev.map((d) =>
           d.division?.id === deleteDivisionTarget.id
@@ -121,7 +120,6 @@ export default function DepartmentPage() {
   return (
     <div className="bg-background p-4">
       <div className="p-2 w-auto space-y-5">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -192,7 +190,6 @@ export default function DepartmentPage() {
         />
       </div>
 
-      {/* Department modals */}
       <AddDepartmentModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
@@ -217,7 +214,6 @@ export default function DepartmentPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {/* Division modals */}
       <EditDivisionModal
         open={!!editDivisionTarget}
         division={editDivisionTarget}
@@ -234,7 +230,6 @@ export default function DepartmentPage() {
         onCancel={() => setDeleteDivisionTarget(null)}
       />
 
-      {/* MCC Office modal */}
       <AddMCCOfficeModal
         open={showAddMCC}
         onClose={() => setShowAddMCC(false)}
