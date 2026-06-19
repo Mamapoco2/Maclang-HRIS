@@ -90,7 +90,6 @@ export default function PlantillaItemsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ── Header bar ── */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0">
@@ -115,7 +114,6 @@ export default function PlantillaItemsPage() {
         </Button>
       </div>
 
-      {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 py-5">
         {STAT_CARDS.map(({ label, key, icon: Icon, iconCls, bgCls }) => (
           <div
@@ -139,7 +137,6 @@ export default function PlantillaItemsPage() {
         ))}
       </div>
 
-      {/* ── Table section ── */}
       <div className="px-6 pb-8">
         <div className="flex items-center justify-between mb-3">
           <div>

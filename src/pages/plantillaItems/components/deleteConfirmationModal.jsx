@@ -34,7 +34,6 @@ export default function DeleteConfirmModal({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="sm:max-w-[420px] bg-white border border-slate-200 shadow-xl p-0 overflow-hidden rounded-lg">
-        {/* Icon */}
         <div className="px-6 pt-8 pb-4 flex flex-col items-center text-center">
           <div className="mb-4 relative">
             <div className="absolute inset-0 bg-red-100/40 rounded-full blur-md" />
@@ -54,7 +53,6 @@ export default function DeleteConfirmModal({
           </AlertDialogHeader>
         </div>
 
-        {/* Body */}
         <div className="px-6 pb-6">
           <AlertDialogDescription className="text-sm text-slate-600 leading-relaxed space-y-3">
             <p>
@@ -75,7 +73,6 @@ export default function DeleteConfirmModal({
           </AlertDialogDescription>
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex gap-3 justify-end">
           <AlertDialogCancel
             disabled={loading}

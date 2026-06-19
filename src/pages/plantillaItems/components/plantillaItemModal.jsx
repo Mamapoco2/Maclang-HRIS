@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Pencil, UserPlus, Search } from "lucide-react";
+import { Loader2, Plus, Pencil, UserPlus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   plantillaPositionService as plantillaItemService,
@@ -45,6 +45,13 @@ const ROLE_OPTIONS = [
 ];
 
 const DEPT_TYPES = ["OFFICE", "DIRECTORATE", "DIVISION", "DEPARTMENT"];
+
+const TYPE_BADGE = {
+  OFFICE: "bg-indigo-100 text-indigo-700",
+  DIRECTORATE: "bg-purple-100 text-purple-700",
+  DIVISION: "bg-teal-100 text-teal-700",
+  DEPARTMENT: "bg-blue-100 text-blue-700",
+};
 
 function unitValue(unit) {
   const prefix =
@@ -161,11 +168,117 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
   );
 }
 
-/*
-|─────────────────────────────────────────────────────────────────────────────
-| AddItemModal
-|─────────────────────────────────────────────────────────────────────────────
-*/
+function DeptTargetField({
+  departments,
+  loading,
+  search,
+  onSearch,
+  value,
+  onChange,
+  placeholder = "Select department or division",
+}) {
+  const selectedUnit = departments.find((d) => unitValue(d) === value);
+
+  if (value && selectedUnit) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-slate-50">
+        <span
+          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+            TYPE_BADGE[(selectedUnit.type ?? "").toUpperCase()] ??
+            "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {(selectedUnit.type ?? "").toUpperCase()}
+        </span>
+        <span className="text-sm font-medium flex-1 truncate">
+          {selectedUnit.name}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="text-gray-400 hover:text-gray-600 shrink-0"
+        >
+          <X size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  if (value && !selectedUnit) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-slate-50">
+        <span className="text-sm text-gray-400 flex-1 truncate">
+          {loading ? "Loading..." : "Selected unit"}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="text-gray-400 hover:text-gray-600 shrink-0"
+        >
+          <X size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <Select onValueChange={onChange} value={value} disabled={loading}>
+      <FormControl>
+        <SelectTrigger className="text-sm border-gray-200">
+          <SelectValue placeholder={loading ? "Loading..." : placeholder} />
+        </SelectTrigger>
+      </FormControl>
+      <DeptSelectContent
+        departments={departments}
+        loading={loading}
+        search={search}
+        onSearch={onSearch}
+      />
+    </Select>
+  );
+}
+
+// ── RoleField — chip-style selector with unselect (X) for the Role dropdown. ──────────────────────────────────────────────────────────────
+
+function RoleField({ value, onChange, placeholder = "Select role" }) {
+  if (value) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-slate-50">
+        <span className="text-sm font-medium flex-1 truncate">{value}</span>
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="text-gray-400 hover:text-gray-600 shrink-0"
+        >
+          <X size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <Select onValueChange={onChange} value={value}>
+      <FormControl>
+        <SelectTrigger className="text-sm border-gray-200">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+      </FormControl>
+      <SelectContent>
+        {ROLE_OPTIONS.map((r) => (
+          <SelectItem
+            key={r}
+            value={r}
+            className="pl-3 [&>span:first-child]:hidden"
+          >
+            {r}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// ── AddItemModal ──────────────────────────────────────────────────────────────
 
 const itemDefaults = {
   base_item_number: "",
@@ -496,27 +609,15 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
                       (optional)
                     </span>
                   </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
+                  <DeptTargetField
+                    departments={departments}
+                    loading={loadingDepts}
+                    search={deptSearch}
+                    onSearch={setDeptSearch}
                     value={field.value}
-                    disabled={loadingDepts}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="text-sm border-gray-200">
-                        <SelectValue
-                          placeholder={
-                            loadingDepts ? "Loading..." : "Select department"
-                          }
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <DeptSelectContent
-                      departments={departments}
-                      loading={loadingDepts}
-                      search={deptSearch}
-                      onSearch={setDeptSearch}
-                    />
-                  </Select>
+                    onChange={field.onChange}
+                    placeholder="Select department"
+                  />
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -557,11 +658,7 @@ export default function PlantillaItemModal(props) {
   return <AddItemForm {...props} />;
 }
 
-/*
-|─────────────────────────────────────────────────────────────────────────────
-| PositionModal — Edit Slot
-|─────────────────────────────────────────────────────────────────────────────
-*/
+// ── PositionModal — Edit Slot ────────────────────────────────────────────────────
 
 const positionDefaults = {
   position_title: "",
@@ -874,27 +971,10 @@ export function PositionModal({
                           (optional)
                         </span>
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
+                      <RoleField
                         value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="text-sm border-gray-200">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {ROLE_OPTIONS.map((r) => (
-                            <SelectItem
-                              key={r}
-                              value={r}
-                              className="pl-3 [&>span:first-child]:hidden"
-                            >
-                              {r}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onChange={field.onChange}
+                      />
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )}
@@ -918,29 +998,14 @@ export function PositionModal({
                             : "This position will appear as a Vacant node in the org chart under the selected department/division."}
                         </p>
                       )}
-                      <Select
-                        onValueChange={field.onChange}
+                      <DeptTargetField
+                        departments={departments}
+                        loading={loadingDepts}
+                        search={deptSearch}
+                        onSearch={setDeptSearch}
                         value={field.value}
-                        disabled={loadingDepts}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="text-sm border-gray-200">
-                            <SelectValue
-                              placeholder={
-                                loadingDepts
-                                  ? "Loading..."
-                                  : "Select department or division"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <DeptSelectContent
-                          departments={departments}
-                          loading={loadingDepts}
-                          search={deptSearch}
-                          onSearch={setDeptSearch}
-                        />
-                      </Select>
+                        onChange={field.onChange}
+                      />
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )}
@@ -977,11 +1042,7 @@ export function PositionModal({
   );
 }
 
-/*
-|─────────────────────────────────────────────────────────────────────────────
-| AssignEmployeeModal
-|─────────────────────────────────────────────────────────────────────────────
-*/
+// ── AssignEmployeeModal ────────────────────────────────────────────────────
 
 const assignDefaults = {
   employee_id: "",

@@ -64,11 +64,10 @@ const ITEM_HEADERS = [
   "Actions",
 ];
 
-const POSITION_HEADERS = [
+const BASE_POSITION_HEADERS = [
   "Item Number",
   "Position Title",
   "SG",
-  "Step",
   "Status",
   "Assigned To",
   "Actions",
@@ -132,16 +131,12 @@ function sortItems(items) {
   });
 }
 
-// FIX: Pick the most representative slot config from existing positions.
-// Previously only the first slot with SG+Step was used; now we pick the
-// most common SG/Step pair so inherited config is more reliable.
 function resolveInheritedConfig(positions = []) {
   const configured = positions.filter(
     (p) => p.salary_grade_id && p.step_increment_id,
   );
   if (configured.length === 0) return null;
 
-  // Count occurrences of each SG+Step pair and pick the most common one.
   const freq = new Map();
   for (const p of configured) {
     const key = `${p.salary_grade_id}:${p.step_increment_id}`;
@@ -163,6 +158,23 @@ function resolveInheritedConfig(positions = []) {
       : null,
     monthly_salary: best.step_increment?.monthly_salary ?? null,
   };
+}
+
+function itemHasSteps(positions = []) {
+  return positions.some((p) => !!p.step_increment?.step);
+}
+
+function getPositionHeaders(showStep) {
+  if (!showStep) return BASE_POSITION_HEADERS;
+  return [
+    "Item Number",
+    "Position Title",
+    "SG",
+    "Step",
+    "Status",
+    "Assigned To",
+    "Actions",
+  ];
 }
 
 // ─── TableSkeleton ────────────────────────────────────────────────────────────
@@ -209,7 +221,6 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
 
   return (
     <SelectContent className="p-0 overflow-hidden w-72">
-      {/* Tabs */}
       <div className="flex border-b border-gray-100 bg-gray-50">
         {DEPT_TYPES.map((type) => (
           <button
@@ -234,7 +245,6 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
         ))}
       </div>
 
-      {/* Search */}
       <div className="px-2 py-1.5 bg-white border-b border-gray-100">
         <div className="relative">
           <Search
@@ -251,7 +261,6 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
         </div>
       </div>
 
-      {/* List */}
       <div className="overflow-y-auto max-h-44">
         {loading ? (
           <div className="px-3 py-4 text-xs text-slate-400 text-center">
@@ -282,7 +291,6 @@ function DeptSelectContent({ departments, loading, search, onSearch }) {
 function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
   const form = useForm({ defaultValues: addSlotDefaults });
 
-  // FIX: Use resolveInheritedConfig instead of picking just the first slot.
   const inherited = resolveInheritedConfig(item?.positions ?? []);
 
   const [departments, setDepartments] = useState([]);
@@ -342,9 +350,6 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
   const handleSubmit = async (data) => {
     setSaving(true);
     try {
-      // FIX: Build the slotConfig to pass to addSlots.
-      // If inherited config exists, use it automatically.
-      // If the user manually picked SG/Step (no inherited), use those.
       const slotConfig = inherited
         ? {
             salary_grade_id: Number(inherited.sg_id),
@@ -468,12 +473,11 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
               )}
             />
 
-            {/* FIX: Show inherited SG/Step as read-only display.
-                If no existing slot has SG+Step configured, show manual selects. */}
             {inherited ? (
               <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-4 py-3 space-y-1">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">
-                  SG · Step — inherited from existing slots
+                  SG{inherited.step_label ? " · Step" : ""} — inherited from
+                  existing slots
                 </p>
                 <p className="text-sm font-mono font-semibold text-indigo-700">
                   {inherited.sg_label ?? "—"}
@@ -536,60 +540,58 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="step_increment_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                        Step Increment{" "}
-                        <span className="text-gray-300 normal-case font-normal">
-                          (optional)
-                        </span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={loadingSteps || !watchedSgId}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="text-sm border-gray-200">
-                            <SelectValue
-                              placeholder={
-                                !watchedSgId
-                                  ? "Select SG first"
-                                  : loadingSteps
-                                    ? "Loading..."
-                                    : "Select step"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-60">
-                          {steps.map((s) => (
-                            <SelectItem
-                              key={s.id}
-                              value={String(s.id)}
-                              className="pl-3 [&>span:first-child]:hidden"
-                            >
-                              Step {s.step}
-                              {s.monthly_salary != null && (
-                                <span className="ml-2 text-slate-400 text-xs">
-                                  — ₱
-                                  {Number(s.monthly_salary).toLocaleString(
-                                    "en-PH",
-                                  )}
-                                  /mo
-                                </span>
-                              )}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+                {watchedSgId && (loadingSteps || steps.length > 0) && (
+                  <FormField
+                    control={form.control}
+                    name="step_increment_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                          Step Increment{" "}
+                          <span className="text-gray-300 normal-case font-normal">
+                            (optional)
+                          </span>
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={loadingSteps}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="text-sm border-gray-200">
+                              <SelectValue
+                                placeholder={
+                                  loadingSteps ? "Loading..." : "Select step"
+                                }
+                              />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-60">
+                            {steps.map((s) => (
+                              <SelectItem
+                                key={s.id}
+                                value={String(s.id)}
+                                className="pl-3 [&>span:first-child]:hidden"
+                              >
+                                Step {s.step}
+                                {s.monthly_salary != null && (
+                                  <span className="ml-2 text-slate-400 text-xs">
+                                    — ₱
+                                    {Number(s.monthly_salary).toLocaleString(
+                                      "en-PH",
+                                    )}
+                                    /mo
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </>
             )}
 
@@ -703,6 +705,9 @@ function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
 function PositionsSubTable({ item, onRefresh }) {
   const positions = item.positions ?? [];
 
+  const showStep = itemHasSteps(positions);
+  const positionHeaders = getPositionHeaders(showStep);
+
   const [editPos, setEditPos] = useState(null);
   const [deletePos, setDeletePos] = useState(null);
   const [assignPos, setAssignPos] = useState(null);
@@ -725,7 +730,7 @@ function PositionsSubTable({ item, onRefresh }) {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
-                {POSITION_HEADERS.map((h) => (
+                {positionHeaders.map((h) => (
                   <TableHead
                     key={h}
                     className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 py-2.5 text-center whitespace-nowrap"
@@ -740,7 +745,7 @@ function PositionsSubTable({ item, onRefresh }) {
               {positions.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={POSITION_HEADERS.length}
+                    colSpan={positionHeaders.length}
                     className="text-center py-8 text-xs text-slate-400"
                   >
                     No slots provisioned yet.
@@ -771,18 +776,12 @@ function PositionsSubTable({ item, onRefresh }) {
                       className="hover:bg-slate-50/60 transition-colors"
                     >
                       <TableCell className="text-center">
-                        {/* FIX: Display as base_item_number-slot_number (e.g. "3-1").
-                            position_slot_name from the backend contains the title-based
-                            name which belongs in the Position Title column, not here. */}
                         <div className="font-mono text-xs font-semibold text-indigo-600">
                           {item.base_item_number}-{pos.slot_number}
-                          {/* {pos.position_slot_name} */}
                         </div>
                       </TableCell>
 
                       <TableCell className="text-sm text-slate-600 text-center uppercase">
-                        {/* FIX: Fall back to item.title when pos.position_title is empty,
-                            so every slot shows the position title even if not overridden. */}
                         {pos.position_title ?? item.title ?? (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
@@ -796,13 +795,15 @@ function PositionsSubTable({ item, onRefresh }) {
                         )}
                       </TableCell>
 
-                      <TableCell className="text-sm text-slate-600 text-center uppercase">
-                        {pos.step_increment?.step ? (
-                          `Step ${pos.step_increment.step}`
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
-                        )}
-                      </TableCell>
+                      {showStep && (
+                        <TableCell className="text-sm text-slate-600 text-center uppercase">
+                          {pos.step_increment?.step ? (
+                            `Step ${pos.step_increment.step}`
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </TableCell>
+                      )}
 
                       <TableCell className="text-center">
                         <StatusBadge status={pos.status} />
