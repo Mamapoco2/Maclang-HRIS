@@ -1,6 +1,4 @@
 // src/pages/profile/components/ProfileCompletionModal.jsx
-// Updated: PDS file import + full PDS multi-step form + blurred backdrop
-
 import { useState } from "react";
 import {
   Dialog,
@@ -15,11 +13,9 @@ import {
   ShieldCheck,
   AlertTriangle,
   CheckCircle2,
-  CheckCheck,
 } from "lucide-react";
 import { ProfileFormFields } from "./ProfileFormFields";
 import { AvatarUpload } from "./avatarUpload";
-import { PdsUploadButton } from "./pdsUploadButton";
 import { useCompleteProfile } from "@/hooks/useCompleteProfile";
 
 // ── Human-readable labels for the confirm screen ──────────────────────────────
@@ -102,7 +98,7 @@ const SUMMARY_FIELDS = [
   "father_surname",
   "mother_maiden_surname",
   "govt_id_type",
-  "govt_id_type_other", // shown only when govt_id_type === "OTHER"
+  "govt_id_type_other",
   "govt_id_no",
   "govt_id_date_place",
   "license_number",
@@ -144,28 +140,10 @@ function FillStep({
   avatarFile,
   onAvatarSelected,
   onChange,
-  onBulkChange,
   fieldErrors,
   serverError,
   onNext,
 }) {
-  const [importSuccess, setImportSuccess] = useState(false);
-  const [importCount, setImportCount] = useState(0);
-
-  const handleExtracted = (extracted) => {
-    const count = Object.values(extracted).filter((v) =>
-      Array.isArray(v)
-        ? v.length > 0
-        : v !== null && v !== undefined && v !== "",
-    ).length;
-
-    onBulkChange(extracted);
-    setImportCount(count);
-    setImportSuccess(true);
-
-    setTimeout(() => setImportSuccess(false), 4000);
-  };
-
   return (
     <>
       <DialogHeader>
@@ -175,8 +153,10 @@ function FillStep({
         </div>
         <DialogDescription className="text-sm text-muted-foreground">
           Please accomplish your{" "}
-          <strong>Personal Data Sheet (CS Form No. 212, Revised 2025)</strong>.
-          You will only need to do this once.
+          <strong>
+            Personal Data Sheet (CS Form No. 212, Revised 2017 or 2025)
+          </strong>
+          . You will only need to do this once.
         </DialogDescription>
       </DialogHeader>
 
@@ -187,28 +167,6 @@ function FillStep({
       )}
 
       <div className="mt-2 space-y-4">
-        {/* ── PDS Import ─────────────────────────────────────────────────── */}
-        <div className="rounded-md border border-dashed border-muted-foreground/25 bg-muted/30 p-3 space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-            Have an existing PDS file?
-          </p>
-          <PdsUploadButton
-            onExtracted={handleExtracted}
-            onError={(msg) => console.error("PDS extract error:", msg)}
-          />
-
-          {importSuccess && (
-            <div className="flex items-center gap-2 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2 text-xs text-green-700 dark:text-green-400">
-              <CheckCheck className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                Successfully imported <strong>{importCount}</strong> field
-                {importCount !== 1 ? "s" : ""} from your PDS file. Review and
-                edit below before submitting.
-              </span>
-            </div>
-          )}
-        </div>
-
         {/* ── Photo upload ───────────────────────────────────────────────── */}
         <div className="flex flex-col items-center gap-1 py-1">
           <AvatarUpload onFileSelected={onAvatarSelected} />
@@ -341,12 +299,6 @@ export function ProfileCompletionModal({ isOpen, onCompleted }) {
   const handleChange = (key, val) =>
     setValues((prev) => ({ ...prev, [key]: val }));
 
-  // Merge all extracted fields at once (from PDS import).
-  // govt_id_type and govt_id_type_other are both set here when extraction
-  // finds an ID type not in the known dropdown list.
-  const handleBulkChange = (extracted) =>
-    setValues((prev) => ({ ...prev, ...extracted }));
-
   const { submit, isSubmitting, fieldErrors, serverError } = useCompleteProfile(
     () => {
       setStep("fill");
@@ -396,7 +348,6 @@ export function ProfileCompletionModal({ isOpen, onCompleted }) {
               avatarFile={avatarFile}
               onAvatarSelected={setAvatarFile}
               onChange={handleChange}
-              onBulkChange={handleBulkChange}
               fieldErrors={fieldErrors}
               serverError={serverError}
               onNext={() => setStep("confirm")}
