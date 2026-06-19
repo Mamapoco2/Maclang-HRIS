@@ -8,14 +8,12 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// ─── Request: attach token ────────────────────────────────────────────────────
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// ─── Response: handle 401 ────────────────────────────────────────────────────
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -23,8 +21,6 @@ api.interceptors.response.use(
     const url = err.config?.url ?? "";
 
     if (status === 401) {
-      // Don't redirect for profile/status — ProfileGate handles this gracefully.
-      // Don't redirect if we're already on /login (avoids the loop).
       const isProfileCheck = url.includes("/profile/status");
       const isAlreadyOnLogin = window.location.pathname === "/login";
 
