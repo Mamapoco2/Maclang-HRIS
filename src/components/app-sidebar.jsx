@@ -90,6 +90,18 @@ const NAV_MAIN = [
         ],
       },
       {
+        title: "Leave",
+        permission: "leave.view",
+        items: [
+          { title: "Dashboard", url: "/leaveDashboard" },
+          { title: "Approval", url: "/leaveApproval" },
+          { title: "Balance", url: "/leaveBalance" },
+          { title: "Calendar", url: "/leaveCalendar" },
+          { title: "Leave Request", url: "/leaveRequest" },
+          { title: "New Leave Request", url: "/newLeaveRequest" },
+        ],
+      },
+      {
         title: "Employees",
         url: "/employees",
         icon: IconUsers,
@@ -343,20 +355,6 @@ const NAV_MAIN = [
   // },
 
   {
-    title: "Leave",
-    icon: IconPlane,
-    permission: "leave.view",
-    items: [
-      { title: "Dashboard", url: "/leaveDashboard" },
-      { title: "Approval", url: "/leaveApproval" },
-      { title: "Balance", url: "/leaveBalance" },
-      { title: "Calendar", url: "/leaveCalendar" },
-      { title: "Leave Request", url: "/leaveRequest" },
-      { title: "New Leave Request", url: "/newLeaveRequest" },
-    ],
-  },
-
-  {
     title: "Announcement",
     icon: IconSpeakerphone,
     permission: "announcements.view",
@@ -382,7 +380,7 @@ const NAV_MAIN = [
 ];
 
 const NAV_SECONDARY = [
-  { title: "Settings", url: "/settings", icon: IconSettings },
+  // { title: "Settings", url: "/settings", icon: IconSettings },
 ];
 
 const NAV_DOCUMENTS = [{ name: "Reports", url: "#", icon: IconReport }];

@@ -34,7 +34,7 @@ export function ProfileGate({ children }) {
 
           {!error && !forceComplete && isComplete === false && (
             <ProfileCompletionModal
-              isOpen={true}
+              isOpen={false}
               missingFields={missingFields}
               onCompleted={handleCompleted}
             />

@@ -44,6 +44,7 @@ import PublicRoute from "./publicRoute";
 import PermissionRoute from "./permissionRoute";
 import Updates from "../pages/updates/update";
 import Settings from "../pages/settings/settingsPage";
+import AccountPage from "../pages/account/accountPage";
 import { ProfileGate } from "../pages/profile/profileGate";
 import TopPeformerDepartmentPage from "../pages/topPerformer/topDepartmentPerformer/topDepartmentPerformerPage";
 import TopPeformerHospitalPage from "../pages/topPerformer/topHospitalPerformer/topHospitalPerformerPage";
@@ -259,6 +260,7 @@ function AppRoutes() {
 
             <Route path="/updates" element={<Updates />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/account" element={<AccountPage />} />
             <Route
               path="/TopDepartment"
               element={<TopPeformerDepartmentPage />}

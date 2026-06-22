@@ -232,6 +232,7 @@ const COLUMNS = [
   { label: "Mode", width: "min-w-[100px]" },
   { label: "Duration", width: "min-w-[80px]" },
   { label: "Enrolled", width: "min-w-[90px]" },
+  { label: "Priority", width: "min-w-[90px]" },
   { label: "Status", width: "min-w-[100px]" },
   { label: "Actions", width: "min-w-[120px]" },
 ];
@@ -248,6 +249,7 @@ export default function TrainingTable({
   onJoin = () => {},
   joiningId = null,
   userRole = "HR",
+  emptyMessage = "No training programs yet",
 }) {
   const now = useNow();
   const [selectedTraining, setSelectedTraining] = useState(null);
@@ -327,9 +329,7 @@ export default function TrainingTable({
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                       />
                     </svg>
-                    <p className="text-sm text-gray-400">
-                      No training programs yet
-                    </p>
+                    <p className="text-sm text-gray-400">{emptyMessage}</p>
                   </div>
                 </td>
               </tr>
@@ -412,6 +412,20 @@ export default function TrainingTable({
                         isAdmin={!isEmployee && canManage}
                         onClick={(e) => handleEnrolledClick(e, t)}
                       />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {t.priority === "high" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-red-50 text-red-700 border-red-200 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                          High
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-gray-50 text-gray-500 border-gray-200 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+                          Low
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-4 py-3">

@@ -13,6 +13,8 @@ import {
   IconCircleCheck,
   IconPlus,
   IconLoader2,
+  IconFlag,
+  IconFlag3,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -413,43 +415,111 @@ export default function TrainingPage() {
           </div>
         )}
 
-        {/* ── Training Programs Table card ── */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-800">
-                Training Programs
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {trainings.length} program{trainings.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-          </div>
+        {/* ── High Priority Trainings ── */}
+        {(() => {
+          const highPriority = trainings.filter((t) => t.priority === "high");
+          return (
+            <div className="bg-white rounded-xl border border-red-100 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-red-100 bg-red-50/40">
+                <div className="flex items-center gap-2">
+                  <IconFlag size={16} className="text-red-500" />
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-800">
+                      High Priority Trainings
+                    </h2>
+                    <p className="text-xs text-red-400 mt-0.5">
+                      {highPriority.length} program
+                      {highPriority.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          {loading ? (
-            <div className="flex justify-center py-16">
-              <IconLoader2 size={24} className="animate-spin text-gray-300" />
+              {loading ? (
+                <div className="flex justify-center py-16">
+                  <IconLoader2
+                    size={24}
+                    className="animate-spin text-gray-300"
+                  />
+                </div>
+              ) : (
+                <TrainingTable
+                  trainings={highPriority}
+                  onSelect={setSelected}
+                  onView={handleViewTraining}
+                  onEdit={
+                    !isEmployee && canManage ? handleEditTraining : undefined
+                  }
+                  onDelete={
+                    !isEmployee && canManage ? handleDeleteTraining : undefined
+                  }
+                  onAssign={
+                    !isEmployee && canManage ? handleAssignPeople : undefined
+                  }
+                  isEmployee={isEmployee}
+                  canManage={canManage}
+                  onJoin={handleJoin}
+                  joiningId={joiningId}
+                  currentEmployeeId={currentEmployeeId}
+                  emptyMessage="No high priority training programs."
+                />
+              )}
             </div>
-          ) : (
-            <TrainingTable
-              trainings={trainings}
-              onSelect={setSelected}
-              onView={handleViewTraining}
-              onEdit={!isEmployee && canManage ? handleEditTraining : undefined}
-              onDelete={
-                !isEmployee && canManage ? handleDeleteTraining : undefined
-              }
-              onAssign={
-                !isEmployee && canManage ? handleAssignPeople : undefined
-              }
-              isEmployee={isEmployee}
-              canManage={canManage}
-              onJoin={handleJoin}
-              joiningId={joiningId}
-              currentEmployeeId={currentEmployeeId}
-            />
-          )}
-        </div>
+          );
+        })()}
+
+        {/* ── Low Priority Trainings ── */}
+        {(() => {
+          const lowPriority = trainings.filter((t) => t.priority !== "high");
+          return (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/60">
+                <div className="flex items-center gap-2">
+                  <IconFlag3 size={16} className="text-gray-400" />
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-800">
+                      Low Priority Trainings
+                    </h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {lowPriority.length} program
+                      {lowPriority.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-16">
+                  <IconLoader2
+                    size={24}
+                    className="animate-spin text-gray-300"
+                  />
+                </div>
+              ) : (
+                <TrainingTable
+                  trainings={lowPriority}
+                  onSelect={setSelected}
+                  onView={handleViewTraining}
+                  onEdit={
+                    !isEmployee && canManage ? handleEditTraining : undefined
+                  }
+                  onDelete={
+                    !isEmployee && canManage ? handleDeleteTraining : undefined
+                  }
+                  onAssign={
+                    !isEmployee && canManage ? handleAssignPeople : undefined
+                  }
+                  isEmployee={isEmployee}
+                  canManage={canManage}
+                  onJoin={handleJoin}
+                  joiningId={joiningId}
+                  currentEmployeeId={currentEmployeeId}
+                  emptyMessage="No low priority training programs."
+                />
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Modals ── */}

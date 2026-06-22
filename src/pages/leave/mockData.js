@@ -1,31 +1,4 @@
-export const LEAVE_TYPES = [
-  {
-    value: "vacation",
-    label: "Vacation Leave",
-    color: "#6366f1",
-    bg: "#eef2ff",
-  },
-  { value: "sick", label: "Sick Leave", color: "#f59e0b", bg: "#fffbeb" },
-  {
-    value: "emergency",
-    label: "Emergency Leave",
-    color: "#ef4444",
-    bg: "#fef2f2",
-  },
-  {
-    value: "maternity",
-    label: "Maternity Leave",
-    color: "#ec4899",
-    bg: "#fdf2f8",
-  },
-  {
-    value: "paternity",
-    label: "Paternity Leave",
-    color: "#8b5cf6",
-    bg: "#f5f3ff",
-  },
-  { value: "unpaid", label: "Unpaid Leave", color: "#6b7280", bg: "#f9fafb" },
-];
+export { LEAVE_TYPES } from "./leavePolicy";
 
 export const STATUS_CONFIG = {
   approved: {
@@ -383,12 +356,13 @@ export const DEPT_USAGE = [
 ];
 
 export const LEAVE_TYPE_PIE = [
-  { name: "Vacation", value: 42, color: "#6366f1" },
-  { name: "Sick", value: 28, color: "#f59e0b" },
-  { name: "Emergency", value: 8, color: "#ef4444" },
-  { name: "Maternity", value: 12, color: "#ec4899" },
-  { name: "Paternity", value: 5, color: "#8b5cf6" },
-  { name: "Unpaid", value: 5, color: "#6b7280" },
+  { name: "Vacation", value: 32, color: "#3b82f6" },
+  { name: "Sick", value: 22, color: "#f59e0b" },
+  { name: "Maternity", value: 10, color: "#ec4899" },
+  { name: "Paternity", value: 6, color: "#8b5cf6" },
+  { name: "Special Privilege", value: 8, color: "#06b6d4" },
+  { name: "Calamity", value: 5, color: "#64748b" },
+  { name: "Other", value: 17, color: "#6366f1" },
 ];
 
 export const NOTIFICATIONS = [

@@ -1,5 +1,6 @@
 // src/components/NavUser.jsx
 import { useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   IconDotsVertical,
   IconLogout,
@@ -37,6 +38,7 @@ import { AuthContext } from "@/context/authContext";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
+  const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -140,7 +142,7 @@ export function NavUser() {
               <DropdownMenuSeparator />
 
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/account")}>
                   <IconUserCircle />
                   Account
                 </DropdownMenuItem>
@@ -160,9 +162,11 @@ export function NavUser() {
       <AlertDialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+            <AlertDialogTitle>
+              Are you sure you want to log out?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to log out of the system?
+              You will need to sign in again to access the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -172,7 +176,7 @@ export function NavUser() {
               disabled={loggingOut}
               className="bg-red-600 hover:bg-red-700"
             >
-              {loggingOut ? "Logging out..." : "Log out"}
+              {loggingOut ? "Logging out..." : "Logout"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

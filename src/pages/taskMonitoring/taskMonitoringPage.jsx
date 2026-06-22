@@ -11,6 +11,7 @@ const DEPARTMENTS = [
   "Design",
   "Sales",
 ];
+
 const EMPLOYEES = [
   { id: 1, name: "Alicia Reyes", dept: "Engineering", avatar: "AR" },
   { id: 2, name: "Brandon Kim", dept: "Human Resources", avatar: "BK" },
@@ -221,47 +222,31 @@ const INITIAL_TASKS = [
 ];
 
 const PRIORITY_META = {
-  Low: { color: "#3B6D11", bg: "#EAF3DE", border: "#C0DD97" },
-  Medium: { color: "#854F0B", bg: "#FAEEDA", border: "#FAC775" },
-  High: { color: "#185FA5", bg: "#E6F1FB", border: "#B5D4F4" },
-  Critical: { color: "#A32D2D", bg: "#FCEBEB", border: "#F7C1C1" },
+  Low: { badge: "bg-[#EAF3DE] text-[#3B6D11] border-[#C0DD97]" },
+  Medium: { badge: "bg-[#FAEEDA] text-[#854F0B] border-[#FAC775]" },
+  High: { badge: "bg-[#E6F1FB] text-[#185FA5] border-[#B5D4F4]" },
+  Critical: { badge: "bg-[#FCEBEB] text-[#A32D2D] border-[#F7C1C1]" },
 };
 
 const STATUS_META = {
-  Pending: { color: "#5F5E5A", bg: "#F1EFE8", border: "#D3D1C7" },
-  "In Progress": { color: "#185FA5", bg: "#E6F1FB", border: "#85B7EB" },
-  Completed: { color: "#3B6D11", bg: "#EAF3DE", border: "#97C459" },
-  Cancelled: { color: "#5F5E5A", bg: "#F1EFE8", border: "#B4B2A9" },
-  Overdue: { color: "#A32D2D", bg: "#FCEBEB", border: "#F09595" },
+  Pending: { badge: "bg-[#F1EFE8] text-[#5F5E5A] border-[#D3D1C7]" },
+  "In Progress": { badge: "bg-[#E6F1FB] text-[#185FA5] border-[#85B7EB]" },
+  Completed: { badge: "bg-[#EAF3DE] text-[#3B6D11] border-[#97C459]" },
+  Cancelled: { badge: "bg-[#F1EFE8] text-[#5F5E5A] border-[#B4B2A9]" },
+  Overdue: { badge: "bg-[#FCEBEB] text-[#A32D2D] border-[#F09595]" },
 };
 
 const KANBAN_COLS = ["Pending", "In Progress", "Review", "Completed"];
 
 const ACTIVITY_FEED = [
-  { type: "created", text: "Task created", date: "Jun 1, 09:00", icon: "plus" },
-  {
-    type: "assigned",
-    text: "Assigned to Brandon Kim",
-    date: "Jun 1, 09:05",
-    icon: "user",
-  },
-  {
-    type: "updated",
-    text: "Priority set to High",
-    date: "Jun 3, 14:22",
-    icon: "pencil",
-  },
-  {
-    type: "comment",
-    text: "Comment added",
-    date: "Jun 10, 11:15",
-    icon: "message",
-  },
+  { type: "created", text: "Task created", date: "Jun 1, 09:00" },
+  { type: "assigned", text: "Assigned to Brandon Kim", date: "Jun 1, 09:05" },
+  { type: "updated", text: "Priority set to High", date: "Jun 3, 14:22" },
+  { type: "comment", text: "Comment added", date: "Jun 10, 11:15" },
   {
     type: "status",
     text: "Status changed to In Progress",
     date: "Jun 10, 11:30",
-    icon: "refresh",
   },
 ];
 
@@ -281,136 +266,80 @@ const progressColor = (p) => {
 
 const formatDate = (d) => {
   if (!d) return "—";
-  const dt = new Date(d);
-  return dt.toLocaleDateString("en-US", {
+  return new Date(d).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 };
 
-const isOverdue = (dueDate) => new Date(dueDate) < new Date();
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+  { bg: "bg-[#E6F1FB]", text: "text-[#185FA5]" },
+  { bg: "bg-[#EAF3DE]", text: "text-[#3B6D11]" },
+  { bg: "bg-[#FAEEDA]", text: "text-[#854F0B]" },
+  { bg: "bg-[#EEEDFE]", text: "text-[#534AB7]" },
+  { bg: "bg-[#FAECE7]", text: "text-[#993C1D]" },
+];
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
-
-function Avatar({ initials, size = 32 }) {
-  const colors = ["#E6F1FB", "#EAF3DE", "#FAEEDA", "#EEEDFE", "#FAECE7"];
-  const textColors = ["#185FA5", "#3B6D11", "#854F0B", "#534AB7", "#993C1D"];
-
+function Avatar({ initials, size = "md" }) {
   const safeInitials = String(initials || "?");
-  const idx = safeInitials.charCodeAt(0) % colors.length;
+  const idx = safeInitials.charCodeAt(0) % AVATAR_COLORS.length;
+  const { bg, text } = AVATAR_COLORS[idx];
+
+  const sizeClass =
+    {
+      sm: "w-5 h-5 text-[9px]",
+      md: "w-6 h-6 text-[10px]",
+      lg: "w-8 h-8 text-[11px]",
+      xl: "w-9 h-9 text-xs",
+    }[size] ?? "w-8 h-8 text-[11px]";
 
   return (
     <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: colors[idx],
-        color: textColors[idx],
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: size * 0.35,
-        fontWeight: 500,
-        flexShrink: 0,
-      }}
+      className={`${sizeClass} ${bg} ${text} rounded-full flex items-center justify-center font-medium shrink-0`}
     >
       {safeInitials}
     </div>
   );
 }
 
+// ─── Badge ───────────────────────────────────────────────────────────────────
 function Badge({ label, meta }) {
-  const m = meta || { color: "#5F5E5A", bg: "#F1EFE8", border: "#D3D1C7" };
+  const cls = meta?.badge ?? "bg-[#F1EFE8] text-[#5F5E5A] border-[#D3D1C7]";
   return (
     <span
-      style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: 4,
-        fontSize: 11,
-        fontWeight: 500,
-        letterSpacing: "0.02em",
-        background: m.bg,
-        color: m.color,
-        border: `0.5px solid ${m.border}`,
-        whiteSpace: "nowrap",
-      }}
+      className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium tracking-wide border border-solid whitespace-nowrap ${cls}`}
     >
       {label}
     </span>
   );
 }
 
+// ─── ProgressBar ─────────────────────────────────────────────────────────────
 function ProgressBar({ value }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
-        style={{
-          flex: 1,
-          height: 6,
-          background: "#E8E6E0",
-          borderRadius: 3,
-          overflow: "hidden",
-        }}
-      >
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-[#E8E6E0] rounded-full overflow-hidden">
         <div
-          style={{
-            width: `${value}%`,
-            height: "100%",
-            background: progressColor(value),
-            borderRadius: 3,
-            transition: "width 0.3s",
-          }}
+          className="h-full rounded-full transition-[width] duration-300"
+          style={{ width: `${value}%`, background: progressColor(value) }}
         />
       </div>
-      <span style={{ fontSize: 11, color: "#888780", minWidth: 28 }}>
-        {value}%
-      </span>
+      <span className="text-[11px] text-[#888780] min-w-[28px]">{value}%</span>
     </div>
   );
 }
 
+// ─── SummaryCard ─────────────────────────────────────────────────────────────
 function SummaryCard({ label, value, trend, iconPath, accentColor }) {
   return (
-    <div
-      style={{
-        background: "var(--color-background-primary,#fff)",
-        border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-        borderRadius: 12,
-        padding: "1rem 1.25rem",
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 13,
-            color: "var(--color-text-secondary,#888780)",
-            fontWeight: 400,
-          }}
-        >
-          {label}
-        </span>
+    <div className="bg-white border border-[#e0ddd6] rounded-xl p-4 flex flex-col gap-3">
+      <div className="flex justify-between items-start">
+        <span className="text-[13px] text-[#888780] font-normal">{label}</span>
         <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: accentColor + "22",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ background: accentColor + "22" }}
         >
           <svg
             width="16"
@@ -426,18 +355,10 @@ function SummaryCard({ label, value, trend, iconPath, accentColor }) {
           </svg>
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+      <div className="flex items-baseline gap-2">
+        <span className="text-[28px] font-medium text-[#2C2C2A]">{value}</span>
         <span
-          style={{
-            fontSize: 28,
-            fontWeight: 500,
-            color: "var(--color-text-primary,#2C2C2A)",
-          }}
-        >
-          {value}
-        </span>
-        <span
-          style={{ fontSize: 12, color: trend >= 0 ? "#3B6D11" : "#A32D2D" }}
+          className={`text-xs ${trend >= 0 ? "text-[#3B6D11]" : "text-[#A32D2D]"}`}
         >
           {trend >= 0 ? "▲" : "▼"} {Math.abs(trend)}% this month
         </span>
@@ -446,8 +367,8 @@ function SummaryCard({ label, value, trend, iconPath, accentColor }) {
   );
 }
 
-// ─── Notifications Panel ─────────────────────────────────────────────────────
-function NotificationsPanel({ tasks, onClose }) {
+// ─── NotificationsPanel ───────────────────────────────────────────────────────
+function NotificationsPanel({ onClose }) {
   const notifs = [
     {
       id: 1,
@@ -474,52 +395,20 @@ function NotificationsPanel({ tasks, onClose }) {
       type: "success",
     },
   ];
-  const typeColor = {
-    overdue: "#A32D2D",
-    warning: "#854F0B",
-    info: "#185FA5",
-    success: "#3B6D11",
+  const dotColor = {
+    overdue: "bg-[#A32D2D]",
+    warning: "bg-[#854F0B]",
+    info: "bg-[#185FA5]",
+    success: "bg-[#3B6D11]",
   };
-  const typeBg = {
-    overdue: "#FCEBEB",
-    warning: "#FAEEDA",
-    info: "#E6F1FB",
-    success: "#EAF3DE",
-  };
+
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 48,
-        right: 0,
-        width: 320,
-        background: "var(--color-background-primary,#fff)",
-        border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-        borderRadius: 12,
-        boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-        zIndex: 100,
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          padding: "12px 16px",
-          borderBottom: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span style={{ fontWeight: 500, fontSize: 14 }}>Notifications</span>
+    <div className="absolute top-12 right-0 w-80 bg-white border border-[#e0ddd6] rounded-xl shadow-lg z-[100] overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#e0ddd6] flex justify-between items-center">
+        <span className="font-medium text-sm">Notifications</span>
         <button
           onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 18,
-            color: "#888780",
-          }}
+          className="text-[#888780] text-lg leading-none bg-transparent border-none cursor-pointer"
         >
           ×
         </button>
@@ -527,36 +416,14 @@ function NotificationsPanel({ tasks, onClose }) {
       {notifs.map((n) => (
         <div
           key={n.id}
-          style={{
-            padding: "12px 16px",
-            borderBottom: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-            display: "flex",
-            gap: 10,
-          }}
+          className="px-4 py-3 border-b border-[#e0ddd6] flex gap-2.5"
         >
           <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: typeColor[n.type],
-              marginTop: 5,
-              flexShrink: 0,
-            }}
+            className={`w-2 h-2 rounded-full mt-1 shrink-0 ${dotColor[n.type]}`}
           />
           <div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 13,
-                color: "var(--color-text-primary,#2C2C2A)",
-              }}
-            >
-              {n.title}
-            </p>
-            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#888780" }}>
-              {n.time}
-            </p>
+            <p className="m-0 text-[13px] text-[#2C2C2A]">{n.title}</p>
+            <p className="m-0 mt-0.5 text-[11px] text-[#888780]">{n.time}</p>
           </div>
         </div>
       ))}
@@ -564,7 +431,7 @@ function NotificationsPanel({ tasks, onClose }) {
   );
 }
 
-// ─── Create Task Modal ────────────────────────────────────────────────────────
+// ─── CreateTaskModal ──────────────────────────────────────────────────────────
 function CreateTaskModal({ onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
@@ -596,7 +463,6 @@ function CreateTaskModal({ onClose, onSave }) {
       setErrors(e);
       return;
     }
-    const emp = getEmployee(parseInt(form.assignedTo));
     onSave({
       id: `TSK-${String(Math.floor(Math.random() * 900 + 100))}`,
       ...form,
@@ -609,102 +475,46 @@ function CreateTaskModal({ onClose, onSave }) {
     });
   };
 
-  const field = (key, label, required) => (
-    <div>
-      <label
-        style={{
-          display: "block",
-          fontSize: 12,
-          fontWeight: 500,
-          color: "#5F5E5A",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-        {required && " *"}
-      </label>
-      {errors[key] && (
-        <p style={{ fontSize: 11, color: "#A32D2D", margin: "0 0 4px" }}>
-          {errors[key]}
-        </p>
-      )}
-    </div>
+  const inputCls = (key) =>
+    `w-full px-2.5 py-2 rounded-md text-[13px] border outline-none bg-white text-[#2C2C2A] box-border
+    ${errors[key] ? "border-[#F09595]" : "border-[#e0ddd6]"}`;
+
+  const Label = ({ htmlFor, children, required }) => (
+    <label
+      htmlFor={htmlFor}
+      className="block text-xs font-medium text-[#5F5E5A] mb-1"
+    >
+      {children}
+      {required && " *"}
+    </label>
   );
 
-  const inputStyle = (key) => ({
-    width: "100%",
-    padding: "8px 10px",
-    borderRadius: 6,
-    fontSize: 13,
-    border: `0.5px solid ${errors[key] ? "#F09595" : "var(--color-border-tertiary,#e0ddd6)"}`,
-    background: "var(--color-background-primary,#fff)",
-    color: "var(--color-text-primary,#2C2C2A)",
-    boxSizing: "border-box",
-    outline: "none",
-  });
-
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        zIndex: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: "var(--color-background-primary,#fff)",
-          borderRadius: 12,
-          width: "100%",
-          maxWidth: 560,
-          maxHeight: "90vh",
-          overflow: "auto",
-        }}
-      >
-        <div
-          style={{
-            padding: "20px 24px",
-            borderBottom: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            position: "sticky",
-            top: 0,
-            background: "var(--color-background-primary,#fff)",
-            zIndex: 1,
-          }}
-        >
-          <span style={{ fontWeight: 500, fontSize: 16 }}>Create New Task</span>
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl w-full max-w-[560px] max-h-[90vh] overflow-auto">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-[#e0ddd6] flex justify-between items-center sticky top-0 bg-white z-[1]">
+          <span className="font-medium text-base">Create New Task</span>
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 20,
-              color: "#888780",
-            }}
+            className="text-[#888780] text-xl bg-transparent border-none cursor-pointer leading-none"
           >
             ×
           </button>
         </div>
-        <div
-          style={{
-            padding: "20px 24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
+
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-3.5">
+          {/* Title */}
           <div>
-            {field("title", "Task Title", true)}
+            <Label required>Task Title</Label>
+            {errors.title && (
+              <p className="text-[11px] text-[#A32D2D] mt-0 mb-1">
+                {errors.title}
+              </p>
+            )}
             <input
-              style={inputStyle("title")}
+              className={inputCls("title")}
               value={form.title}
               onChange={(e) =>
                 setForm((f) => ({ ...f, title: e.target.value }))
@@ -712,18 +522,16 @@ function CreateTaskModal({ onClose, onSave }) {
               placeholder="Enter task title"
               maxLength={100}
             />
-            <span style={{ fontSize: 11, color: "#B4B2A9" }}>
+            <span className="text-[11px] text-[#B4B2A9]">
               {form.title.length}/100
             </span>
           </div>
+
+          {/* Description */}
           <div>
-            {field("description", "Description")}
+            <Label>Description</Label>
             <textarea
-              style={{
-                ...inputStyle("description"),
-                height: 80,
-                resize: "vertical",
-              }}
+              className={`${inputCls("description")} h-20 resize-y`}
               value={form.description}
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
@@ -732,13 +540,18 @@ function CreateTaskModal({ onClose, onSave }) {
               maxLength={500}
             />
           </div>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
-          >
+
+          {/* Dept + Assignee */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              {field("dept", "Department", true)}
+              <Label required>Department</Label>
+              {errors.dept && (
+                <p className="text-[11px] text-[#A32D2D] mt-0 mb-1">
+                  {errors.dept}
+                </p>
+              )}
               <select
-                style={inputStyle("dept")}
+                className={inputCls("dept")}
                 value={form.dept}
                 onChange={(e) =>
                   setForm((f) => ({
@@ -757,9 +570,14 @@ function CreateTaskModal({ onClose, onSave }) {
               </select>
             </div>
             <div>
-              {field("assignedTo", "Assigned To", true)}
+              <Label required>Assigned To</Label>
+              {errors.assignedTo && (
+                <p className="text-[11px] text-[#A32D2D] mt-0 mb-1">
+                  {errors.assignedTo}
+                </p>
+              )}
               <select
-                style={inputStyle("assignedTo")}
+                className={inputCls("assignedTo")}
                 value={form.assignedTo}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, assignedTo: e.target.value }))
@@ -776,13 +594,13 @@ function CreateTaskModal({ onClose, onSave }) {
               </select>
             </div>
           </div>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
-          >
+
+          {/* Priority + Status */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              {field("priority", "Priority")}
+              <Label>Priority</Label>
               <select
-                style={inputStyle("priority")}
+                className={inputCls("priority")}
                 value={form.priority}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, priority: e.target.value }))
@@ -796,9 +614,9 @@ function CreateTaskModal({ onClose, onSave }) {
               </select>
             </div>
             <div>
-              {field("status", "Status")}
+              <Label>Status</Label>
               <select
-                style={inputStyle("status")}
+                className={inputCls("status")}
                 value={form.status}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, status: e.target.value }))
@@ -812,14 +630,14 @@ function CreateTaskModal({ onClose, onSave }) {
               </select>
             </div>
           </div>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
-          >
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              {field("startDate", "Start Date")}
+              <Label>Start Date</Label>
               <input
                 type="date"
-                style={inputStyle("startDate")}
+                className={inputCls("startDate")}
                 value={form.startDate}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, startDate: e.target.value }))
@@ -827,10 +645,15 @@ function CreateTaskModal({ onClose, onSave }) {
               />
             </div>
             <div>
-              {field("dueDate", "Due Date", true)}
+              <Label required>Due Date</Label>
+              {errors.dueDate && (
+                <p className="text-[11px] text-[#A32D2D] mt-0 mb-1">
+                  {errors.dueDate}
+                </p>
+              )}
               <input
                 type="date"
-                style={inputStyle("dueDate")}
+                className={inputCls("dueDate")}
                 value={form.dueDate}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, dueDate: e.target.value }))
@@ -838,11 +661,13 @@ function CreateTaskModal({ onClose, onSave }) {
               />
             </div>
           </div>
+
+          {/* Hours */}
           <div>
-            {field("estimatedHours", "Estimated Hours")}
+            <Label>Estimated Hours</Label>
             <input
               type="number"
-              style={inputStyle("estimatedHours")}
+              className={inputCls("estimatedHours")}
               value={form.estimatedHours}
               onChange={(e) =>
                 setForm((f) => ({ ...f, estimatedHours: e.target.value }))
@@ -853,44 +678,18 @@ function CreateTaskModal({ onClose, onSave }) {
             />
           </div>
         </div>
-        <div
-          style={{
-            padding: "16px 24px",
-            borderTop: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 8,
-            position: "sticky",
-            bottom: 0,
-            background: "var(--color-background-primary,#fff)",
-          }}
-        >
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[#e0ddd6] flex justify-end gap-2 sticky bottom-0 bg-white">
           <button
             onClick={onClose}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 6,
-              border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-              background: "none",
-              cursor: "pointer",
-              fontSize: 13,
-              color: "var(--color-text-secondary,#5F5E5A)",
-            }}
+            className="px-4 py-2 rounded-md border border-[#e0ddd6] bg-transparent cursor-pointer text-[13px] text-[#5F5E5A] hover:bg-[#F8F7F4] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 6,
-              border: "none",
-              background: "#185FA5",
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 500,
-            }}
+            className="px-4 py-2 rounded-md border-none bg-[#185FA5] text-white cursor-pointer text-[13px] font-medium hover:bg-[#1451891] transition-colors"
           >
             Create Task
           </button>
@@ -900,7 +699,7 @@ function CreateTaskModal({ onClose, onSave }) {
   );
 }
 
-// ─── Task Details Drawer ──────────────────────────────────────────────────────
+// ─── TaskDetailsDrawer ────────────────────────────────────────────────────────
 function TaskDetailsDrawer({ task, onClose, onUpdate }) {
   const [newComment, setNewComment] = useState("");
   const [progress, setProgress] = useState(task.progress);
@@ -908,7 +707,7 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
 
   const addComment = () => {
     if (!newComment.trim()) return;
-    const updated = {
+    onUpdate({
       ...task,
       comments: [
         ...task.comments,
@@ -923,8 +722,7 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
           avatar: "CU",
         },
       ],
-    };
-    onUpdate(updated);
+    });
     setNewComment("");
   };
 
@@ -934,47 +732,19 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 150, display: "flex" }}>
-      <div
-        style={{ flex: 1, background: "rgba(0,0,0,0.3)" }}
-        onClick={onClose}
-      />
-      <div
-        style={{
-          width: 420,
-          maxWidth: "90vw",
-          background: "var(--color-background-primary,#fff)",
-          height: "100vh",
-          overflow: "auto",
-          display: "flex",
-          flexDirection: "column",
-          borderLeft: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-        }}
-      >
-        <div
-          style={{
-            padding: "20px 20px 16px",
-            borderBottom: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
+    <div className="fixed inset-0 z-[150] flex">
+      {/* backdrop */}
+      <div className="flex-1 bg-black/30" onClick={onClose} />
+      {/* panel */}
+      <div className="w-[420px] max-w-[90vw] bg-white h-screen overflow-auto flex flex-col border-l border-[#e0ddd6]">
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 border-b border-[#e0ddd6] flex justify-between items-start">
           <div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                color: "#888780",
-                fontWeight: 500,
-              }}
-            >
+            <p className="m-0 text-[11px] text-[#888780] font-medium">
               {task.id}
             </p>
-            <h3 style={{ margin: "4px 0 8px", fontSize: 15, fontWeight: 500 }}>
-              {task.title}
-            </h3>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <h3 className="mt-1 mb-2 text-[15px] font-medium">{task.title}</h3>
+            <div className="flex gap-1.5 flex-wrap">
               <Badge
                 label={task.priority}
                 meta={PRIORITY_META[task.priority]}
@@ -984,60 +754,30 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 20,
-              color: "#888780",
-              padding: 0,
-              flexShrink: 0,
-            }}
+            className="text-[#888780] text-xl bg-transparent border-none cursor-pointer p-0 shrink-0 leading-none"
           >
             ×
           </button>
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-          }}
-        >
+        {/* Body */}
+        <div className="flex-1 p-5 flex flex-col gap-5">
           {/* Assignee */}
           <div>
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "#888780",
-                margin: "0 0 8px",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
+            <p className="text-[11px] font-medium text-[#888780] mb-2 uppercase tracking-widest">
               Assignee
             </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Avatar initials={emp.avatar} size={32} />
+            <div className="flex items-center gap-2">
+              <Avatar initials={emp.avatar} size="lg" />
               <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>
-                  {emp.name}
-                </p>
-                <p style={{ margin: 0, fontSize: 11, color: "#888780" }}>
-                  {emp.dept}
-                </p>
+                <p className="m-0 text-[13px] font-medium">{emp.name}</p>
+                <p className="m-0 text-[11px] text-[#888780]">{emp.dept}</p>
               </div>
             </div>
           </div>
 
-          {/* Details grid */}
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
-          >
+          {/* Detail grid */}
+          <div className="grid grid-cols-2 gap-3">
             {[
               ["Department", task.dept],
               ["Created By", task.createdBy],
@@ -1048,18 +788,9 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
                 task.estimatedHours ? `${task.estimatedHours}h` : "—",
               ],
             ].map(([k, v]) => (
-              <div
-                key={k}
-                style={{
-                  padding: "10px 12px",
-                  background: "var(--color-background-secondary,#F8F7F4)",
-                  borderRadius: 8,
-                }}
-              >
-                <p style={{ margin: 0, fontSize: 11, color: "#888780" }}>{k}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 500 }}>
-                  {v}
-                </p>
+              <div key={k} className="px-3 py-2.5 bg-[#F8F7F4] rounded-lg">
+                <p className="m-0 text-[11px] text-[#888780]">{k}</p>
+                <p className="m-0 mt-0.5 text-[13px] font-medium">{v}</p>
               </div>
             ))}
           </div>
@@ -1067,26 +798,10 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
           {/* Description */}
           {task.description && (
             <div>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "#888780",
-                  margin: "0 0 6px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
+              <p className="text-[11px] font-medium text-[#888780] mb-1.5 uppercase tracking-widest">
                 Description
               </p>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "var(--color-text-primary,#2C2C2A)",
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
+              <p className="text-[13px] text-[#2C2C2A] leading-relaxed m-0">
                 {task.description}
               </p>
             </div>
@@ -1094,16 +809,7 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
 
           {/* Progress */}
           <div>
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "#888780",
-                margin: "0 0 8px",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
+            <p className="text-[11px] font-medium text-[#888780] mb-2 uppercase tracking-widest">
               Progress — {progress}%
             </p>
             <input
@@ -1112,17 +818,10 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
               max="100"
               value={progress}
               onChange={(e) => updateProgress(parseInt(e.target.value))}
-              style={{ width: "100%", accentColor: progressColor(progress) }}
+              className="w-full"
+              style={{ accentColor: progressColor(progress) }}
             />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 11,
-                color: "#B4B2A9",
-                marginTop: 2,
-              }}
-            >
+            <div className="flex justify-between text-[11px] text-[#B4B2A9] mt-0.5">
               <span>0%</span>
               <span>50%</span>
               <span>100%</span>
@@ -1131,55 +830,16 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
 
           {/* Activity */}
           <div>
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "#888780",
-                margin: "0 0 10px",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
+            <p className="text-[11px] font-medium text-[#888780] mb-2.5 uppercase tracking-widest">
               Activity
             </p>
-            <div style={{ position: "relative", paddingLeft: 20 }}>
-              <div
-                style={{
-                  position: "absolute",
-                  left: 7,
-                  top: 0,
-                  bottom: 0,
-                  width: 1,
-                  background: "var(--color-border-tertiary,#e0ddd6)",
-                }}
-              />
+            <div className="relative pl-5">
+              <div className="absolute left-[7px] top-0 bottom-0 w-px bg-[#e0ddd6]" />
               {ACTIVITY_FEED.map((a, i) => (
-                <div key={i} style={{ position: "relative", marginBottom: 12 }}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: -17,
-                      top: 3,
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: "#B4B2A9",
-                      border: "2px solid var(--color-background-primary,#fff)",
-                    }}
-                  />
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 12,
-                      color: "var(--color-text-primary,#2C2C2A)",
-                    }}
-                  >
-                    {a.text}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 11, color: "#888780" }}>
-                    {a.date}
-                  </p>
+                <div key={i} className="relative mb-3">
+                  <div className="absolute -left-[17px] top-[3px] w-[7px] h-[7px] rounded-full bg-[#B4B2A9] border-2 border-white" />
+                  <p className="m-0 text-xs text-[#2C2C2A]">{a.text}</p>
+                  <p className="m-0 text-[11px] text-[#888780]">{a.date}</p>
                 </div>
               ))}
             </div>
@@ -1187,80 +847,32 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
 
           {/* Comments */}
           <div>
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "#888780",
-                margin: "0 0 10px",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
+            <p className="text-[11px] font-medium text-[#888780] mb-2.5 uppercase tracking-widest">
               Comments ({task.comments.length})
             </p>
             {task.comments.map((c) => (
-              <div
-                key={c.id}
-                style={{ display: "flex", gap: 8, marginBottom: 12 }}
-              >
-                <Avatar initials={c.avatar} size={28} />
-                <div
-                  style={{
-                    flex: 1,
-                    background: "var(--color-background-secondary,#F8F7F4)",
-                    borderRadius: 8,
-                    padding: "8px 12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: 4,
-                    }}
-                  >
-                    <span style={{ fontSize: 12, fontWeight: 500 }}>
-                      {c.author}
-                    </span>
-                    <span style={{ fontSize: 11, color: "#888780" }}>
-                      {c.date}
-                    </span>
+              <div key={c.id} className="flex gap-2 mb-3">
+                <Avatar initials={c.avatar} size="md" />
+                <div className="flex-1 bg-[#F8F7F4] rounded-lg px-3 py-2">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-xs font-medium">{c.author}</span>
+                    <span className="text-[11px] text-[#888780]">{c.date}</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>
-                    {c.text}
-                  </p>
+                  <p className="m-0 text-xs leading-relaxed">{c.text}</p>
                 </div>
               </div>
             ))}
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div className="flex gap-2 mt-2">
               <input
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addComment()}
                 placeholder="Add a comment..."
-                style={{
-                  flex: 1,
-                  padding: "8px 10px",
-                  borderRadius: 6,
-                  border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                  fontSize: 12,
-                  background: "var(--color-background-primary,#fff)",
-                  color: "var(--color-text-primary,#2C2C2A)",
-                  outline: "none",
-                }}
+                className="flex-1 px-2.5 py-2 rounded-md border border-[#e0ddd6] text-xs bg-white text-[#2C2C2A] outline-none"
               />
               <button
                 onClick={addComment}
-                style={{
-                  padding: "8px 12px",
-                  background: "#185FA5",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
+                className="px-3 py-2 bg-[#185FA5] text-white border-none rounded-md cursor-pointer text-xs hover:bg-[#145191] transition-colors"
               >
                 Send
               </button>
@@ -1272,7 +884,7 @@ function TaskDetailsDrawer({ task, onClose, onUpdate }) {
   );
 }
 
-// ─── Kanban Board ─────────────────────────────────────────────────────────────
+// ─── KanbanBoard ──────────────────────────────────────────────────────────────
 function KanbanBoard({ tasks, onTaskClick, onStatusChange }) {
   const [draggedId, setDraggedId] = useState(null);
 
@@ -1285,22 +897,15 @@ function KanbanBoard({ tasks, onTaskClick, onStatusChange }) {
     }),
   }));
 
-  const colColors = {
-    Pending: "#888780",
-    "In Progress": "#185FA5",
-    Review: "#854F0B",
-    Completed: "#3B6D11",
+  const colTextColor = {
+    Pending: "text-[#888780]",
+    "In Progress": "text-[#185FA5]",
+    Review: "text-[#854F0B]",
+    Completed: "text-[#3B6D11]",
   };
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-        gap: 12,
-        padding: "4px 0",
-      }}
-    >
+    <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] py-1">
       {cols.map((col) => (
         <div
           key={col.title}
@@ -1310,44 +915,17 @@ function KanbanBoard({ tasks, onTaskClick, onStatusChange }) {
               onStatusChange(draggedId, col.title);
             setDraggedId(null);
           }}
-          style={{
-            background: "var(--color-background-secondary,#F8F7F4)",
-            borderRadius: 10,
-            padding: 12,
-            minHeight: 300,
-          }}
+          className="bg-[#F8F7F4] rounded-[10px] p-3 min-h-[300px]"
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: colColors[col.title],
-              }}
-            >
+          <div className="flex justify-between items-center mb-3">
+            <span className={`text-xs font-medium ${colTextColor[col.title]}`}>
               {col.title}
             </span>
-            <span
-              style={{
-                fontSize: 11,
-                background: "var(--color-background-primary,#fff)",
-                padding: "1px 7px",
-                borderRadius: 10,
-                color: "#888780",
-                border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-              }}
-            >
+            <span className="text-[11px] bg-white px-1.5 py-px rounded-full text-[#888780] border border-[#e0ddd6]">
               {col.tasks.length}
             </span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {col.tasks.map((task) => {
               const emp = getEmployee(task.assignedTo);
               return (
@@ -1356,44 +934,22 @@ function KanbanBoard({ tasks, onTaskClick, onStatusChange }) {
                   draggable
                   onDragStart={() => setDraggedId(task.id)}
                   onClick={() => onTaskClick(task)}
-                  style={{
-                    background: "var(--color-background-primary,#fff)",
-                    border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                    borderRadius: 8,
-                    padding: 10,
-                    cursor: "grab",
-                    transition: "box-shadow 0.15s",
-                  }}
+                  className="bg-white border border-[#e0ddd6] rounded-lg p-2.5 cursor-grab hover:shadow-sm transition-shadow"
                 >
-                  <p
-                    style={{
-                      margin: "0 0 6px",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      lineHeight: 1.4,
-                    }}
-                  >
+                  <p className="m-0 mb-1.5 text-xs font-medium leading-snug">
                     {task.title}
                   </p>
-                  <div style={{ marginBottom: 6 }}>
+                  <div className="mb-1.5">
                     <ProgressBar value={task.progress} />
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
+                  <div className="flex justify-between items-center">
                     <Badge
                       label={task.priority}
                       meta={PRIORITY_META[task.priority]}
                     />
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 4 }}
-                    >
-                      <Avatar initials={emp.avatar} size={20} />
-                      <span style={{ fontSize: 10, color: "#888780" }}>
+                    <div className="flex items-center gap-1">
+                      <Avatar initials={emp.avatar} size="sm" />
+                      <span className="text-[10px] text-[#888780]">
                         {formatDate(task.dueDate).split(",")[0]}
                       </span>
                     </div>
@@ -1402,16 +958,7 @@ function KanbanBoard({ tasks, onTaskClick, onStatusChange }) {
               );
             })}
             {col.tasks.length === 0 && (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "20px 0",
-                  color: "#B4B2A9",
-                  fontSize: 12,
-                  border: "1px dashed var(--color-border-tertiary,#e0ddd6)",
-                  borderRadius: 8,
-                }}
-              >
+              <div className="text-center py-5 text-[#B4B2A9] text-xs border border-dashed border-[#e0ddd6] rounded-lg">
                 Drop tasks here
               </div>
             )}
@@ -1422,7 +969,7 @@ function KanbanBoard({ tasks, onTaskClick, onStatusChange }) {
   );
 }
 
-// ─── Analytics View ───────────────────────────────────────────────────────────
+// ─── AnalyticsView ────────────────────────────────────────────────────────────
 function AnalyticsView({ tasks }) {
   const byDept = useMemo(() => {
     const m = {};
@@ -1461,114 +1008,60 @@ function AnalyticsView({ tasks }) {
   const total = byStatus.reduce((s, [, v]) => s + v, 0);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: 12,
-        }}
-      >
+    <div className="flex flex-col gap-4">
+      {/* KPI row */}
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
         {[
-          ["Completion Rate", `${completionRate}%`, "#3B6D11"],
-          ["Avg. Progress", `${avgProgress}%`, "#185FA5"],
+          ["Completion Rate", `${completionRate}%`, "text-[#3B6D11]"],
+          ["Avg. Progress", `${avgProgress}%`, "text-[#185FA5]"],
           [
             "Overdue Rate",
             `${Math.round((tasks.filter((t) => t.status === "Overdue").length / tasks.length) * 100)}%`,
-            "#A32D2D",
+            "text-[#A32D2D]",
           ],
           [
             "Active Tasks",
             tasks.filter((t) => t.status === "In Progress").length,
-            "#854F0B",
+            "text-[#854F0B]",
           ],
         ].map(([label, value, color]) => (
           <div
             key={label}
-            style={{
-              background: "var(--color-background-primary,#fff)",
-              border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-              borderRadius: 10,
-              padding: "12px 14px",
-            }}
+            className="bg-white border border-[#e0ddd6] rounded-[10px] px-3.5 py-3"
           >
-            <p style={{ margin: "0 0 4px", fontSize: 11, color: "#888780" }}>
-              {label}
-            </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 500, color }}>
-              {value}
-            </p>
+            <p className="m-0 mb-1 text-[11px] text-[#888780]">{label}</p>
+            <p className={`m-0 text-[22px] font-medium ${color}`}>{value}</p>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* Tasks by Department */}
-        <div
-          style={{
-            background: "var(--color-background-primary,#fff)",
-            border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-            borderRadius: 10,
-            padding: "14px 16px",
-          }}
-        >
-          <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 500 }}>
+      {/* Charts row */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* By department */}
+        <div className="bg-white border border-[#e0ddd6] rounded-[10px] px-4 py-3.5">
+          <p className="m-0 mb-3.5 text-[13px] font-medium">
             Tasks by department
           </p>
           {byDept.slice(0, 6).map(([dept, count]) => (
-            <div key={dept} style={{ marginBottom: 10 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 4,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: "var(--color-text-secondary,#5F5E5A)",
-                  }}
-                >
-                  {dept}
-                </span>
-                <span style={{ fontSize: 12, fontWeight: 500 }}>{count}</span>
+            <div key={dept} className="mb-2.5">
+              <div className="flex justify-between mb-1">
+                <span className="text-xs text-[#5F5E5A]">{dept}</span>
+                <span className="text-xs font-medium">{count}</span>
               </div>
-              <div
-                style={{
-                  height: 5,
-                  background: "#E8E6E0",
-                  borderRadius: 3,
-                  overflow: "hidden",
-                }}
-              >
+              <div className="h-[5px] bg-[#E8E6E0] rounded-full overflow-hidden">
                 <div
-                  style={{
-                    width: `${(count / maxDept) * 100}%`,
-                    height: "100%",
-                    background: "#185FA5",
-                    borderRadius: 3,
-                  }}
+                  className="h-full bg-[#185FA5] rounded-full"
+                  style={{ width: `${(count / maxDept) * 100}%` }}
                 />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Status breakdown */}
-        <div
-          style={{
-            background: "var(--color-background-primary,#fff)",
-            border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-            borderRadius: 10,
-            padding: "14px 16px",
-          }}
-        >
-          <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 500 }}>
-            Status breakdown
-          </p>
-          {/* Simple donut via SVG */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        {/* Status donut */}
+        <div className="bg-white border border-[#e0ddd6] rounded-[10px] px-4 py-3.5">
+          <p className="m-0 mb-3.5 text-[13px] font-medium">Status breakdown</p>
+          <div className="flex items-center gap-4">
             <svg width="80" height="80" viewBox="0 0 80 80">
               {(() => {
                 let offset = 0;
@@ -1605,36 +1098,20 @@ function AnalyticsView({ tasks }) {
                 textAnchor="middle"
                 fontSize="14"
                 fontWeight="500"
-                fill="var(--color-text-primary,#2C2C2A)"
+                fill="#2C2C2A"
               >
                 {total}
               </text>
             </svg>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {byStatus.map(([status, count]) => (
-                <div
-                  key={status}
-                  style={{ display: "flex", alignItems: "center", gap: 6 }}
-                >
+                <div key={status} className="flex items-center gap-1.5">
                   <div
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 2,
-                      background: statusColors[status] || "#888780",
-                      flexShrink: 0,
-                    }}
+                    className="w-2 h-2 rounded-sm shrink-0"
+                    style={{ background: statusColors[status] || "#888780" }}
                   />
-                  <span style={{ fontSize: 11, color: "#5F5E5A" }}>
-                    {status}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 500,
-                      marginLeft: "auto",
-                    }}
-                  >
+                  <span className="text-[11px] text-[#5F5E5A]">{status}</span>
+                  <span className="text-[11px] font-medium ml-auto">
                     {count}
                   </span>
                 </div>
@@ -1644,16 +1121,9 @@ function AnalyticsView({ tasks }) {
         </div>
       </div>
 
-      {/* Monthly trend placeholder */}
-      <div
-        style={{
-          background: "var(--color-background-primary,#fff)",
-          border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-          borderRadius: 10,
-          padding: "14px 16px",
-        }}
-      >
-        <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 500 }}>
+      {/* Trend chart */}
+      <div className="bg-white border border-[#e0ddd6] rounded-[10px] px-4 py-3.5">
+        <p className="m-0 mb-3.5 text-[13px] font-medium">
           Monthly completion trend
         </p>
         <svg
@@ -1669,22 +1139,10 @@ function AnalyticsView({ tasks }) {
               y1={y}
               x2="520"
               y2={y}
-              stroke="var(--color-border-tertiary,#e0ddd6)"
+              stroke="#e0ddd6"
               strokeWidth="0.5"
             />
           ))}
-          {[
-            [0, 65],
-            [87, 50],
-            [174, 75],
-            [261, 40],
-            [348, 80],
-            [435, 60],
-            [520, 85],
-          ].reduce((acc, [x, y], i, arr) => {
-            if (i === 0) return `M${x},${100 - y}`;
-            return acc + ` L${x},${100 - y}`;
-          }, "")}
           <polyline
             points="0,35 87,50 174,25 261,60 348,20 435,40 520,15"
             fill="none"
@@ -1708,7 +1166,7 @@ function AnalyticsView({ tasks }) {
               x={i * 87}
               y="98"
               fontSize="10"
-              fill="var(--color-text-secondary,#888780)"
+              fill="#888780"
               textAnchor="middle"
             >
               {m}
@@ -1720,10 +1178,10 @@ function AnalyticsView({ tasks }) {
   );
 }
 
-// ─── Main Task Monitoring Module ──────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function TaskMonitoringModule() {
   const [tasks, setTasks] = useState(INITIAL_TASKS);
-  const [view, setView] = useState("table"); // table | kanban | analytics
+  const [view, setView] = useState("table");
   const [search, setSearch] = useState("");
   const [filterPriority, setFilterPriority] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -1737,7 +1195,6 @@ export default function TaskMonitoringModule() {
   const [selectedRows, setSelectedRows] = useState([]);
   const PAGE_SIZE = 8;
 
-  // Stats
   const stats = useMemo(
     () => ({
       total: tasks.length,
@@ -1749,7 +1206,6 @@ export default function TaskMonitoringModule() {
     [tasks],
   );
 
-  // Filtered + sorted tasks
   const filtered = useMemo(() => {
     let out = tasks.filter((t) => {
       const q = search.toLowerCase();
@@ -1799,23 +1255,17 @@ export default function TaskMonitoringModule() {
     }
   };
 
-  const updateTask = useCallback(
-    (updated) => {
-      setTasks((ts) => ts.map((t) => (t.id === updated.id ? updated : t)));
-      if (selectedTask?.id === updated.id) setSelectedTask(updated);
-    },
-    [selectedTask],
-  );
+  const updateTask = useCallback((updated) => {
+    setTasks((ts) => ts.map((t) => (t.id === updated.id ? updated : t)));
+    setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
+  }, []);
 
   const createTask = (task) => {
     setTasks((ts) => [task, ...ts]);
     setShowCreate(false);
   };
-
-  const changeStatus = (id, status) => {
+  const changeStatus = (id, status) =>
     setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, status } : t)));
-  };
-
   const toggleRow = (id) =>
     setSelectedRows((s) =>
       s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
@@ -1825,80 +1275,27 @@ export default function TaskMonitoringModule() {
   const toggleAll = () =>
     setSelectedRows(allSelected ? [] : pageData.map((t) => t.id));
 
-  const thStyle = (field) => ({
-    padding: "10px 12px",
-    textAlign: "left",
-    fontSize: 11,
-    fontWeight: 500,
-    color: "#888780",
-    borderBottom: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-    cursor: "pointer",
-    userSelect: "none",
-    whiteSpace: "nowrap",
-    background:
-      sortField === field
-        ? "var(--color-background-secondary,#F8F7F4)"
-        : "transparent",
-  });
+  const thCls = (field) =>
+    `px-3 py-2.5 text-left text-[11px] font-medium text-[#888780] border-b border-[#e0ddd6] cursor-pointer select-none whitespace-nowrap
+    ${sortField === field ? "bg-[#F8F7F4]" : "bg-transparent"}`;
 
-  const tdStyle = {
-    padding: "10px 12px",
-    fontSize: 12,
-    color: "var(--color-text-primary,#2C2C2A)",
-    borderBottom: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-    verticalAlign: "middle",
-  };
+  const tdCls =
+    "px-3 py-2.5 text-xs text-[#2C2C2A] border-b border-[#e0ddd6] align-middle";
 
   const SortIndicator = ({ field }) =>
     sortField === field ? (
-      <span style={{ marginLeft: 3 }}>{sortDir === "asc" ? "↑" : "↓"}</span>
+      <span className="ml-0.5">{sortDir === "asc" ? "↑" : "↓"}</span>
     ) : (
-      <span style={{ marginLeft: 3, opacity: 0.3 }}>↕</span>
+      <span className="ml-0.5 opacity-30">↕</span>
     );
 
   return (
-    <div
-      style={{
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        background: "var(--color-background-tertiary,#f4f4f4)",
-        minHeight: "100vh",
-        color: "var(--color-text-primary,#2C2C2A)",
-      }}
-    >
-      {/* Header */}
-      <header
-        style={{
-          background: "var(--color-background-primary,#fff)",
-          borderBottom: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-          padding: "0 24px",
-          height: 56,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginRight: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              background: "#185FA5",
-              borderRadius: 6,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+    <div className="font-sans h-screen text-[#2C2C2A]">
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <header className="bg-white border-b border-[#e0ddd6] px-6 h-14 flex items-center gap-3 sticky top-0 z-50">
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 mr-2">
+          <div className="w-7 h-7 bg-[#185FA5] rounded-md flex items-center justify-center">
             <svg
               width="14"
               height="14"
@@ -1912,12 +1309,13 @@ export default function TaskMonitoringModule() {
               <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
           </div>
-          <span style={{ fontWeight: 500, fontSize: 14, whiteSpace: "nowrap" }}>
+          <span className="font-medium text-sm whitespace-nowrap">
             Task Monitoring
           </span>
         </div>
 
-        <div style={{ flex: 1, position: "relative", maxWidth: 360 }}>
+        {/* Search */}
+        <div className="flex-1 relative max-w-[360px]">
           <svg
             width="14"
             height="14"
@@ -1927,12 +1325,7 @@ export default function TaskMonitoringModule() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{
-              position: "absolute",
-              left: 10,
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.35-4.35" />
@@ -1944,45 +1337,15 @@ export default function TaskMonitoringModule() {
               setPage(1);
             }}
             placeholder="Search tasks..."
-            style={{
-              width: "100%",
-              paddingLeft: 32,
-              paddingRight: 10,
-              height: 34,
-              borderRadius: 6,
-              border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-              fontSize: 13,
-              background: "var(--color-background-secondary,#F8F7F4)",
-              color: "var(--color-text-primary,#2C2C2A)",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
+            className="w-full pl-8 pr-2.5 h-[34px] rounded-md border border-[#e0ddd6] text-[13px] bg-[#F8F7F4] text-[#2C2C2A] outline-none box-border"
           />
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginLeft: "auto",
-          }}
-        >
+        {/* Actions */}
+        <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={() => setShowCreate(true)}
-            style={{
-              padding: "7px 14px",
-              background: "#185FA5",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 500,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
+            className="px-3.5 py-1.5 bg-[#185FA5] text-white border-none rounded-md cursor-pointer text-xs font-medium flex items-center gap-1.5 hover:bg-[#145191] transition-colors"
           >
             <svg
               width="12"
@@ -1997,82 +1360,14 @@ export default function TaskMonitoringModule() {
             </svg>
             New Task
           </button>
-          <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setShowNotifs((s) => !s)}
-              style={{
-                width: 34,
-                height: 34,
-                border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                background: "none",
-                borderRadius: 6,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative",
-              }}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
-              </svg>
-              <span
-                style={{
-                  position: "absolute",
-                  top: 6,
-                  right: 6,
-                  width: 6,
-                  height: 6,
-                  background: "#A32D2D",
-                  borderRadius: "50%",
-                }}
-              />
-            </button>
-            {showNotifs && (
-              <NotificationsPanel
-                tasks={tasks}
-                onClose={() => setShowNotifs(false)}
-              />
-            )}
-          </div>
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 6,
-              background: "#E6F1FB",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#185FA5" }}>
-              HR
-            </span>
-          </div>
+
+          {/* Avatar */}
         </div>
       </header>
 
-      <main style={{ padding: "20px 24px", maxWidth: 1400, margin: "0 auto" }}>
-        {/* Summary Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
+      <main className="px-6 py-5 max-w-screen mx-auto">
+        {/* ── Summary Cards ──────────────────────────────────────────────── */}
+        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(160px,1fr))] mb-5">
           <SummaryCard
             label="Total Tasks"
             value={stats.total}
@@ -2110,29 +1405,10 @@ export default function TaskMonitoringModule() {
           />
         </div>
 
-        {/* View Switcher + Filters */}
-        <div
-          style={{
-            background: "var(--color-background-primary,#fff)",
-            border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-            borderRadius: 10,
-            padding: "12px 16px",
-            marginBottom: 16,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: 2,
-              background: "var(--color-background-secondary,#F8F7F4)",
-              borderRadius: 6,
-              padding: 2,
-            }}
-          >
+        {/* ── Toolbar ─────────────────────────────────────────────────────── */}
+        <div className="bg-white border border-[#e0ddd6] rounded-[10px] px-4 py-3 mb-4 flex flex-wrap gap-2.5 items-center">
+          {/* View switcher */}
+          <div className="flex gap-0.5 bg-[#F8F7F4] rounded-md p-0.5">
             {[
               ["table", "Table"],
               ["kanban", "Kanban"],
@@ -2141,82 +1417,46 @@ export default function TaskMonitoringModule() {
               <button
                 key={v}
                 onClick={() => setView(v)}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 5,
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: view === v ? 500 : 400,
-                  background:
+                className={`px-3 py-1 rounded text-xs cursor-pointer border-none transition-all
+                  ${
                     view === v
-                      ? "var(--color-background-primary,#fff)"
-                      : "transparent",
-                  color:
-                    view === v
-                      ? "var(--color-text-primary,#2C2C2A)"
-                      : "#888780",
-                  boxShadow:
-                    view === v ? "0 0.5px 2px rgba(0,0,0,0.06)" : "none",
-                }}
+                      ? "bg-white text-[#2C2C2A] font-medium shadow-sm"
+                      : "bg-transparent text-[#888780] font-normal"
+                  }`}
               >
                 {label}
               </button>
             ))}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              flexWrap: "wrap",
-              marginLeft: "auto",
-            }}
-          >
+          {/* Filters */}
+          <div className="flex gap-2 flex-wrap ml-auto">
             {[
               [
-                "filterPriority",
                 filterPriority,
                 setFilterPriority,
                 ["Low", "Medium", "High", "Critical"],
                 "Priority",
               ],
               [
-                "filterStatus",
                 filterStatus,
                 setFilterStatus,
                 ["Pending", "In Progress", "Completed", "Overdue", "Cancelled"],
                 "Status",
               ],
-              [
-                "filterDept",
-                filterDept,
-                setFilterDept,
-                DEPARTMENTS,
-                "Department",
-              ],
-            ].map(([key, val, setter, opts, placeholder]) => (
+              [filterDept, setFilterDept, DEPARTMENTS, "Department"],
+            ].map(([val, setter, opts, label], i) => (
               <select
-                key={key}
+                key={i}
                 value={val}
                 onChange={(e) => {
                   setter(e.target.value);
                   setPage(1);
                 }}
-                style={{
-                  padding: "5px 8px",
-                  borderRadius: 6,
-                  border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                  fontSize: 12,
-                  background: val
-                    ? "#E6F1FB"
-                    : "var(--color-background-primary,#fff)",
-                  color: val ? "#185FA5" : "#888780",
-                  outline: "none",
-                  cursor: "pointer",
-                }}
+                className={`px-2 py-1 rounded-md border text-xs outline-none cursor-pointer transition-colors
+                  ${val ? "border-[#B5D4F4] bg-[#E6F1FB] text-[#185FA5]" : "border-[#e0ddd6] bg-white text-[#888780]"}`}
               >
-                <option value="">{placeholder}: All</option>
+                <option value="">{label}: All</option>
                 {opts.map((o) => (
                   <option key={o} value={o}>
                     {o}
@@ -2231,15 +1471,7 @@ export default function TaskMonitoringModule() {
                   setFilterStatus("");
                   setFilterDept("");
                 }}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: 6,
-                  border: "0.5px solid #F09595",
-                  background: "#FCEBEB",
-                  color: "#A32D2D",
-                  fontSize: 12,
-                  cursor: "pointer",
-                }}
+                className="px-2.5 py-1 rounded-md border border-[#F09595] bg-[#FCEBEB] text-[#A32D2D] text-xs cursor-pointer hover:bg-[#f7d5d5] transition-colors"
               >
                 Clear filters
               </button>
@@ -2247,22 +1479,9 @@ export default function TaskMonitoringModule() {
           </div>
         </div>
 
-        {/* Bulk Actions */}
+        {/* ── Bulk Actions ────────────────────────────────────────────────── */}
         {selectedRows.length > 0 && (
-          <div
-            style={{
-              background: "#E6F1FB",
-              border: "0.5px solid #B5D4F4",
-              borderRadius: 8,
-              padding: "8px 14px",
-              marginBottom: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              fontSize: 12,
-              color: "#185FA5",
-            }}
-          >
+          <div className="bg-[#E6F1FB] border border-[#B5D4F4] rounded-lg px-3.5 py-2 mb-3 flex items-center gap-2.5 text-xs text-[#185FA5]">
             <span>
               {selectedRows.length} task{selectedRows.length > 1 ? "s" : ""}{" "}
               selected
@@ -2278,15 +1497,7 @@ export default function TaskMonitoringModule() {
                 );
                 setSelectedRows([]);
               }}
-              style={{
-                padding: "4px 10px",
-                borderRadius: 5,
-                border: "none",
-                background: "#185FA5",
-                color: "#fff",
-                cursor: "pointer",
-                fontSize: 11,
-              }}
+              className="px-2.5 py-1 rounded bg-[#185FA5] text-white border-none cursor-pointer text-[11px] hover:bg-[#145191] transition-colors"
             >
               Mark completed
             </button>
@@ -2297,64 +1508,32 @@ export default function TaskMonitoringModule() {
                 );
                 setSelectedRows([]);
               }}
-              style={{
-                padding: "4px 10px",
-                borderRadius: 5,
-                border: "none",
-                background: "#FCEBEB",
-                color: "#A32D2D",
-                cursor: "pointer",
-                fontSize: 11,
-              }}
+              className="px-2.5 py-1 rounded bg-[#FCEBEB] text-[#A32D2D] border-none cursor-pointer text-[11px] hover:bg-[#f7d5d5] transition-colors"
             >
               Delete
             </button>
             <button
               onClick={() => setSelectedRows([])}
-              style={{
-                marginLeft: "auto",
-                background: "none",
-                border: "none",
-                color: "#185FA5",
-                cursor: "pointer",
-                fontSize: 12,
-              }}
+              className="ml-auto bg-transparent border-none text-[#185FA5] cursor-pointer text-xs"
             >
               Cancel
             </button>
           </div>
         )}
 
-        {/* Table View */}
+        {/* ── Table View ──────────────────────────────────────────────────── */}
         {view === "table" && (
-          <div
-            style={{
-              background: "var(--color-background-primary,#fff)",
-              border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-              borderRadius: 10,
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  minWidth: 900,
-                }}
-              >
+          <div className="bg-white border border-[#e0ddd6] rounded-[10px] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse min-w-[900px]">
                 <thead>
-                  <tr
-                    style={{
-                      background: "var(--color-background-secondary,#F8F7F4)",
-                    }}
-                  >
-                    <th style={{ ...thStyle(), width: 36, cursor: "default" }}>
+                  <tr className="bg-[#F8F7F4]">
+                    <th className="px-3 py-2.5 w-9 border-b border-[#e0ddd6]">
                       <input
                         type="checkbox"
                         checked={allSelected}
                         onChange={toggleAll}
-                        style={{ cursor: "pointer" }}
+                        className="cursor-pointer"
                       />
                     </th>
                     {[
@@ -2369,14 +1548,16 @@ export default function TaskMonitoringModule() {
                     ].map(([field, label]) => (
                       <th
                         key={field}
-                        style={thStyle(field)}
+                        className={thCls(field)}
                         onClick={() => handleSort(field)}
                       >
                         {label}
                         <SortIndicator field={field} />
                       </th>
                     ))}
-                    <th style={{ ...thStyle(), cursor: "default" }}>Actions</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] font-medium text-[#888780] border-b border-[#e0ddd6]">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2384,12 +1565,7 @@ export default function TaskMonitoringModule() {
                     <tr>
                       <td
                         colSpan={10}
-                        style={{
-                          textAlign: "center",
-                          padding: "32px",
-                          color: "#888780",
-                          fontSize: 13,
-                        }}
+                        className="text-center py-8 text-[#888780] text-[13px]"
                       >
                         No tasks match your filters
                       </td>
@@ -2400,11 +1576,11 @@ export default function TaskMonitoringModule() {
                     return (
                       <tr
                         key={task.id}
-                        style={{ cursor: "pointer" }}
+                        className="cursor-pointer hover:bg-[#fafaf9] transition-colors"
                         onClick={() => setSelectedTask(task)}
                       >
                         <td
-                          style={tdStyle}
+                          className={tdCls}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleRow(task.id);
@@ -2414,91 +1590,60 @@ export default function TaskMonitoringModule() {
                             type="checkbox"
                             checked={selectedRows.includes(task.id)}
                             onChange={() => toggleRow(task.id)}
-                            style={{ cursor: "pointer" }}
+                            className="cursor-pointer"
                           />
                         </td>
                         <td
-                          style={{
-                            ...tdStyle,
-                            fontSize: 11,
-                            color: "#888780",
-                            fontFamily: "monospace",
-                          }}
+                          className={`${tdCls} font-mono text-[11px] text-[#888780]`}
                         >
                           {task.id}
                         </td>
-                        <td style={{ ...tdStyle, maxWidth: 200 }}>
-                          <span style={{ fontWeight: 500, fontSize: 12 }}>
+                        <td className={`${tdCls} max-w-[200px]`}>
+                          <span className="font-medium text-xs">
                             {task.title}
                           </span>
                         </td>
-                        <td style={tdStyle}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                            }}
-                          >
-                            <Avatar initials={emp.avatar} size={24} />
-                            <span
-                              style={{ fontSize: 12, whiteSpace: "nowrap" }}
-                            >
+                        <td className={tdCls}>
+                          <div className="flex items-center gap-1.5">
+                            <Avatar initials={emp.avatar} size="md" />
+                            <span className="text-xs whitespace-nowrap">
                               {emp.name}
                             </span>
                           </div>
                         </td>
-                        <td style={tdStyle}>
-                          <span style={{ fontSize: 12, color: "#5F5E5A" }}>
+                        <td className={tdCls}>
+                          <span className="text-xs text-[#5F5E5A]">
                             {task.dept}
                           </span>
                         </td>
-                        <td style={tdStyle}>
+                        <td className={tdCls}>
                           <Badge
                             label={task.priority}
                             meta={PRIORITY_META[task.priority]}
                           />
                         </td>
-                        <td style={tdStyle}>
+                        <td className={tdCls}>
                           <Badge
                             label={task.status}
                             meta={STATUS_META[task.status]}
                           />
                         </td>
-                        <td style={{ ...tdStyle, minWidth: 120 }}>
+                        <td className={`${tdCls} min-w-[120px]`}>
                           <ProgressBar value={task.progress} />
                         </td>
                         <td
-                          style={{
-                            ...tdStyle,
-                            whiteSpace: "nowrap",
-                            fontSize: 12,
-                            color:
-                              task.status === "Overdue"
-                                ? "#A32D2D"
-                                : "var(--color-text-primary,#2C2C2A)",
-                          }}
+                          className={`${tdCls} whitespace-nowrap text-xs ${task.status === "Overdue" ? "text-[#A32D2D]" : "text-[#2C2C2A]"}`}
                         >
                           {formatDate(task.dueDate)}
                         </td>
                         <td
-                          style={tdStyle}
+                          className={tdCls}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div style={{ display: "flex", gap: 4 }}>
+                          <div className="flex gap-1">
                             <button
                               onClick={() => setSelectedTask(task)}
-                              title="View details"
-                              style={{
-                                padding: "4px 8px",
-                                border:
-                                  "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                                background: "none",
-                                borderRadius: 5,
-                                cursor: "pointer",
-                                fontSize: 11,
-                                color: "#185FA5",
-                              }}
+                              className="px-2 py-1 border border-[#e0ddd6] bg-transparent rounded text-[11px] text-[#185FA5] cursor-pointer hover:bg-[#E6F1FB] transition-colors"
                             >
                               View
                             </button>
@@ -2511,17 +1656,7 @@ export default function TaskMonitoringModule() {
                                     : "Completed",
                                 )
                               }
-                              title="Toggle complete"
-                              style={{
-                                padding: "4px 8px",
-                                border:
-                                  "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                                background: "none",
-                                borderRadius: 5,
-                                cursor: "pointer",
-                                fontSize: 11,
-                                color: "#3B6D11",
-                              }}
+                              className="px-2 py-1 border border-[#e0ddd6] bg-transparent rounded text-[11px] text-[#3B6D11] cursor-pointer hover:bg-[#EAF3DE] transition-colors"
                             >
                               {task.status === "Completed"
                                 ? "Reopen"
@@ -2537,35 +1672,17 @@ export default function TaskMonitoringModule() {
             </div>
 
             {/* Pagination */}
-            <div
-              style={{
-                padding: "12px 16px",
-                borderTop: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: 8,
-              }}
-            >
-              <span style={{ fontSize: 12, color: "#888780" }}>
+            <div className="px-4 py-3 border-t border-[#e0ddd6] flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs text-[#888780]">
                 Showing {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
                 –{Math.min(page * PAGE_SIZE, filtered.length)} of{" "}
                 {filtered.length} tasks
               </span>
-              <div style={{ display: "flex", gap: 4 }}>
+              <div className="flex gap-1">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: 5,
-                    border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                    background: "none",
-                    cursor: page === 1 ? "default" : "pointer",
-                    fontSize: 12,
-                    opacity: page === 1 ? 0.4 : 1,
-                  }}
+                  className="px-2.5 py-1 rounded border border-[#e0ddd6] bg-transparent text-xs cursor-pointer disabled:opacity-40"
                 >
                   Prev
                 </button>
@@ -2574,20 +1691,8 @@ export default function TaskMonitoringModule() {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      style={{
-                        padding: "5px 10px",
-                        borderRadius: 5,
-                        border:
-                          "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                        background: page === p ? "#185FA5" : "none",
-                        color:
-                          page === p
-                            ? "#fff"
-                            : "var(--color-text-primary,#2C2C2A)",
-                        cursor: "pointer",
-                        fontSize: 12,
-                        minWidth: 32,
-                      }}
+                      className={`px-2.5 py-1 rounded border border-[#e0ddd6] text-xs cursor-pointer min-w-[32px] transition-colors
+                      ${page === p ? "bg-[#185FA5] text-white border-[#185FA5]" : "bg-transparent text-[#2C2C2A] hover:bg-[#F8F7F4]"}`}
                     >
                       {p}
                     </button>
@@ -2596,15 +1701,7 @@ export default function TaskMonitoringModule() {
                 <button
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: 5,
-                    border: "0.5px solid var(--color-border-tertiary,#e0ddd6)",
-                    background: "none",
-                    cursor: page === totalPages ? "default" : "pointer",
-                    fontSize: 12,
-                    opacity: page === totalPages ? 0.4 : 1,
-                  }}
+                  className="px-2.5 py-1 rounded border border-[#e0ddd6] bg-transparent text-xs cursor-pointer disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -2613,7 +1710,7 @@ export default function TaskMonitoringModule() {
           </div>
         )}
 
-        {/* Kanban View */}
+        {/* ── Kanban View ─────────────────────────────────────────────────── */}
         {view === "kanban" && (
           <KanbanBoard
             tasks={filtered}
@@ -2622,13 +1719,13 @@ export default function TaskMonitoringModule() {
           />
         )}
 
-        {/* Analytics View */}
+        {/* ── Analytics View ───────────────────────────────────────────────── */}
         {view === "analytics" && (
           <AnalyticsView tasks={filtered.length ? filtered : tasks} />
         )}
       </main>
 
-      {/* Modals / Drawers */}
+      {/* ── Modals / Drawers ─────────────────────────────────────────────── */}
       {showCreate && (
         <CreateTaskModal
           onClose={() => setShowCreate(false)}

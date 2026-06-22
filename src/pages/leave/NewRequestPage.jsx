@@ -1,69 +1,93 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "./PageHeader";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
 } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FormField, Input, Textarea, Select } from "./FormField";
 import { useToast } from "./Toast";
-import { LEAVE_TYPES, EMPLOYEES, CURRENT_USER } from "./mockData";
-import { Upload, AlertCircle, Info, CalendarDays } from "lucide-react";
+import { LEAVE_TYPES, CURRENT_USER, LEAVE_BALANCES } from "./mockData";
+import {
+  LEAVE_TYPE_MAP,
+  HIDE_DATE_SELECTION,
+} from "./leavePolicy";
+import { LeaveTypeFields } from "./components/LeaveTypeFields";
+import { LeaveRequirementsPanel } from "./components/LeaveRequirementsPanel";
+import { CalendarDays, User, Building2, Briefcase } from "lucide-react";
 import { daysBetween, formatDate } from "./utils";
 
-const schema = z
-  .object({
-    employeeId: z.string().min(1, "Employee is required"),
-    leaveType: z.string().min(1, "Leave type is required"),
-    startDate: z.string().min(1, "Start date is required"),
-    endDate: z.string().min(1, "End date is required"),
-    reason: z
-      .string()
-      .min(10, "Reason must be at least 10 characters")
-      .max(500, "Max 500 characters"),
-    emergencyContact: z.string().optional(),
-    halfDay: z.boolean().optional(),
-  })
-  .refine((d) => new Date(d.endDate) >= new Date(d.startDate), {
-    message: "End date cannot be before start date",
-    path: ["endDate"],
-  });
-
 export default function NewRequestPage({ onNavigate }) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [halfDay, setHalfDay] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [attachment, setAttachment] = useState(null);
+  const [uploads, setUploads] = useState({});
+  const [vawcFiles, setVawcFiles] = useState([]);
+
+  const goTo = (page) => {
+    const routes = {
+      requests: "/leaveRequest",
+      dashboard: "/leaveDashboard",
+    };
+    if (onNavigate) onNavigate(page);
+    else navigate(routes[page] || "/leaveDashboard");
+  };
+
+  const employee = CURRENT_USER;
+  const balance = LEAVE_BALANCES.find((b) => b.employeeId === employee.id);
 
   const {
     register,
     handleSubmit,
     watch,
-    formState: { errors },
     reset,
   } = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: { employeeId: CURRENT_USER.id, halfDay: false },
+    defaultValues: {
+      leaveType: "",
+      startDate: "",
+      endDate: "",
+      reason: "",
+      destination: "within_ph",
+      locationType: "within_ph",
+    },
   });
 
+  const leaveType = watch("leaveType");
   const startDate = watch("startDate");
   const endDate = watch("endDate");
   const reason = watch("reason") || "";
-  const days =
-    startDate && endDate && new Date(endDate) >= new Date(startDate)
-      ? halfDay
-        ? 0.5
-        : daysBetween(startDate, endDate)
-      : 0;
+  const hideDates = HIDE_DATE_SELECTION.has(leaveType);
+  const typeConfig = LEAVE_TYPE_MAP[leaveType];
 
-  const onSubmit = async (data) => {
+  const days =
+    !hideDates && startDate && endDate && new Date(endDate) >= new Date(startDate)
+      ? daysBetween(startDate, endDate)
+      : hideDates && leaveType === "monetization"
+        ? watch("creditsToMonetize") || "—"
+        : 0;
+
+  const setUpload = (key, file) => {
+    setUploads((prev) => {
+      const next = { ...prev };
+      if (file) next[key] = file;
+      else delete next[key];
+      return next;
+    });
+  };
+
+  const uploadedFilesForPanel = { ...uploads };
+  if (leaveType === "vawc" && vawcFiles.length > 0) {
+    vawcFiles.forEach((f, i) => {
+      uploadedFilesForPanel[`vawc_${i}`] = f;
+    });
+    uploadedFilesForPanel.bpo = vawcFiles[0];
+  }
+
+  const onSubmit = async () => {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 1200));
     setLoading(false);
@@ -73,47 +97,65 @@ export default function NewRequestPage({ onNavigate }) {
       variant: "success",
     });
     reset();
-    onNavigate("requests");
+    setUploads({});
+    setVawcFiles([]);
+    goTo("requests");
   };
 
+  const LeaveTypeIcon = typeConfig?.icon;
+
   return (
-    <div className="p-5">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <PageHeader
-        title="Apply for Leave"
-        description="Submit a new leave request for approval"
+        title="Leave Application"
+        description="Submit a leave request in accordance with CSC leave policies"
+        breadcrumbs={["Leave Management", "Apply for Leave"]}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="lg:col-span-2 space-y-5"
-        >
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="xl:col-span-2 space-y-5">
+          {/* Employee Information */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-[var(--primary)]" />
+                <CardTitle>Employee Information</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-[var(--muted)]/40 border border-[var(--border)]">
+                <div>
+                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5">Full Name</p>
+                  <p className="text-sm font-semibold">{employee.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5 flex items-center gap-1">
+                    <Building2 className="w-3 h-3" /> Department
+                  </p>
+                  <p className="text-sm font-semibold">{employee.department}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5 flex items-center gap-1">
+                    <Briefcase className="w-3 h-3" /> Designation
+                  </p>
+                  <p className="text-sm font-semibold">{employee.designation}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5">Email</p>
+                  <p className="text-sm font-semibold truncate">{employee.email}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Leave Details */}
           <Card>
             <CardHeader>
               <CardTitle>Leave Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                label="Employee"
-                required
-                error={errors.employeeId?.message}
-              >
-                <Select {...register("employeeId")} error={!!errors.employeeId}>
-                  <option value="">Select employee</option>
-                  {EMPLOYEES.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name} — {e.department}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-
-              <FormField
-                label="Leave Type"
-                required
-                error={errors.leaveType?.message}
-              >
-                <Select {...register("leaveType")} error={!!errors.leaveType}>
+              <FormField label="Leave Type" required>
+                <Select {...register("leaveType")}>
                   <option value="">Select leave type</option>
                   {LEAVE_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -123,264 +165,176 @@ export default function NewRequestPage({ onNavigate }) {
                 </Select>
               </FormField>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  label="Start Date"
-                  required
-                  error={errors.startDate?.message}
+              {typeConfig && LeaveTypeIcon && (
+                <div
+                  className="flex items-center gap-2 p-2.5 rounded-lg text-sm"
+                  style={{ backgroundColor: typeConfig.bg, color: typeConfig.color }}
                 >
-                  <Input
-                    type="date"
-                    {...register("startDate")}
-                    error={!!errors.startDate}
-                  />
-                </FormField>
-                <FormField
-                  label="End Date"
-                  required
-                  error={errors.endDate?.message}
-                >
-                  <Input
-                    type="date"
-                    {...register("endDate")}
-                    error={!!errors.endDate}
-                    min={startDate || undefined}
-                  />
-                </FormField>
-              </div>
-
-              {/* Half Day Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border)] bg-[var(--muted)]/30">
-                <div>
-                  <p className="text-sm font-medium text-[var(--foreground)]">
-                    Half Day
-                  </p>
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    Apply for only half a working day
-                  </p>
+                  <LeaveTypeIcon className="w-4 h-4" />
+                  <span className="font-medium">{typeConfig.label}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setHalfDay((v) => !v)}
-                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${halfDay ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${halfDay ? "translate-x-5" : "translate-x-0"}`}
-                  />
-                </button>
-              </div>
+              )}
+
+              {!hideDates && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Start Date" required>
+                      <Input type="date" {...register("startDate")} />
+                    </FormField>
+                    <FormField label="End Date" required>
+                      <Input
+                        type="date"
+                        {...register("endDate")}
+                        min={startDate || undefined}
+                      />
+                    </FormField>
+                  </div>
+
+                  <FormField label="Number of Days" hint="Auto-calculated from date range">
+                    <Input
+                      readOnly
+                      value={days > 0 ? `${days} day${days !== 1 ? "s" : ""}` : "—"}
+                      className="bg-[var(--muted)]/50 cursor-not-allowed"
+                    />
+                  </FormField>
+                </>
+              )}
 
               <FormField
-                label="Reason"
-                required
-                error={errors.reason?.message}
+                label="Reason for Leave"
+                required={leaveType !== "monetization"}
                 hint={`${reason.length}/500 characters`}
               >
                 <Textarea
                   rows={4}
+                  maxLength={500}
                   placeholder="Please describe the reason for your leave request..."
                   {...register("reason")}
-                  error={!!errors.reason}
                 />
               </FormField>
 
-              <FormField
-                label="Emergency Contact"
-                hint="Optional – contact person during your leave"
-              >
-                <Input
-                  placeholder="Name and phone number"
-                  {...register("emergencyContact")}
-                />
-              </FormField>
+              <LeaveTypeFields
+                leaveType={leaveType}
+                register={register}
+                uploads={uploads}
+                setUpload={setUpload}
+                setMultiUpload={setVawcFiles}
+                vawcFiles={vawcFiles}
+              />
             </CardContent>
           </Card>
 
-          {/* Attachment */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Attachment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  const file = e.dataTransfer.files[0];
-                  if (file) setAttachment(file);
-                }}
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-                  dragOver
-                    ? "border-[var(--primary)] bg-[var(--accent)]"
-                    : "border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--muted)]/30"
-                }`}
-                onClick={() => document.getElementById("file-input").click()}
-              >
-                <input
-                  id="file-input"
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  onChange={(e) => setAttachment(e.target.files[0])}
-                />
-                <Upload className="w-8 h-8 text-[var(--muted-foreground)] mx-auto mb-3" />
-                {attachment ? (
-                  <div>
-                    <p className="text-sm font-medium text-[var(--foreground)]">
-                      {attachment.name}
-                    </p>
-                    <p className="text-xs text-[var(--muted-foreground)]">
-                      {(attachment.size / 1024).toFixed(1)} KB
-                    </p>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAttachment(null);
-                      }}
-                      className="text-xs text-red-600 mt-1 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm font-medium text-[var(--foreground)]">
-                      Drop files here or click to upload
-                    </p>
-                    <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                      PDF, JPG, PNG, DOC up to 10MB
-                    </p>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button type="submit" loading={loading} className="flex-1">
               Submit Leave Request
             </Button>
             <Button
               type="button"
               variant="outline"
-              onClick={() => onNavigate("requests")}
+              onClick={() => goTo("requests")}
             >
               Cancel
             </Button>
           </div>
         </form>
 
-        {/* Summary Card */}
+        {/* Right Sidebar */}
         <div className="space-y-4">
+          <LeaveRequirementsPanel
+            leaveType={leaveType}
+            uploadedFiles={uploadedFilesForPanel}
+          />
+
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-[var(--primary)]" />
-                <CardTitle>Request Summary</CardTitle>
+                <CardTitle className="text-base">Leave Summary</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {days > 0 ? (
-                <div className="text-center p-4 bg-[var(--accent)] rounded-xl">
-                  <p className="text-4xl font-bold text-[var(--primary)]">
+              {!hideDates && days > 0 ? (
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
+                  <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
                     {days}
                   </p>
                   <p className="text-sm text-[var(--muted-foreground)] mt-1">
                     {days === 1 ? "day" : "days"} requested
                   </p>
                 </div>
+              ) : hideDates && leaveType === "monetization" ? (
+                <div className="text-center p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl">
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                    {watch("creditsToMonetize") || "—"}
+                  </p>
+                  <p className="text-sm text-[var(--muted-foreground)] mt-1">
+                    credits to monetize
+                  </p>
+                </div>
               ) : (
                 <div className="text-center p-4 bg-[var(--muted)] rounded-xl">
                   <p className="text-sm text-[var(--muted-foreground)]">
-                    Select dates to preview
+                    {hideDates ? "No date range required" : "Select dates to preview"}
                   </p>
                 </div>
               )}
-              {startDate && (
+              {startDate && !hideDates && (
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--muted-foreground)]">From</span>
                   <span className="font-medium">{formatDate(startDate)}</span>
                 </div>
               )}
-              {endDate && (
+              {endDate && !hideDates && (
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--muted-foreground)]">To</span>
                   <span className="font-medium">{formatDate(endDate)}</span>
                 </div>
               )}
-              {halfDay && (
+              {typeConfig && (
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--muted-foreground)]">Type</span>
-                  <span className="font-medium">Half Day</span>
+                  <span className="font-medium text-right max-w-[60%] truncate">
+                    {typeConfig.label}
+                  </span>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Policy Info */}
-          <Card>
-            <CardContent className="pt-5">
-              <div className="flex gap-2">
-                <Info className="w-4 h-4 text-[var(--primary)] flex-shrink-0 mt-0.5" />
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    Leave Policy
-                  </p>
-                  {[
-                    "Submit requests at least 3 days in advance",
-                    "Medical certificate required for sick leave > 3 days",
-                    "Emergency leaves need manager confirmation",
-                    "Unused vacation is carried forward up to 5 days",
-                  ].map((p, i) => (
-                    <p
-                      key={i}
-                      className="text-xs text-[var(--muted-foreground)] flex items-start gap-1.5"
-                    >
-                      <span className="w-1 h-1 rounded-full bg-[var(--muted-foreground)] mt-1.5 flex-shrink-0" />
-                      {p}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Available Balance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Available Balance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { label: "Vacation", remaining: 16, total: 21 },
-                { label: "Sick", remaining: 14, total: 15 },
-                { label: "Emergency", remaining: 5, total: 5 },
-              ].map((b) => (
-                <div key={b.label}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[var(--muted-foreground)]">
-                      {b.label}
-                    </span>
-                    <span className="font-medium text-[var(--foreground)]">
-                      {b.remaining}/{b.total}
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[var(--muted)] rounded-full">
-                    <div
-                      className="h-full bg-[var(--primary)] rounded-full"
-                      style={{ width: `${(b.remaining / b.total) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          {balance && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Available Balance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[
+                  { label: "Vacation", data: balance.vacation, color: "#3b82f6" },
+                  { label: "Sick", data: balance.sick, color: "#f59e0b" },
+                ].map((b) => {
+                  const remaining = b.data.total - b.data.used + b.data.carryForward;
+                  return (
+                    <div key={b.label}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-[var(--muted-foreground)]">{b.label}</span>
+                        <span className="font-medium">
+                          {remaining}/{b.data.total}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-[var(--muted)] rounded-full">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min((remaining / b.data.total) * 100, 100)}%`,
+                            background: b.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "./PageHeader";
 import { StatCard } from "./StatCard";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { formatDate, formatDateShort } from "./utils";
-import { initializeAutoYearlyUpdate } from "@/services/holidayService"; // adjust path if needed
+import { formatDate } from "./utils";
+import { initializeAutoYearlyUpdate } from "@/services/holidayService";
 import {
   LEAVE_REQUESTS,
   HOLIDAYS,
   MONTHLY_TRENDS,
   LEAVE_TYPE_PIE,
   ACTIVITIES,
+  LEAVE_BALANCES,
+  CURRENT_USER,
 } from "./mockData";
 import {
   AreaChart,
@@ -30,17 +33,16 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  Calendar,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  TrendingUp,
-  Users,
   Palmtree,
   Plus,
   ArrowRight,
-  Sparkles,
   Gift,
+  Thermometer,
+  BarChart3,
+  PieChartIcon,
+  Clock,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 const COLORS = [
@@ -62,9 +64,33 @@ const rejectedCount = LEAVE_REQUESTS.filter(
   (r) => r.status === "rejected",
 ).length;
 
-export default function DashboardPage({ onNavigate }) {
+const userBalance = LEAVE_BALANCES.find(
+  (b) => b.employeeId === CURRENT_USER.id,
+);
+const vacationRemaining = userBalance
+  ? userBalance.vacation.total -
+    userBalance.vacation.used +
+    userBalance.vacation.carryForward
+  : 0;
+const sickRemaining = userBalance
+  ? userBalance.sick.total - userBalance.sick.used + userBalance.sick.carryForward
+  : 0;
+
+export default function DashboardPage({ onNavigate: onNavigateProp }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
-  const [holidays, setHolidays] = useState(HOLIDAYS); // fallback to mock data
+  const [holidays, setHolidays] = useState(HOLIDAYS);
+
+  const onNavigate = (page) => {
+    const routes = {
+      "new-request": "/NewLeaveRequest",
+      requests: "/leaveRequest",
+      balances: "/leaveBalance",
+      approvals: "/leaveApproval",
+    };
+    if (onNavigateProp) onNavigateProp(page);
+    else navigate(routes[page] || "/leaveDashboard");
+  };
 
   useEffect(() => {
     const cleanup = initializeAutoYearlyUpdate((updatedHolidays) => {
@@ -129,17 +155,23 @@ export default function DashboardPage({ onNavigate }) {
 function OverviewTab({ onNavigate, upcomingHolidays }) {
   return (
     <div className="space-y-6">
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
-          title="Total Leave Balance"
-          value="18 days"
-          subtitle="Vacation + Sick remaining"
-          icon={Calendar}
+          title="Vacation Leave Balance"
+          value={`${vacationRemaining} days`}
+          subtitle={`of ${userBalance?.vacation.total ?? 21} total`}
+          icon={Palmtree}
           color="indigo"
-          trend="up"
-          trendValue="3 carried"
           className="animate-fade-in stagger-1"
+        />
+        <StatCard
+          title="Sick Leave Balance"
+          value={`${sickRemaining} days`}
+          subtitle={`of ${userBalance?.sick.total ?? 15} total`}
+          icon={Thermometer}
+          color="amber"
+          className="animate-fade-in stagger-2"
         />
         <StatCard
           title="Pending Requests"
@@ -147,19 +179,15 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
           subtitle="Awaiting approval"
           icon={Clock}
           color="amber"
-          trend="up"
-          trendValue="+1 today"
-          className="animate-fade-in stagger-2"
+          className="animate-fade-in stagger-3"
         />
         <StatCard
-          title="Approved Leaves"
+          title="Approved Requests"
           value={approvedCount}
           subtitle="This year"
           icon={CheckCircle2}
           color="emerald"
-          trend="up"
-          trendValue="+2 this month"
-          className="animate-fade-in stagger-3"
+          className="animate-fade-in stagger-4"
         />
         <StatCard
           title="Rejected Requests"
@@ -167,46 +195,38 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
           subtitle="This year"
           icon={XCircle}
           color="red"
-          className="animate-fade-in stagger-4"
+          className="animate-fade-in stagger-5 col-span-2 lg:col-span-1"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Leave Trend Chart */}
-        <Card className="lg:col-span-2 animate-fade-in stagger-3">
+      {/* Chart Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="animate-fade-in">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Leave Trends</CardTitle>
+                <CardTitle>Leave Usage Overview</CardTitle>
                 <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
                   Monthly leave usage this year
                 </p>
               </div>
-              <TrendingUp className="w-4 h-4 text-[var(--muted-foreground)]" />
+              <BarChart3 className="w-4 h-4 text-[var(--muted-foreground)]" />
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <AreaChart
                 data={MONTHLY_TRENDS}
                 margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="vacation" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="sick" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="emergency" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="other" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -236,7 +256,7 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
                 <Area
                   type="monotone"
                   dataKey="vacation"
-                  stroke="#6366f1"
+                  stroke="#3b82f6"
                   fill="url(#vacation)"
                   strokeWidth={2}
                   name="Vacation"
@@ -249,93 +269,117 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
                   strokeWidth={2}
                   name="Sick"
                 />
-                <Area
-                  type="monotone"
-                  dataKey="emergency"
-                  stroke="#ef4444"
-                  fill="url(#emergency)"
-                  strokeWidth={2}
-                  name="Emergency"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="other"
-                  stroke="#8b5cf6"
-                  fill="url(#other)"
-                  strokeWidth={2}
-                  name="Other"
-                />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Upcoming Holidays */}
-        <Card className="animate-fade-in stagger-4">
+        <Card className="animate-fade-in">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Upcoming Holidays</CardTitle>
-              <Gift className="w-4 h-4 text-[var(--muted-foreground)]" />
+              <div>
+                <CardTitle>Leave Distribution by Type</CardTitle>
+                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                  Breakdown of leave availed this year
+                </p>
+              </div>
+              <PieChartIcon className="w-4 h-4 text-[var(--muted-foreground)]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {upcomingHolidays.length > 0 ? (
-              upcomingHolidays.map((h) => {
-                const dateObj = new Date(h.date);
-                const day = dateObj.toLocaleDateString("en-US", {
-                  weekday: "short",
-                });
-                const month = dateObj
-                  .toLocaleDateString("en-US", { month: "short" })
-                  .toUpperCase();
-                const num = dateObj.getDate();
-
-                return (
-                  <div
-                    key={h.id ?? h.date}
-                    className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--muted)]/50 hover:bg-[var(--muted)] transition-colors group"
-                  >
-                    {/* Date block */}
-                    <div className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-[var(--primary)]/10 flex-shrink-0">
-                      <span className="text-[10px] font-semibold text-[var(--primary)] leading-none">
-                        {month}
-                      </span>
-                      <span className="text-lg font-bold text-[var(--primary)] leading-tight">
-                        {num}
-                      </span>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[var(--foreground)] truncate">
-                        {h.name ?? h.localName}
-                      </p>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {day}
-                      </p>
-                    </div>
-
-                    {/* Type badge */}
-                    <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
-                        h.type === "public" || h.types?.includes("Public")
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                          : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400"
-                      }`}
-                    >
-                      {h.type ?? (h.types?.[0] || "holiday")}
-                    </span>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
-                No upcoming holidays
-              </p>
-            )}
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={LEAVE_TYPE_PIE}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  {LEAVE_TYPE_PIE.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: "11px" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="animate-fade-in stagger-4 max-w-lg">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Upcoming Holidays</CardTitle>
+            <Gift className="w-4 h-4 text-[var(--muted-foreground)]" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {upcomingHolidays.length > 0 ? (
+            upcomingHolidays.map((h) => {
+              const dateObj = new Date(h.date);
+              const day = dateObj.toLocaleDateString("en-US", {
+                weekday: "short",
+              });
+              const month = dateObj
+                .toLocaleDateString("en-US", { month: "short" })
+                .toUpperCase();
+              const num = dateObj.getDate();
+
+              return (
+                <div
+                  key={h.id ?? h.date}
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--muted)]/50 hover:bg-[var(--muted)] transition-colors group"
+                >
+                  <div className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-[var(--primary)]/10 flex-shrink-0">
+                    <span className="text-[10px] font-semibold text-[var(--primary)] leading-none">
+                      {month}
+                    </span>
+                    <span className="text-lg font-bold text-[var(--primary)] leading-tight">
+                      {num}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[var(--foreground)] truncate">
+                      {h.name ?? h.localName}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      {day}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
+                      h.type === "public" || h.types?.includes("Public")
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                        : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400"
+                    }`}
+                  >
+                    {h.type ?? (h.types?.[0] || "holiday")}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
+              No upcoming holidays
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activities */}
@@ -390,9 +434,18 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
           </CardHeader>
           <CardContent className="space-y-4">
             {[
-              { label: "Vacation Leave", used: 5, total: 21, color: "#6366f1" },
-              { label: "Sick Leave", used: 1, total: 15, color: "#f59e0b" },
-              { label: "Emergency Leave", used: 0, total: 5, color: "#ef4444" },
+              {
+                label: "Vacation Leave",
+                used: userBalance?.vacation.used ?? 5,
+                total: userBalance?.vacation.total ?? 21,
+                color: "#3b82f6",
+              },
+              {
+                label: "Sick Leave",
+                used: userBalance?.sick.used ?? 1,
+                total: userBalance?.sick.total ?? 15,
+                color: "#f59e0b",
+              },
             ].map((item) => (
               <div key={item.label}>
                 <div className="flex items-center justify-between mb-1.5">

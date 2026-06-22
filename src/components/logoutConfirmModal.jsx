@@ -13,15 +13,16 @@ export default function LogoutConfirmDialog({
   onClose,
   onConfirm,
   loading = false,
+  title = "Log out",
+  description = "Are you sure you want to log out of your account?",
+  confirmLabel = "Log out",
 }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Log out</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to log out of your account?
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <DialogFooter className="flex justify-end gap-2">
@@ -29,7 +30,7 @@ export default function LogoutConfirmDialog({
             Cancel
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={loading}>
-            {loading ? "Logging out..." : "Log out"}
+            {loading ? "Logging out..." : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
