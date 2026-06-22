@@ -20,6 +20,7 @@ import {
   IconWallet,
   IconSettings2,
   IconCompass,
+  IconBug,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -376,6 +377,12 @@ const NAV_MAIN = [
     url: "/task-monitoring",
     icon: IconUsersGroup,
     permission: "manpower.view",
+  },
+  {
+    title: "Bug Reports",
+    url: "/bug-reports",
+    icon: IconBug,
+    permission: "team.view",
   },
 ];
 

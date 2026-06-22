@@ -54,6 +54,7 @@ import ConsultantPositionsPage from "../pages/positions/ConsultantPositionsPage"
 import OrientationPage from "../pages/orientation/orientationPage";
 import OrientationMonitoringPage from "../pages/orientation/monitoring/orientationMonitoring";
 import TaskMonitoringPage from "../pages/taskMonitoring/taskMonitoringPage";
+import BugReportsPage from "../pages/bugReport/bugReportPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -276,6 +277,7 @@ function AppRoutes() {
               element={<ConsultantPositionsPage />}
             />
             <Route path="task-monitoring" element={<TaskMonitoringPage />} />
+            <Route path="/bug-reports" element={<BugReportsPage />} />
           </Route>
         </Route>
       </Routes>
