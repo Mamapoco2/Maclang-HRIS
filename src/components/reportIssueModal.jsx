@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Bug,
-  Lightbulb,
-  Loader2,
-  CheckCircle,
-  AlertTriangle,
-} from "lucide-react";
+import { Bug, Lightbulb, Loader2, AlertTriangle } from "lucide-react";
 
 import {
   Dialog,
@@ -28,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { createReport } from "@/services/bugService"; // ← adjust path to match your project
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -193,7 +188,6 @@ function GuidanceCard({ type }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ReportIssueModal({ open, onOpenChange }) {
-  // Form state
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -202,7 +196,6 @@ export default function ReportIssueModal({ open, onOpenChange }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [touched, setTouched] = useState({});
 
-  // Classification
   const autoClassification = classifyText(`${subject} ${description}`);
   const effectiveType =
     overrideMode === "auto"
@@ -213,7 +206,6 @@ export default function ReportIssueModal({ open, onOpenChange }) {
           ? "improvement"
           : null;
 
-  // Validation
   const errors = {
     subject: !subject.trim() ? "Subject is required." : null,
     description: !description.trim()
@@ -226,7 +218,6 @@ export default function ReportIssueModal({ open, onOpenChange }) {
   const isFormValid =
     !errors.subject && !errors.description && !errors.category;
 
-  // Reset on close
   useEffect(() => {
     if (!open) {
       setSubject("");
@@ -243,13 +234,29 @@ export default function ReportIssueModal({ open, onOpenChange }) {
     if (!isFormValid) return;
 
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setIsSubmitting(false);
+    try {
+      await createReport({
+        subject,
+        description,
+        category,
+        type: effectiveType ?? "bug",
+        severity: effectiveType === "bug" && severity ? severity : null,
+        status: "open",
+      });
 
-    toast.success("Report submitted successfully.", {
-      description: "Thank you for helping improve the platform.",
-    });
-    onOpenChange(false);
+      // Notify ReportsModule (or any other listener) to refetch
+      window.dispatchEvent(new CustomEvent("report:created"));
+
+      toast.success("Report submitted successfully.", {
+        description: "Thank you for helping improve the platform.",
+      });
+      onOpenChange(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to submit report. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const field = (name) => ({

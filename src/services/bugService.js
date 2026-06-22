@@ -1,23 +1,13 @@
 import api from "@/api/api";
 
 export async function getReports(params = {}) {
-  try {
-    const res = await api.get("/reports", { params });
-    return res.data;
-  } catch (err) {
-    console.error("getReports:", err);
-    return { data: [], meta: {} };
-  }
+  const res = await api.get("/reports", { params });
+  return res.data;
 }
 
 export async function getReport(id) {
-  try {
-    const res = await api.get(`/reports/${id}`);
-    return res.data;
-  } catch (err) {
-    console.error("getReport:", err);
-    return null;
-  }
+  const res = await api.get(`/reports/${id}`);
+  return res.data;
 }
 
 export async function createReport(data) {

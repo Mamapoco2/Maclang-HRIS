@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Bug,
   Lightbulb,
@@ -9,10 +9,10 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  Filter,
   X,
   RotateCcw,
   ArrowUpDown,
+  RefreshCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,115 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_REPORTS = [
-  {
-    id: 1,
-    subject: "Login button unresponsive on iOS Safari",
-    description:
-      "When tapping the login button on iOS Safari 17, nothing happens. The form submits fine on Chrome and Firefox. Expected to be redirected to the dashboard after login.",
-    type: "bug",
-    category: "Authentication",
-    severity: "critical",
-    status: "open",
-    submitted_by: "Maria Santos",
-    created_at: "2025-08-01T08:14:00Z",
-    resolved_at: null,
-  },
-  {
-    id: 2,
-    subject: "Dashboard charts not loading after timezone change",
-    description:
-      "After switching my account timezone to UTC+8, the revenue charts on the dashboard show a blank area. The data table below still loads correctly. Refreshing does not fix it.",
-    type: "bug",
-    category: "Dashboard",
-    severity: "high",
-    status: "in_progress",
-    submitted_by: "James Reyes",
-    created_at: "2025-08-03T11:45:00Z",
-    resolved_at: null,
-  },
-  {
-    id: 3,
-    subject: "Add keyboard shortcut to open report modal",
-    description:
-      "It would be useful to open the report issue modal via a keyboard shortcut like Ctrl+Shift+R so power users don't have to reach for the mouse every time they spot a bug.",
-    type: "improvement",
-    category: "UI / UX",
-    severity: null,
-    status: "open",
-    submitted_by: "Lena Cruz",
-    created_at: "2025-08-05T09:00:00Z",
-    resolved_at: null,
-  },
-  {
-    id: 4,
-    subject: "API rate limit error not surfaced in UI",
-    description:
-      "When the API rate limit is hit, the frontend shows a generic error toast instead of a specific message telling the user to wait before retrying. This causes confusion.",
-    type: "bug",
-    category: "API",
-    severity: "medium",
-    status: "resolved",
-    submitted_by: "Carlos Tan",
-    created_at: "2025-07-28T14:22:00Z",
-    resolved_at: "2025-08-06T10:00:00Z",
-  },
-  {
-    id: 5,
-    subject: "Notification bell badge count resets on page refresh",
-    description:
-      "The unread notification count shown on the bell icon goes back to zero after refreshing the page even when there are unread notifications. It repopulates after a few seconds.",
-    type: "bug",
-    category: "Notifications",
-    severity: "low",
-    status: "resolved",
-    submitted_by: "Ana Villanueva",
-    created_at: "2025-07-30T16:10:00Z",
-    resolved_at: "2025-08-04T09:30:00Z",
-  },
-  {
-    id: 6,
-    subject: "Optimize billing page load time",
-    description:
-      "The billing page takes 4–6 seconds to load on first visit. Most of the delay appears to be from unoptimized invoice list queries. Pagination or lazy loading would help significantly.",
-    type: "improvement",
-    category: "Billing",
-    severity: null,
-    status: "in_progress",
-    submitted_by: "Miguel Orozco",
-    created_at: "2025-08-02T13:00:00Z",
-    resolved_at: null,
-  },
-  {
-    id: 7,
-    subject: "Mobile sidebar overlaps main content on small screens",
-    description:
-      "On screens narrower than 375px the open sidebar overlaps the main content area without a backdrop or close affordance, making the page unusable until the user rotates the device.",
-    type: "bug",
-    category: "Mobile",
-    severity: "high",
-    status: "open",
-    submitted_by: "Rachel Kim",
-    created_at: "2025-08-07T07:55:00Z",
-    resolved_at: null,
-  },
-  {
-    id: 8,
-    subject: "Add bulk status update for reports",
-    description:
-      "Admins currently have to open each report individually to change its status. A checkbox selection with a bulk action dropdown would save significant time when triaging many reports at once.",
-    type: "improvement",
-    category: "UI / UX",
-    severity: null,
-    status: "open",
-    submitted_by: "Derek Lim",
-    created_at: "2025-08-08T10:30:00Z",
-    resolved_at: null,
-  },
-];
+import { getReports, updateReport } from "@/services/bugService"; // ← adjust path to match your project
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -184,7 +76,10 @@ const SEVERITY_CONFIG = {
     label: "Medium",
     className: "bg-yellow-100 text-yellow-700 border-yellow-200",
   },
-  low: { label: "Low", className: "bg-blue-100 text-blue-700 border-blue-200" },
+  low: {
+    label: "Low",
+    className: "bg-blue-100 text-blue-700 border-blue-200",
+  },
 };
 
 const TYPE_CONFIG = {
@@ -293,31 +188,20 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
   const TypeIcon = typeCfg.icon;
   const isResolved = report.status === "resolved";
 
-  const handleMarkFixed = () => {
-    onStatusChange(report.id, "resolved");
-    onOpenChange(false);
-  };
-
-  const handleReopen = () => {
-    onStatusChange(report.id, "open");
-    onOpenChange(false);
-  };
-
-  const handleMarkInProgress = () => {
-    onStatusChange(report.id, "in_progress");
-    onOpenChange(false);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-start gap-3">
             <div
-              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${report.type === "bug" ? "bg-red-100" : "bg-blue-100"}`}
+              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                report.type === "bug" ? "bg-red-100" : "bg-blue-100"
+              }`}
             >
               <TypeIcon
-                className={`w-4 h-4 ${report.type === "bug" ? "text-red-600" : "text-blue-600"}`}
+                className={`w-4 h-4 ${
+                  report.type === "bug" ? "text-red-600" : "text-blue-600"
+                }`}
               />
             </div>
             <div className="min-w-0">
@@ -333,7 +217,6 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-4">
-          {/* Badges row */}
           <div className="flex flex-wrap gap-2">
             <StatusBadge status={report.status} />
             <Badge
@@ -346,7 +229,9 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
             </Badge>
             {report.severity && (
               <Badge
-                className={`text-xs font-medium border ${SEVERITY_CONFIG[report.severity].className} hover:${SEVERITY_CONFIG[report.severity].className}`}
+                className={`text-xs font-medium border ${
+                  SEVERITY_CONFIG[report.severity].className
+                } hover:${SEVERITY_CONFIG[report.severity].className}`}
               >
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 {SEVERITY_CONFIG[report.severity].label}
@@ -356,7 +241,6 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
 
           <Separator />
 
-          {/* Description */}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1.5">
               Description
@@ -375,7 +259,6 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
           )}
         </div>
 
-        {/* Footer actions */}
         <div className="flex items-center justify-between border-t px-6 py-4 gap-2 flex-wrap">
           <Button
             variant="outline"
@@ -389,14 +272,24 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleMarkInProgress}
+                onClick={() => {
+                  onStatusChange(report.id, "in_progress");
+                  onOpenChange(false);
+                }}
               >
                 <Clock className="w-3.5 h-3.5 mr-1.5" />
                 Mark in progress
               </Button>
             )}
             {isResolved ? (
-              <Button size="sm" variant="outline" onClick={handleReopen}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onStatusChange(report.id, "open");
+                  onOpenChange(false);
+                }}
+              >
                 <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                 Reopen
               </Button>
@@ -404,7 +297,10 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
               <Button
                 size="sm"
                 className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={handleMarkFixed}
+                onClick={() => {
+                  onStatusChange(report.id, "resolved");
+                  onOpenChange(false);
+                }}
               >
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                 Mark as fixed
@@ -420,7 +316,11 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
 // ─── Main Module ──────────────────────────────────────────────────────────────
 
 export default function ReportsModule() {
-  const [reports, setReports] = useState(MOCK_REPORTS);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null); // tracks which row is mid-update
+
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -430,6 +330,27 @@ export default function ReportsModule() {
   const [sortDir, setSortDir] = useState("desc");
   const [selectedReport, setSelectedReport] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // ── Fetch ────────────────────────────────────────────────────────────────
+
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getReports();
+      // Support both { data: [...] } envelope and plain array responses
+      setReports(Array.isArray(data) ? data : (data.data ?? []));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load reports. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   // ── Filtering & sorting ──────────────────────────────────────────────────
 
@@ -488,25 +409,44 @@ export default function ReportsModule() {
     }
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: newStatus,
-              resolved_at:
-                newStatus === "resolved" ? new Date().toISOString() : null,
-            }
-          : r,
-      ),
-    );
-    const labels = {
-      resolved: "Marked as fixed",
-      open: "Reopened",
-      in_progress: "Marked in progress",
+  const handleStatusChange = async (id, newStatus) => {
+    // Optimistic update
+    const previous = reports.find((r) => r.id === id);
+    const optimisticPayload = {
+      status: newStatus,
+      resolved_at: newStatus === "resolved" ? new Date().toISOString() : null,
     };
-    toast.success(labels[newStatus] ?? "Status updated.");
+
+    setReports((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...optimisticPayload } : r)),
+    );
+    // Keep modal in sync if it's open for this report
+    setSelectedReport((prev) =>
+      prev?.id === id ? { ...prev, ...optimisticPayload } : prev,
+    );
+
+    setUpdatingId(id);
+    try {
+      await updateReport(id, optimisticPayload);
+      const labels = {
+        resolved: "Marked as fixed",
+        open: "Reopened",
+        in_progress: "Marked in progress",
+      };
+      toast.success(labels[newStatus] ?? "Status updated.");
+    } catch (err) {
+      console.error(err);
+      // Roll back on failure
+      setReports((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, ...previous } : r)),
+      );
+      setSelectedReport((prev) =>
+        prev?.id === id ? { ...prev, ...previous } : prev,
+      );
+      toast.error("Failed to update status. Please try again.");
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const handleRowClick = (report) => {
@@ -529,8 +469,6 @@ export default function ReportsModule() {
     setFilterSeverity("all");
   };
 
-  // ── Sort icon ─────────────────────────────────────────────────────────────
-
   const SortIcon = ({ field }) => {
     if (sortField !== field)
       return (
@@ -543,14 +481,49 @@ export default function ReportsModule() {
     );
   };
 
+  // ── Loading / error states ────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[300px]">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <RefreshCw className="w-6 h-6 animate-spin" />
+          <p className="text-sm">Loading reports…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[300px]">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-destructive">{error}</p>
+          <Button variant="outline" size="sm" onClick={fetchReports}>
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div className="p-6 space-y-6">
       {/* ── Page header ── */}
-      <div>
-        <h1 className="text-xl font-semibold">Reports</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Track and resolve bug reports and improvement requests.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Reports</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Track and resolve bug reports and improvement requests.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchReports}>
+          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+          Refresh
+        </Button>
       </div>
 
       {/* ── Stat cards ── */}
@@ -679,11 +652,14 @@ export default function ReportsModule() {
                 const typeCfg = TYPE_CONFIG[report.type];
                 const TypeIcon = typeCfg.icon;
                 const isResolved = report.status === "resolved";
+                const isUpdating = updatingId === report.id;
 
                 return (
                   <TableRow
                     key={report.id}
-                    className={`cursor-pointer transition-colors ${isResolved ? "opacity-60" : ""}`}
+                    className={`cursor-pointer transition-colors ${
+                      isResolved ? "opacity-60" : ""
+                    } ${isUpdating ? "pointer-events-none opacity-50" : ""}`}
                     onClick={() => handleRowClick(report)}
                   >
                     <TableCell className="text-xs text-muted-foreground font-mono">
@@ -692,10 +668,18 @@ export default function ReportsModule() {
                     <TableCell>
                       <div className="flex items-start gap-2 min-w-0">
                         <TypeIcon
-                          className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${report.type === "bug" ? "text-red-500" : "text-blue-500"}`}
+                          className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
+                            report.type === "bug"
+                              ? "text-red-500"
+                              : "text-blue-500"
+                          }`}
                         />
                         <span
-                          className={`text-sm font-medium line-clamp-1 ${isResolved ? "line-through text-muted-foreground" : ""}`}
+                          className={`text-sm font-medium line-clamp-1 ${
+                            isResolved
+                              ? "line-through text-muted-foreground"
+                              : ""
+                          }`}
                         >
                           {report.subject}
                         </span>
@@ -714,7 +698,9 @@ export default function ReportsModule() {
                     <TableCell>
                       {report.severity ? (
                         <Badge
-                          className={`text-xs border ${SEVERITY_CONFIG[report.severity].className} hover:${SEVERITY_CONFIG[report.severity].className}`}
+                          className={`text-xs border ${
+                            SEVERITY_CONFIG[report.severity].className
+                          } hover:${SEVERITY_CONFIG[report.severity].className}`}
                         >
                           {SEVERITY_CONFIG[report.severity].label}
                         </Badge>
@@ -740,6 +726,7 @@ export default function ReportsModule() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs text-muted-foreground"
+                          disabled={isUpdating}
                           onClick={() => handleStatusChange(report.id, "open")}
                         >
                           <RotateCcw className="w-3 h-3 mr-1" />
@@ -750,6 +737,7 @@ export default function ReportsModule() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                          disabled={isUpdating}
                           onClick={() =>
                             handleStatusChange(report.id, "resolved")
                           }
