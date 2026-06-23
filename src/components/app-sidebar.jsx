@@ -21,6 +21,7 @@ import {
   IconSettings2,
   IconCompass,
   IconBug,
+  IconRocket,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -382,6 +383,12 @@ const NAV_MAIN = [
     title: "Bug Reports",
     url: "/bug-reports",
     icon: IconBug,
+    permission: "team.view",
+  },
+  {
+    title: "Release Manager",
+    url: "/release-manager",
+    icon: IconRocket,
     permission: "team.view",
   },
 ];

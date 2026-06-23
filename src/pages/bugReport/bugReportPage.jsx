@@ -209,8 +209,8 @@ function ReportDetailModal({ report, open, onOpenChange, onStatusChange }) {
                 {report.subject}
               </DialogTitle>
               <DialogDescription className="mt-1 text-xs text-muted-foreground">
-                #{report.id} · Submitted by {report.submitted_by} on{" "}
-                {formatDate(report.created_at)}
+                #{report.id} · Submitted by {report.user?.username ?? "Unknown"}{" "}
+                on {formatDate(report.created_at)}
               </DialogDescription>
             </div>
           </div>
@@ -362,7 +362,7 @@ export default function ReportsModule() {
       rows = rows.filter(
         (r) =>
           r.subject.toLowerCase().includes(q) ||
-          r.submitted_by.toLowerCase().includes(q) ||
+          r.user?.username?.toLowerCase().includes(q) ||
           r.category.toLowerCase().includes(q),
       );
     }
@@ -375,8 +375,14 @@ export default function ReportsModule() {
       rows = rows.filter((r) => r.severity === filterSeverity);
 
     rows.sort((a, b) => {
-      let av = a[sortField] ?? "";
-      let bv = b[sortField] ?? "";
+      let av, bv;
+      if (sortField === "user.username") {
+        av = a.user?.username ?? "";
+        bv = b.user?.username ?? "";
+      } else {
+        av = a[sortField] ?? "";
+        bv = b[sortField] ?? "";
+      }
       if (sortField === "created_at" || sortField === "resolved_at") {
         av = av ? new Date(av).getTime() : 0;
         bv = bv ? new Date(bv).getTime() : 0;
@@ -622,9 +628,9 @@ export default function ReportsModule() {
               <TableHead className="text-xs w-[110px]">Status</TableHead>
               <TableHead
                 className="text-xs w-[120px] cursor-pointer select-none"
-                onClick={() => handleSort("submitted_by")}
+                onClick={() => handleSort("user.username")}
               >
-                Reporter <SortIcon field="submitted_by" />
+                Reporter <SortIcon field="user.username" />
               </TableHead>
               <TableHead
                 className="text-xs w-[110px] cursor-pointer select-none"
@@ -712,7 +718,7 @@ export default function ReportsModule() {
                       <StatusBadge status={report.status} />
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {report.submitted_by}
+                      {report.user?.username ?? "—"}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {formatDate(report.created_at)}

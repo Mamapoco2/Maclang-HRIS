@@ -42,7 +42,7 @@ import Sent from "../pages/announcement/sent/sent";
 import ProtectedRoute from "./protectedRoutes";
 import PublicRoute from "./publicRoute";
 import PermissionRoute from "./permissionRoute";
-import Updates from "../pages/updates/update";
+import Updates from "../components/update";
 import Settings from "../pages/settings/settingsPage";
 import AccountPage from "../pages/account/accountPage";
 import { ProfileGate } from "../pages/profile/profileGate";
@@ -55,6 +55,7 @@ import OrientationPage from "../pages/orientation/orientationPage";
 import OrientationMonitoringPage from "../pages/orientation/monitoring/orientationMonitoring";
 import TaskMonitoringPage from "../pages/taskMonitoring/taskMonitoringPage";
 import BugReportsPage from "../pages/bugReport/bugReportPage";
+import ReleaseManagerPage from "../pages/releaseManager/releaseManagerPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -278,6 +279,7 @@ function AppRoutes() {
             />
             <Route path="task-monitoring" element={<TaskMonitoringPage />} />
             <Route path="/bug-reports" element={<BugReportsPage />} />
+            <Route path="/release-manager" element={<ReleaseManagerPage />} />
           </Route>
         </Route>
       </Routes>

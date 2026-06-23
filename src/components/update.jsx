@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Zap, Shield, Bug } from "lucide-react";
+import { Sparkles, Zap, Shield, Bug, X } from "lucide-react";
 
 export default function WhatsNew() {
   const [expandedVersion, setExpandedVersion] = React.useState("4.3.0");
@@ -207,6 +207,23 @@ export default function WhatsNew() {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function WhatsNewModal({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="relative bg-white dark:bg-black rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-10">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+        >
+          <X className="w-5 h-5 text-gray-500" />
+        </button>
+        <WhatsNew /> {/* ← must match the function name above exactly */}
       </div>
     </div>
   );

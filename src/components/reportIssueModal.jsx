@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { createReport } from "@/services/bugService"; // ← adjust path to match your project
+import { createReport } from "@/services/bugService";
+import authService from "@/services/authService"; // ← adjust path to match your project
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -235,13 +236,17 @@ export default function ReportIssueModal({ open, onOpenChange }) {
 
     setIsSubmitting(true);
     try {
+      const currentUser = authService.getCurrentUser();
+      const submitted_by = currentUser?.given_name
+        ? `${currentUser.given_name} ${currentUser.last_name}`.trim()
+        : (currentUser?.username ?? "Unknown");
+
       await createReport({
         subject,
         description,
         category,
         type: effectiveType ?? "bug",
         severity: effectiveType === "bug" && severity ? severity : null,
-        status: "open",
       });
 
       // Notify ReportsModule (or any other listener) to refetch
