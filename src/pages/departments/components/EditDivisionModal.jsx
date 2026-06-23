@@ -23,9 +23,9 @@ import { Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 const TYPE_OPTIONS = [
-  { value: "OFFICE", label: "Office" },
-  { value: "DIVISION", label: "Division" },
-  { value: "DIRECTORATE", label: "Directorate" },
+  { value: "OFFICE", label: "OFFICE" },
+  { value: "DIVISION", label: "DIVISION" },
+  { value: "DIRECTORATE", label: "DIRECTORATE" },
 ];
 
 const TYPE_BADGE = {
@@ -98,7 +98,6 @@ export default function EditDivisionModal({
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [loadingDivisions, setLoadingDivisions] = useState(false);
   const [saving, setSaving] = useState(false);
-
   const [headSearch, setHeadSearch] = useState("");
   const [parentSearch, setParentSearch] = useState("");
 
@@ -134,12 +133,11 @@ export default function EditDivisionModal({
     setLoadingDivisions(true);
     api
       .get("/divisions")
-      .then((res) => {
-        const list = Array.isArray(res.data)
-          ? res.data
-          : (res.data?.data ?? []);
-        setDivisions(list);
-      })
+      .then((res) =>
+        setDivisions(
+          Array.isArray(res.data) ? res.data : (res.data?.data ?? []),
+        ),
+      )
       .catch(() => toast.error("Failed to load divisions."))
       .finally(() => setLoadingDivisions(false));
   }, [open]);
@@ -148,7 +146,6 @@ export default function EditDivisionModal({
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: null }));
   };
-
   const setUpper = (field, value) => set(field, value.toUpperCase());
 
   const getDescendantIds = (rootId) => {
@@ -173,28 +170,21 @@ export default function EditDivisionModal({
   const excludedIds = division
     ? new Set([division.id, ...getDescendantIds(division.id)])
     : new Set();
-
   const parentOptions = divisions.filter((d) => !excludedIds.has(d.id));
-
   const filteredParents = parentOptions.filter((d) =>
     `${d.name} ${d.code ?? ""}`
       .toLowerCase()
       .includes(parentSearch.toLowerCase()),
   );
-
-  const headEmployees = employees.filter((e) => {
-    const roles = getRolePositions(e);
-    return roles.some((r) => HEAD_ROLES.includes(r));
-  });
-
+  const headEmployees = employees.filter((e) =>
+    getRolePositions(e).some((r) => HEAD_ROLES.includes(r)),
+  );
   const filteredEmployees = headEmployees.filter((e) =>
     getEmployeeName(e).toLowerCase().includes(headSearch.toLowerCase()),
   );
-
   const selectedParent = parentOptions.find(
     (d) => String(d.id) === form.parent_id,
   );
-
   const selectedHead = employees.find(
     (e) => String(e.id) === form.head_employee_id,
   );
@@ -204,7 +194,6 @@ export default function EditDivisionModal({
     if (!form.type) newErrors.type = "Type is required.";
     if (!form.code.trim()) newErrors.code = "Code is required.";
     if (!form.name.trim()) newErrors.name = "Name is required.";
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -245,23 +234,35 @@ export default function EditDivisionModal({
     TYPE_OPTIONS.find((o) => o.value === form.type)?.label ?? "";
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit {typeLabel || "Division"}</DialogTitle>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
+      <DialogContent
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="sm:max-w-[480px] flex flex-col max-h-[90vh] p-0 gap-0"
+      >
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
+          <DialogTitle className="text-base">
+            EDIT {typeLabel || "DIVISION"}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        {/* ── Scrollable Body ──────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* Type */}
           <div className="space-y-1.5">
             <Label>
-              Type <span className="text-destructive">*</span>
+              TYPE <span className="text-destructive">*</span>
             </Label>
             <Select value={form.type} onValueChange={(v) => set("type", v)}>
               <SelectTrigger
                 className={errors.type ? "border-destructive" : ""}
               >
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder="SELECT TYPE" />
               </SelectTrigger>
               <SelectContent>
                 {TYPE_OPTIONS.map((opt) => (
@@ -280,15 +281,15 @@ export default function EditDivisionModal({
             )}
           </div>
 
+          {/* Parent */}
           <div className="space-y-1.5">
             <Label>
-              Parent{" "}
+              PARENT{" "}
               <span className="text-xs text-muted-foreground font-normal">
-                (optional)
+                (OPTIONAL)
               </span>
             </Label>
-
-            {selectedParent && (
+            {selectedParent ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/40">
                 <span
                   className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${TYPE_BADGE[selectedParent.type] ?? "bg-gray-100 text-gray-600"}`}
@@ -306,9 +307,7 @@ export default function EditDivisionModal({
                   <X size={13} />
                 </button>
               </div>
-            )}
-
-            {!selectedParent && (
+            ) : (
               <Select
                 value={form.parent_id}
                 onValueChange={(v) => set("parent_id", v)}
@@ -318,8 +317,8 @@ export default function EditDivisionModal({
                   <SelectValue
                     placeholder={
                       loadingDivisions
-                        ? "Loading..."
-                        : "Select parent (optional)"
+                        ? "LOADING..."
+                        : "SELECT PARENT (OPTIONAL)"
                     }
                   />
                 </SelectTrigger>
@@ -331,7 +330,7 @@ export default function EditDivisionModal({
                         className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                       />
                       <input
-                        placeholder="Search office/division…"
+                        placeholder="SEARCH OFFICE / DIVISION..."
                         value={parentSearch}
                         onChange={(e) => setParentSearch(e.target.value)}
                         onKeyDown={(e) => e.stopPropagation()}
@@ -342,11 +341,11 @@ export default function EditDivisionModal({
                   <div className="overflow-y-auto max-h-48">
                     {loadingDivisions ? (
                       <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                        Loading...
+                        LOADING...
                       </div>
                     ) : filteredParents.length === 0 ? (
                       <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                        No options found.
+                        NO OPTIONS FOUND.
                       </div>
                     ) : (
                       filteredParents.map((d) => (
@@ -376,17 +375,18 @@ export default function EditDivisionModal({
               </Select>
             )}
             <p className="text-xs text-muted-foreground">
-              e.g. link this {typeLabel || "Division"} under the Medical Center
-              Chief Office.
+              E.G. LINK THIS {typeLabel || "DIVISION"} UNDER THE MEDICAL CENTER
+              CHIEF OFFICE.
             </p>
           </div>
 
+          {/* Code */}
           <div className="space-y-1.5">
             <Label>
-              Code <span className="text-destructive">*</span>
+              CODE <span className="text-destructive">*</span>
             </Label>
             <Input
-              placeholder="e.g. FIN"
+              placeholder="E.G. FIN"
               value={form.code}
               onChange={(e) => setUpper("code", e.target.value)}
               className={errors.code ? "border-destructive" : ""}
@@ -397,17 +397,18 @@ export default function EditDivisionModal({
             )}
           </div>
 
+          {/* Name */}
           <div className="space-y-1.5">
             <Label>
-              Name <span className="text-destructive">*</span>
+              NAME <span className="text-destructive">*</span>
             </Label>
             <Input
               placeholder={
                 form.type === "OFFICE"
-                  ? "e.g. MEDICAL CENTER CHIEF"
+                  ? "E.G. MEDICAL CENTER CHIEF"
                   : form.type === "DIRECTORATE"
-                    ? "e.g. MEDICAL DIRECTOR"
-                    : "e.g. HOSPITAL ADMINISTRATION DIVISION"
+                    ? "E.G. MEDICAL DIRECTOR"
+                    : "E.G. HOSPITAL ADMINISTRATION DIVISION"
               }
               value={form.name}
               onChange={(e) => setUpper("name", e.target.value)}
@@ -419,8 +420,9 @@ export default function EditDivisionModal({
             )}
           </div>
 
+          {/* Description */}
           <div className="space-y-1.5">
-            <Label>Description</Label>
+            <Label>DESCRIPTION</Label>
             <Textarea
               placeholder="OPTIONAL DESCRIPTION..."
               value={form.description}
@@ -430,14 +432,14 @@ export default function EditDivisionModal({
             />
           </div>
 
+          {/* Division Head */}
           <div className="space-y-1.5">
             <Label>
-              {typeLabel || "Division"} Head{" "}
+              {typeLabel || "DIVISION"} HEAD{" "}
               <span className="text-xs text-muted-foreground font-normal">
-                (optional)
+                (OPTIONAL)
               </span>
             </Label>
-
             {selectedHead ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/40">
                 <span className="text-sm font-medium flex-1 truncate uppercase">
@@ -466,8 +468,8 @@ export default function EditDivisionModal({
                   <SelectValue
                     placeholder={
                       loadingEmployees
-                        ? "Loading..."
-                        : `Select ${(typeLabel || "division").toLowerCase()} head`
+                        ? "LOADING..."
+                        : `SELECT ${(typeLabel || "DIVISION").toUpperCase()} HEAD`
                     }
                   />
                 </SelectTrigger>
@@ -479,7 +481,7 @@ export default function EditDivisionModal({
                         className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                       />
                       <input
-                        placeholder="Search employee…"
+                        placeholder="SEARCH EMPLOYEE..."
                         value={headSearch}
                         onChange={(e) => setHeadSearch(e.target.value)}
                         onKeyDown={(e) => e.stopPropagation()}
@@ -490,11 +492,11 @@ export default function EditDivisionModal({
                   <div className="overflow-y-auto max-h-44">
                     {loadingEmployees ? (
                       <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                        Loading...
+                        LOADING...
                       </div>
                     ) : filteredEmployees.length === 0 ? (
                       <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                        No employees found.
+                        NO EMPLOYEES FOUND.
                       </div>
                     ) : (
                       filteredEmployees.map((e) => (
@@ -521,12 +523,13 @@ export default function EditDivisionModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        {/* ── Fixed Footer ─────────────────────────────────────────────── */}
+        <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2">
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            CANCEL
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "SAVING..." : "SAVE CHANGES"}
           </Button>
         </DialogFooter>
       </DialogContent>

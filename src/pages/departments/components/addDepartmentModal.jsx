@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 
 const TYPE_OPTIONS = [
@@ -89,7 +89,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     employee_head_id: "",
     employee_ids: [],
   });
-
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -98,26 +97,25 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     setLoadingDivisions(true);
     api
       .get("/divisions")
-      .then((res) => {
-        const list = Array.isArray(res.data)
-          ? res.data
-          : (res.data?.data ?? []);
-        setDivisions(list);
-      })
+      .then((res) =>
+        setDivisions(
+          Array.isArray(res.data) ? res.data : (res.data?.data ?? []),
+        ),
+      )
       .catch(() => toast.error("Failed to load divisions."))
       .finally(() => setLoadingDivisions(false));
 
     setLoadingDepartments(true);
     Promise.all([api.get("/departments"), api.get("/divisions")])
       .then(([deptRes, divRes]) => {
-        const depts = Array.isArray(deptRes.data)
-          ? deptRes.data
-          : (deptRes.data?.data ?? []);
-        const divs = Array.isArray(divRes.data)
-          ? divRes.data
-          : (divRes.data?.data ?? []);
-        setAllDepartments(depts);
-        setAllDivisions(divs);
+        setAllDepartments(
+          Array.isArray(deptRes.data)
+            ? deptRes.data
+            : (deptRes.data?.data ?? []),
+        );
+        setAllDivisions(
+          Array.isArray(divRes.data) ? divRes.data : (divRes.data?.data ?? []),
+        );
       })
       .catch(() => toast.error("Failed to load departments."))
       .finally(() => setLoadingDepartments(false));
@@ -153,7 +151,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: null }));
   };
-
   const setUpper = (field, value) => set(field, value.toUpperCase());
 
   const getEmployeeName = (e) => {
@@ -173,20 +170,15 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     return [String(rp).toUpperCase()];
   };
 
-  const headEmployees = employees.filter((e) => {
-    const roles = getRolePositions(e);
-    return roles.some((r) => HEAD_ROLES.includes(r));
-  });
-
-  const staffEmployees = employees.filter((e) => {
-    const roles = getRolePositions(e);
-    return roles.some((r) => STAFF_ROLES.includes(r));
-  });
-
+  const headEmployees = employees.filter((e) =>
+    getRolePositions(e).some((r) => HEAD_ROLES.includes(r)),
+  );
+  const staffEmployees = employees.filter((e) =>
+    getRolePositions(e).some((r) => STAFF_ROLES.includes(r)),
+  );
   const filteredHeadEmployees = headEmployees.filter((e) =>
     getEmployeeName(e).toLowerCase().includes(headSearch.toLowerCase()),
   );
-
   const filteredEmployees = staffEmployees.filter((e) =>
     getEmployeeName(e).toLowerCase().includes(employeeSearch.toLowerCase()),
   );
@@ -196,20 +188,16 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     type: div.type ?? "DIVISION",
     _source: "division",
   }));
-
   const normalizedDepartments = allDepartments.map((d) => ({
     ...d,
     _source: "department",
   }));
-
   const allParents = [...normalizedDivisions, ...normalizedDepartments];
-
   const filteredParents = allParents.filter((d) =>
     `${d.name} ${d.code ?? ""}`
       .toLowerCase()
       .includes(parentSearch.toLowerCase()),
   );
-
   const selectedParent = allParents.find(
     (d) => String(d.id) === form.parent_id && d._source === form.parent_type,
   );
@@ -220,7 +208,6 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     if (!form.division_id) newErrors.division_id = "Division is required.";
     if (!form.code.trim()) newErrors.code = "Code is required.";
     if (!form.name.trim()) newErrors.name = "Name is required.";
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -264,18 +251,28 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     TYPE_OPTIONS.find((o) => o.value === form.type)?.label ?? "";
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            Add {typeLabel || "Department / Unit / Section"}
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
+      <DialogContent
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="sm:max-w-[480px] flex flex-col max-h-[90vh] p-0 gap-0"
+      >
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
+          <DialogTitle className="text-base">
+            ADD {typeLabel || "DEPARTMENT / UNIT / SECTION"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {/* Division */}
           <div className="space-y-1.5">
             <Label>
-              Division <span className="text-destructive">*</span>
+              DIVISION <span className="text-destructive">*</span>
             </Label>
             <Select
               value={form.division_id}
@@ -287,7 +284,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
               >
                 <SelectValue
                   placeholder={
-                    loadingDivisions ? "Loading..." : "Select division"
+                    loadingDivisions ? "LOADING..." : "SELECT DIVISION"
                   }
                 />
               </SelectTrigger>
@@ -308,15 +305,16 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
+          {/* Type */}
           <div className="space-y-1.5">
             <Label>
-              Type <span className="text-destructive">*</span>
+              TYPE <span className="text-destructive">*</span>
             </Label>
             <Select value={form.type} onValueChange={(v) => set("type", v)}>
               <SelectTrigger
                 className={errors.type ? "border-destructive" : ""}
               >
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder="SELECT TYPE" />
               </SelectTrigger>
               <SelectContent>
                 {TYPE_OPTIONS.map((opt) => (
@@ -335,15 +333,15 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
+          {/* Parent */}
           <div className="space-y-1.5">
             <Label>
-              Parent{" "}
+              PARENT{" "}
               <span className="text-xs text-muted-foreground font-normal">
-                (optional)
+                (OPTIONAL)
               </span>
             </Label>
-
-            {selectedParent && (
+            {selectedParent ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/40">
                 <span
                   className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${TYPE_BADGE[selectedParent.type] ?? "bg-gray-100 text-gray-600"}`}
@@ -364,9 +362,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                   <X size={13} />
                 </button>
               </div>
-            )}
-
-            {!selectedParent && (
+            ) : (
               <Select
                 value={form.parent_id}
                 onValueChange={(v) => {
@@ -380,8 +376,8 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                   <SelectValue
                     placeholder={
                       loadingDepartments
-                        ? "Loading..."
-                        : "Select parent (optional)"
+                        ? "LOADING..."
+                        : "SELECT PARENT (OPTIONAL)"
                     }
                   />
                 </SelectTrigger>
@@ -393,7 +389,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                         className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                       />
                       <input
-                        placeholder="Search division or department…"
+                        placeholder="SEARCH DIVISION OR DEPARTMENT..."
                         value={parentSearch}
                         onChange={(e) => setParentSearch(e.target.value)}
                         onKeyDown={(e) => e.stopPropagation()}
@@ -404,11 +400,11 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                   <div className="overflow-y-auto max-h-48">
                     {loadingDepartments ? (
                       <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                        Loading...
+                        LOADING...
                       </div>
                     ) : filteredParents.length === 0 ? (
                       <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                        No results found.
+                        NO RESULTS FOUND.
                       </div>
                     ) : (
                       filteredParents.map((d) => (
@@ -439,12 +435,13 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
+          {/* Code */}
           <div className="space-y-1.5">
             <Label>
-              Code <span className="text-destructive">*</span>
+              CODE <span className="text-destructive">*</span>
             </Label>
             <Input
-              placeholder="e.g. MED-01"
+              placeholder="E.G. MED-01"
               value={form.code}
               onChange={(e) => setUpper("code", e.target.value)}
               className={errors.code ? "border-destructive" : ""}
@@ -455,17 +452,18 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
+          {/* Name */}
           <div className="space-y-1.5">
             <Label>
-              Name <span className="text-destructive">*</span>
+              NAME <span className="text-destructive">*</span>
             </Label>
             <Input
               placeholder={
                 form.type === "UNIT"
-                  ? "e.g. RADIOLOGY UNIT"
+                  ? "E.G. RADIOLOGY UNIT"
                   : form.type === "SECTION"
-                    ? "e.g. OUTPATIENT SECTION"
-                    : "e.g. MEDICAL SERVICE"
+                    ? "E.G. OUTPATIENT SECTION"
+                    : "E.G. MEDICAL SERVICE"
               }
               value={form.name}
               onChange={(e) => setUpper("name", e.target.value)}
@@ -477,8 +475,9 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             )}
           </div>
 
+          {/* Description */}
           <div className="space-y-1.5">
-            <Label>Description</Label>
+            <Label>DESCRIPTION</Label>
             <Textarea
               placeholder="OPTIONAL DESCRIPTION..."
               value={form.description}
@@ -488,11 +487,12 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             />
           </div>
 
+          {/* Employee Head */}
           <div className="space-y-1.5">
             <Label>
-              Employee Head{" "}
+              EMPLOYEE HEAD{" "}
               <span className="text-xs text-muted-foreground font-normal">
-                (Chief, Director, Head, etc.)
+                (CHIEF, DIRECTOR, HEAD, ETC.)
               </span>
             </Label>
             <Select
@@ -503,7 +503,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
               <SelectTrigger>
                 <SelectValue
                   placeholder={
-                    loadingEmployees ? "Loading..." : "Select employee head"
+                    loadingEmployees ? "LOADING..." : "SELECT EMPLOYEE HEAD"
                   }
                 />
               </SelectTrigger>
@@ -515,7 +515,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                       className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                     />
                     <input
-                      placeholder="Search employee…"
+                      placeholder="SEARCH EMPLOYEE..."
                       value={headSearch}
                       onChange={(e) => setHeadSearch(e.target.value)}
                       onKeyDown={(e) => e.stopPropagation()}
@@ -526,11 +526,11 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                 <div className="overflow-y-auto max-h-44">
                   {loadingEmployees ? (
                     <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                      Loading...
+                      LOADING...
                     </div>
                   ) : filteredHeadEmployees.length === 0 ? (
                     <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                      No employees found.
+                      NO EMPLOYEES FOUND.
                     </div>
                   ) : (
                     filteredHeadEmployees.map((e) => (
@@ -553,11 +553,12 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
             </Select>
           </div>
 
+          {/* Employees */}
           <div className="space-y-1.5">
             <Label>
-              Employees{" "}
+              EMPLOYEES{" "}
               <span className="text-xs text-muted-foreground font-normal">
-                (select all that apply)
+                (SELECT ALL THAT APPLY)
               </span>
             </Label>
             <Select
@@ -567,7 +568,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                 setForm((prev) => ({
                   ...prev,
                   employee_ids: prev.employee_ids.includes(strId)
-                    ? prev.employee_ids.filter((e) => e !== strId)
+                    ? prev.employee_ids.filter((id) => id !== strId)
                     : [...prev.employee_ids, strId],
                 }));
               }}
@@ -577,10 +578,10 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                 <SelectValue
                   placeholder={
                     loadingEmployees
-                      ? "Loading..."
+                      ? "LOADING..."
                       : form.employee_ids.length > 0
-                        ? `${form.employee_ids.length} employee(s) selected`
-                        : "Select employees"
+                        ? `${form.employee_ids.length} EMPLOYEE(S) SELECTED`
+                        : "SELECT EMPLOYEES"
                   }
                 />
               </SelectTrigger>
@@ -592,7 +593,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                       className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                     />
                     <input
-                      placeholder="Search employee…"
+                      placeholder="SEARCH EMPLOYEE..."
                       value={employeeSearch}
                       onChange={(e) => setEmployeeSearch(e.target.value)}
                       onKeyDown={(e) => e.stopPropagation()}
@@ -603,11 +604,11 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                 <div className="overflow-y-auto max-h-44">
                   {loadingEmployees ? (
                     <div className="px-3 py-4 text-xs text-slate-400 text-center uppercase">
-                      Loading...
+                      LOADING...
                     </div>
                   ) : filteredEmployees.length === 0 ? (
                     <div className="px-3 py-4 text-xs text-slate-400 text-center">
-                      No employees found.
+                      NO EMPLOYEES FOUND.
                     </div>
                   ) : (
                     filteredEmployees.map((e) => {
@@ -620,9 +621,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                         >
                           <span className="flex items-center gap-2">
                             <span
-                              className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
-                                selected ? "bg-indigo-600" : "bg-gray-200"
-                              }`}
+                              className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${selected ? "bg-indigo-600" : "bg-gray-200"}`}
                             />
                             {getEmployeeName(e)}
                           </span>
@@ -651,7 +650,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                           setForm((prev) => ({
                             ...prev,
                             employee_ids: prev.employee_ids.filter(
-                              (e) => e !== id,
+                              (i) => i !== id,
                             ),
                           }))
                         }
@@ -667,12 +666,13 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        {/* ── Fixed Footer ─────────────────────────────────────────────── */}
+        <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2">
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            CANCEL
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : `Create ${typeLabel || "Record"}`}
+            {saving ? "SAVING..." : `CREATE ${typeLabel || "RECORD"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
