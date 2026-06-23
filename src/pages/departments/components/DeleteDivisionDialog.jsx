@@ -1,12 +1,12 @@
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 export default function DeleteDivisionDialog({
@@ -16,12 +16,7 @@ export default function DeleteDivisionDialog({
   onCancel,
 }) {
   return (
-    <AlertDialog
-      open={!!target}
-      onOpenChange={(o) => {
-        if (!o) onCancel();
-      }}
-    >
+    <AlertDialog open={!!target} onOpenChange={(v) => !v && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Division</AlertDialogTitle>
@@ -38,9 +33,8 @@ export default function DeleteDivisionDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel} disabled={deleting}>
-            Cancel
-          </AlertDialogCancel>
+          {/* No onClick here — onOpenChange handles it via the false branch above */}
+          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             disabled={deleting}

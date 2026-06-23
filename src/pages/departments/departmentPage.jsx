@@ -18,14 +18,17 @@ export default function DepartmentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ── Department modals ──────────────────────────────────────────────────
+  // Derived from divisions — drives the button label
+  const [hasOffice, setHasOffice] = useState(false);
+
+  // ── Department modals ────────────────────────────────────────────────────
   const [showAdd, setShowAdd] = useState(false);
   const [showAddMCC, setShowAddMCC] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // ── Division modals ──────────────────────────────────────────────────
+  // ── Division modals ──────────────────────────────────────────────────────
   const [editDivisionTarget, setEditDivisionTarget] = useState(null);
   const [deleteDivisionTarget, setDeleteDivisionTarget] = useState(null);
   const [deletingDivision, setDeletingDivision] = useState(false);
@@ -39,10 +42,15 @@ export default function DepartmentPage() {
         departmentService.getDepartments(),
         divisionService.getAll(),
       ]);
-      setDepartments(
-        Array.isArray(deptData) ? deptData : (deptData?.data ?? []),
-      );
-      setDivisions(Array.isArray(divData) ? divData : []);
+
+      const depts = Array.isArray(deptData) ? deptData : (deptData?.data ?? []);
+      const divs = Array.isArray(divData) ? divData : [];
+
+      setDepartments(depts);
+      setDivisions(divs);
+
+      // Sync the button label with the actual data
+      setHasOffice(divs.some((d) => d.type?.toUpperCase() === "OFFICE"));
     } catch {
       setError("Failed to load data.");
     } finally {
@@ -109,6 +117,11 @@ export default function DepartmentPage() {
     }
   };
 
+  // Button label reflects whether an OFFICE already exists
+  const addDivisionButtonLabel = hasOffice
+    ? "Add Directorate / Division"
+    : "Add Office / Division";
+
   if (error) {
     return (
       <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
@@ -157,12 +170,13 @@ export default function DepartmentPage() {
               )}
             </div>
 
+            {/* Label updates based on whether an OFFICE already exists */}
             <button
               onClick={() => setShowAddMCC(true)}
               className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 shadow-sm transition hover:bg-indigo-100 active:scale-95 whitespace-nowrap"
             >
               <Plus size={15} />
-              Add MCC Office
+              {addDivisionButtonLabel}
             </button>
 
             <button
