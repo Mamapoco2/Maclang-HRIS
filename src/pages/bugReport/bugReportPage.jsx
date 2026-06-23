@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { getReports, updateReport } from "@/services/bugService"; // ← adjust path to match your project
+import { getReports, updateReport } from "@/services/bugService";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -129,6 +129,37 @@ function formatDateTime(iso) {
   });
 }
 
+/**
+ * Fetch every page of reports from the paginated API.
+ * The backend paginates at 25 per page; without this, stat card totals
+ * are wrong and filters miss records beyond the first page.
+ *
+ * Abort signal is passed through so in-flight fetches cancel on unmount.
+ */
+async function fetchAllReports(signal) {
+  let page = 1;
+  let lastPage = 1;
+  const all = [];
+
+  do {
+    // getReports passes params straight to axios, which serialises them as query strings
+    const data = await getReports({ page, per_page: 100 }, { signal });
+
+    // Support both paginated envelope { data: [], meta: { last_page } }
+    // and plain array responses (unlikely in this codebase but defensive).
+    if (Array.isArray(data)) {
+      all.push(...data);
+      break;
+    }
+
+    all.push(...(data.data ?? []));
+    lastPage = data.meta?.last_page ?? 1;
+    page += 1;
+  } while (page <= lastPage);
+
+  return all;
+}
+
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
@@ -142,6 +173,20 @@ function StatusBadge({ status }) {
       <Icon className="w-3 h-3" />
       {cfg.label}
     </Badge>
+  );
+}
+
+// ─── Sort Icon (extracted — not defined inside render) ────────────────────────
+
+function SortIcon({ field, sortField, sortDir }) {
+  if (sortField !== field)
+    return (
+      <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground/50 ml-1 inline" />
+    );
+  return sortDir === "asc" ? (
+    <ChevronUp className="w-3.5 h-3.5 ml-1 inline" />
+  ) : (
+    <ChevronDown className="w-3.5 h-3.5 ml-1 inline" />
   );
 }
 
@@ -319,7 +364,7 @@ export default function ReportsModule() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [updatingId, setUpdatingId] = useState(null); // tracks which row is mid-update
+  const [updatingId, setUpdatingId] = useState(null);
 
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -333,14 +378,15 @@ export default function ReportsModule() {
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 
-  const fetchReports = useCallback(async () => {
+  const fetchReports = useCallback(async (signal) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getReports();
-      // Support both { data: [...] } envelope and plain array responses
-      setReports(Array.isArray(data) ? data : (data.data ?? []));
+      const all = await fetchAllReports(signal);
+      setReports(all);
     } catch (err) {
+      // Ignore AbortError from cleanup — it's not a real error.
+      if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
       console.error(err);
       setError("Failed to load reports. Please try again.");
     } finally {
@@ -349,7 +395,11 @@ export default function ReportsModule() {
   }, []);
 
   useEffect(() => {
-    fetchReports();
+    // Create an AbortController so we can cancel in-flight requests on unmount
+    // or when the effect re-runs (axios supports { signal } from AbortController).
+    const controller = new AbortController();
+    fetchReports(controller.signal);
+    return () => controller.abort();
   }, [fetchReports]);
 
   // ── Filtering & sorting ──────────────────────────────────────────────────
@@ -415,45 +465,50 @@ export default function ReportsModule() {
     }
   };
 
-  const handleStatusChange = async (id, newStatus) => {
-    // Optimistic update
-    const previous = reports.find((r) => r.id === id);
-    const optimisticPayload = {
-      status: newStatus,
-      resolved_at: newStatus === "resolved" ? new Date().toISOString() : null,
-    };
-
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...optimisticPayload } : r)),
-    );
-    // Keep modal in sync if it's open for this report
-    setSelectedReport((prev) =>
-      prev?.id === id ? { ...prev, ...optimisticPayload } : prev,
-    );
-
-    setUpdatingId(id);
-    try {
-      await updateReport(id, optimisticPayload);
-      const labels = {
-        resolved: "Marked as fixed",
-        open: "Reopened",
-        in_progress: "Marked in progress",
+  const handleStatusChange = useCallback(
+    async (id, newStatus) => {
+      // Optimistic update — update local state immediately for snappy UX
+      const previous = reports.find((r) => r.id === id);
+      const optimisticPayload = {
+        status: newStatus,
+        // Set resolved_at client-side so the Release Manager's unassigned
+        // list orders correctly before the next full refresh.
+        resolved_at: newStatus === "resolved" ? new Date().toISOString() : null,
       };
-      toast.success(labels[newStatus] ?? "Status updated.");
-    } catch (err) {
-      console.error(err);
-      // Roll back on failure
+
       setReports((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, ...previous } : r)),
+        prev.map((r) => (r.id === id ? { ...r, ...optimisticPayload } : r)),
       );
+      // Keep modal in sync if it's open for this report
       setSelectedReport((prev) =>
-        prev?.id === id ? { ...prev, ...previous } : prev,
+        prev?.id === id ? { ...prev, ...optimisticPayload } : prev,
       );
-      toast.error("Failed to update status. Please try again.");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
+
+      setUpdatingId(id);
+      try {
+        await updateReport(id, optimisticPayload);
+        const labels = {
+          resolved: "Marked as fixed",
+          open: "Reopened",
+          in_progress: "Marked in progress",
+        };
+        toast.success(labels[newStatus] ?? "Status updated.");
+      } catch (err) {
+        console.error(err);
+        // Roll back on failure
+        setReports((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, ...previous } : r)),
+        );
+        setSelectedReport((prev) =>
+          prev?.id === id ? { ...prev, ...previous } : prev,
+        );
+        toast.error("Failed to update status. Please try again.");
+      } finally {
+        setUpdatingId(null);
+      }
+    },
+    [reports],
+  );
 
   const handleRowClick = (report) => {
     setSelectedReport(report);
@@ -475,18 +530,6 @@ export default function ReportsModule() {
     setFilterSeverity("all");
   };
 
-  const SortIcon = ({ field }) => {
-    if (sortField !== field)
-      return (
-        <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground/50 ml-1 inline" />
-      );
-    return sortDir === "asc" ? (
-      <ChevronUp className="w-3.5 h-3.5 ml-1 inline" />
-    ) : (
-      <ChevronDown className="w-3.5 h-3.5 ml-1 inline" />
-    );
-  };
-
   // ── Loading / error states ────────────────────────────────────────────────
 
   if (loading) {
@@ -505,7 +548,7 @@ export default function ReportsModule() {
       <div className="p-6 flex items-center justify-center min-h-[300px]">
         <div className="flex flex-col items-center gap-3 text-center">
           <p className="text-sm text-destructive">{error}</p>
-          <Button variant="outline" size="sm" onClick={fetchReports}>
+          <Button variant="outline" size="sm" onClick={() => fetchReports()}>
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             Retry
           </Button>
@@ -526,7 +569,7 @@ export default function ReportsModule() {
             Track and resolve bug reports and improvement requests.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchReports}>
+        <Button variant="outline" size="sm" onClick={() => fetchReports()}>
           <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
           Refresh
         </Button>
@@ -620,7 +663,12 @@ export default function ReportsModule() {
                 className="text-xs cursor-pointer select-none"
                 onClick={() => handleSort("subject")}
               >
-                Subject <SortIcon field="subject" />
+                Subject{" "}
+                <SortIcon
+                  field="subject"
+                  sortField={sortField}
+                  sortDir={sortDir}
+                />
               </TableHead>
               <TableHead className="text-xs w-[100px]">Type</TableHead>
               <TableHead className="text-xs w-[110px]">Category</TableHead>
@@ -630,13 +678,23 @@ export default function ReportsModule() {
                 className="text-xs w-[120px] cursor-pointer select-none"
                 onClick={() => handleSort("user.username")}
               >
-                Reporter <SortIcon field="user.username" />
+                Reporter{" "}
+                <SortIcon
+                  field="user.username"
+                  sortField={sortField}
+                  sortDir={sortDir}
+                />
               </TableHead>
               <TableHead
                 className="text-xs w-[110px] cursor-pointer select-none"
                 onClick={() => handleSort("created_at")}
               >
-                Submitted <SortIcon field="created_at" />
+                Submitted{" "}
+                <SortIcon
+                  field="created_at"
+                  sortField={sortField}
+                  sortDir={sortDir}
+                />
               </TableHead>
               <TableHead className="text-xs w-[100px] text-right">
                 Action
