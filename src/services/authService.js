@@ -82,13 +82,12 @@ const register = async (
   }
 };
 
-const logout = async () => {
-  try {
-    await api.post("/logout");
-  } finally {
-    clearAuth();
-  }
-};
+/**
+ * Fire-and-forget server call — caller is responsible for clearing local auth
+ * BEFORE calling this so the token is still available for the request header.
+ * Returns the axios promise so caller can .catch() if needed.
+ */
+const logout = () => api.post("/logout");
 
 const me = async () => {
   try {

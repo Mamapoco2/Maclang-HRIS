@@ -1,7 +1,8 @@
 import { createContext, useState, useEffect, useCallback, useRef } from "react";
+import api from "@/api/api";
 import authService from "@/services/authService";
-import { getUser, clearAuth, setUser } from "@/lib/tokenStorage";
-import { getEcho } from "@/lib/echo";
+import { getUser, clearAuth, setUser, getToken } from "@/lib/tokenStorage";
+import { getEcho, resetEcho } from "@/lib/echo";
 
 export const AuthContext = createContext(null);
 
@@ -120,18 +121,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      await authService.logout();
-    } catch (err) {
-      console.error("Logout error:", err);
-    } finally {
-      resetEcho();
-      clearAuth();
-      setUserState(null);
-      setShowOrientation(false);
+  const logout = useCallback(() => {
+    // 1. Save token BEFORE wiping localStorage
+    const token = getToken();
+
+    // 2. Clear local state immediately — UI responds instantly
+    resetEcho();
+    clearAuth();
+    setUserState(null);
+    setShowOrientation(false);
+
+    // 3. Invalidate server-side token by passing it directly in the header.
+    //    Cannot use authService.logout() here because the axios request
+    //    interceptor reads getToken() which is already null at this point.
+    if (token) {
+      api
+        .post("/logout", null, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .catch(() => {
+          // Silently ignore — local session is already cleared.
+        });
     }
-  };
+  }, []);
 
   const dismissOrientation = useCallback(async () => {
     try {

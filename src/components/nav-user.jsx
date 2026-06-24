@@ -41,12 +41,9 @@ export function NavUser() {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    await logout();
-    setLoggingOut(false);
+  const handleLogout = () => {
+    logout();
     setShowLogoutModal(false);
   };
 
@@ -170,13 +167,12 @@ export function NavUser() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleLogout}
-              disabled={loggingOut}
               className="bg-red-600 hover:bg-red-700"
             >
-              {loggingOut ? "Logging out..." : "Logout"}
+              Logout
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

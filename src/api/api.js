@@ -23,8 +23,9 @@ api.interceptors.response.use(
     if (status === 401) {
       const isProfileCheck = url.includes("/profile/status");
       const isAlreadyOnLogin = window.location.pathname === "/login";
+      const isLogout = url.includes("/logout");
 
-      if (!isProfileCheck && !isAlreadyOnLogin) {
+      if (!isProfileCheck && !isAlreadyOnLogin && !isLogout) {
         clearAuth();
         window.location.href = "/login";
       }
