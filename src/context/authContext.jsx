@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }) => {
     refreshUserRef.current = refreshUser;
   }, [refreshUser]);
 
+  // ─── Restore session on mount ────────────────────────────────────────────────
   useEffect(() => {
     const syncUser = async () => {
       const stored = getUser();
@@ -44,6 +45,7 @@ export const AuthProvider = ({ children }) => {
         if (res?.success && res.user) {
           setUser(res.user);
           setUserState(res.user);
+          getEcho({ forceNew: true });
         } else {
           clearAuth();
           setUserState(null);
@@ -58,32 +60,44 @@ export const AuthProvider = ({ children }) => {
     syncUser();
   }, []);
 
+  // ─── WebSocket listeners ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;
+
     const echo = getEcho();
     if (!echo) return;
+
     const channel = echo.private(`user.${user.id}`);
+
     channel.listen(".permissions.updated", (e) => {
-      console.log("permissions.updated received — refreshing user", e);
+      console.log("[Echo] permissions.updated →", e);
       refreshUserRef.current();
     });
+
     channel.listen(".logged.in.elsewhere", () => {
+      console.log("[Echo] logged.in.elsewhere → displacing session");
       resetEcho();
       clearAuth();
       setUserState(null);
       setSessionDisplaced(true);
     });
+
     return () => {
       echo.leaveChannel(`user.${user.id}`);
     };
   }, [user?.id]);
 
+  // ─── Login ───────────────────────────────────────────────────────────────────
   const login = async (username, password) => {
     try {
       const res = await authService.login(username, password);
       if (res?.success) {
         setUser(res.user);
         setUserState(res.user);
+
+        // Token is now in storage — reinit Echo with fresh auth header
+        getEcho({ forceNew: true });
+
         if (res.user?.has_completed_orientation === false) {
           setShowOrientation(true);
         }
@@ -95,6 +109,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ─── Register ────────────────────────────────────────────────────────────────
   const register = async (
     given_name,
     middle_name,
@@ -105,7 +120,7 @@ export const AuthProvider = ({ children }) => {
     password_confirmation,
   ) => {
     try {
-      const res = await authService.register(
+      return await authService.register(
         given_name,
         middle_name,
         last_name,
@@ -114,37 +129,31 @@ export const AuthProvider = ({ children }) => {
         password,
         password_confirmation,
       );
-      return res;
     } catch (err) {
       console.error("Register error:", err);
       return { success: false };
     }
   };
 
+  // ─── Logout ──────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
-    // 1. Save token BEFORE wiping localStorage
     const token = getToken();
 
-    // 2. Clear local state immediately — UI responds instantly
     resetEcho();
     clearAuth();
     setUserState(null);
     setShowOrientation(false);
 
-    // 3. Invalidate server-side token by passing it directly in the header.
-    //    Cannot use authService.logout() here because the axios request
-    //    interceptor reads getToken() which is already null at this point.
     if (token) {
       api
         .post("/logout", null, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        .catch(() => {
-          // Silently ignore — local session is already cleared.
-        });
+        .catch(() => {});
     }
   }, []);
 
+  // ─── Orientation ─────────────────────────────────────────────────────────────
   const dismissOrientation = useCallback(async () => {
     try {
       await authService.completeOrientation();

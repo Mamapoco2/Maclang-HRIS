@@ -4,63 +4,68 @@ export const PERMISSION_GROUPS = [
     permissions: [{ key: "dashboard.view", label: "View Dashboard" }],
   },
   {
-    group: "Employees",
+    group: "Recruitment, Selection & Placement",
     permissions: [
+      { key: "hiring.view", label: "View Hiring" },
+      { key: "hiring.manage", label: "Manage Hiring" },
+      { key: "leave.view", label: "View Leave" },
+      { key: "leave.manage", label: "Manage Leave" },
+      { key: "leave.approve", label: "Approve Leave" },
       { key: "employees.view", label: "View Employees" },
       { key: "employees.manage", label: "Manage Employees" },
+      { key: "team.view", label: "View Team" },
+      {
+        key: "orientation.view",
+        label: "View Orientation Compliance Monitoring",
+      },
     ],
   },
   {
-    group: "Analytics",
-    permissions: [{ key: "analytics.view", label: "View Analytics" }],
-  },
-  {
-    group: "Trainings",
+    group: "Learning & Development",
     permissions: [
       { key: "trainings.view", label: "View Trainings" },
       { key: "trainings.manage", label: "Manage Trainings" },
       { key: "trainings.join", label: "Join Trainings" },
+      { key: "trainings.skill_gap", label: "Skill Gap Analysis" },
+      {
+        key: "trainings.effectiveness",
+        label: "Training Effectiveness Analysis",
+      },
+      { key: "trainings.coaching", label: "Coaching & Mentoring" },
     ],
   },
   {
-    group: "Team",
-    permissions: [{ key: "team.view", label: "View Team" }],
-  },
-  {
-    group: "Leave",
+    group: "SPMS",
     permissions: [
-      { key: "leave.view", label: "View Leave" },
-      { key: "leave.manage", label: "Manage Leave" },
-      { key: "leave.approve", label: "Approve Leave" },
+      { key: "spms.view", label: "View SPMS" },
+      { key: "spms.manage", label: "Manage SPMS" },
     ],
   },
   {
-    group: "Accounts",
+    group: "Compensation & Benefits",
     permissions: [
-      { key: "accounts.view", label: "View Accounts" },
-      { key: "accounts.manage", label: "Manage Accounts" },
+      { key: "compensation.view", label: "View Compensation & Benefits" },
     ],
   },
   {
-    group: "Departments",
+    group: "System Management",
     permissions: [
+      { key: "accounts.view", label: "View Accounts Management" },
+      { key: "accounts.manage", label: "Manage Accounts / System" },
       { key: "departments.view", label: "View Departments" },
       { key: "departments.manage", label: "Manage Departments" },
-    ],
-  },
-  {
-    group: "Plantilla Items",
-    permissions: [
       { key: "plantilla_items.view", label: "View Plantilla Items" },
       { key: "plantilla_items.manage", label: "Manage Plantilla Items" },
+      { key: "positions.view", label: "View Positions (COS / Consultant)" },
     ],
   },
   {
-    group: "Hiring",
-    permissions: [
-      { key: "hiring.view", label: "View Hiring" },
-      { key: "hiring.manage", label: "Manage Hiring" },
-    ],
+    group: "Rewards & Recognition",
+    permissions: [{ key: "rewards.view", label: "View Rewards & Recognition" }],
+  },
+  {
+    group: "Analytics",
+    permissions: [{ key: "analytics.view", label: "View Analytics" }],
   },
   {
     group: "Announcements",
@@ -72,17 +77,20 @@ export const PERMISSION_GROUPS = [
   {
     group: "Manpower Mapping",
     permissions: [
-      { key: "manpower.view", label: "View Manpower" },
-      { key: "manpower.manage", label: "Manage Manpower" },
+      { key: "manpower.view", label: "View Manpower Mapping" },
+      { key: "manpower.manage", label: "Manage Manpower Mapping" },
     ],
   },
   {
-    group: "SPMS",
+    group: "Task Monitoring",
     permissions: [
-      { key: "spms.view", label: "View SPMS" },
-      { key: "spms.manage", label: "Manage SPMS" },
+      { key: "task_monitoring.view", label: "View Task Monitoring" },
     ],
   },
+  // {
+  //   group: "Bug Reports",
+  //   permissions: [{ key: "bug-reports.view", label: "View Bug Reports" }],
+  // },
   {
     group: "Users",
     permissions: [

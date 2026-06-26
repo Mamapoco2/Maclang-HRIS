@@ -1,4 +1,4 @@
-//src/routes/appRoutes.jsx
+// src/routes/appRoutes.jsx
 import {
   BrowserRouter as Router,
   Routes,
@@ -87,6 +87,13 @@ function AppRoutes() {
               </ProfileGate>
             }
           >
+            {/* ── Always accessible to authenticated users ── */}
+            <Route path="/updates" element={<Updates />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/Orientation" element={<OrientationPage />} />
+
+            {/* ── Dashboard ── */}
             <Route
               path="/dashboard"
               element={
@@ -95,6 +102,8 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+
+            {/* ── Employees ── */}
             <Route
               path="/employees"
               element={
@@ -103,6 +112,8 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+
+            {/* ── Analytics ── */}
             <Route
               path="/analytics"
               element={
@@ -111,23 +122,8 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
-            <Route
-              path="/trainings"
-              element={
-                <PermissionRoute permission="trainings.view">
-                  <Trainings />
-                </PermissionRoute>
-              }
-            />
-            <Route path="/skillGapAnalysis" element={<SkillAnalysis />} />
-            <Route
-              path="/accounts"
-              element={
-                <PermissionRoute permission="accounts.view">
-                  <Accounts />
-                </PermissionRoute>
-              }
-            />
+
+            {/* ── Hiring ── */}
             <Route
               path="/hiring/plantilla/applications"
               element={
@@ -152,6 +148,8 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+
+            {/* ── Leave ── */}
             <Route
               path="/leaveDashboard"
               element={
@@ -160,17 +158,48 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
-            <Route path="/leaveApproval" element={<LeaveApproval />} />
-            <Route path="/leaveBalance" element={<LeaveBalance />} />
-            <Route path="/leaveCalendar" element={<LeaveCalendar />} />
-            <Route path="/NewLeaveRequest" element={<NewLeaveRequest />} />
-            <Route path="/leaveRequest" element={<LeaveRequest />} />
-            <Route path="/Orientation" element={<OrientationPage />} />
             <Route
-              path="/orientationMonitoring"
-              element={<OrientationMonitoringPage />}
+              path="/leaveApproval"
+              element={
+                <PermissionRoute permission="leave.view">
+                  <LeaveApproval />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/leaveBalance"
+              element={
+                <PermissionRoute permission="leave.view">
+                  <LeaveBalance />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/leaveCalendar"
+              element={
+                <PermissionRoute permission="leave.view">
+                  <LeaveCalendar />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/leaveRequest"
+              element={
+                <PermissionRoute permission="leave.view">
+                  <LeaveRequest />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/NewLeaveRequest"
+              element={
+                <PermissionRoute permission="leave.view">
+                  <NewLeaveRequest />
+                </PermissionRoute>
+              }
             />
 
+            {/* ── Team ── */}
             <Route
               path="/team"
               element={
@@ -179,38 +208,44 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+
+            {/* ── Orientation ── */}
             <Route
-              path="/inbox"
+              path="/orientationMonitoring"
               element={
-                <PermissionRoute permission="announcements.view">
-                  <Inbox />
+                <PermissionRoute permission="orientation.view">
+                  <OrientationMonitoringPage />
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── Trainings ── */}
+            <Route
+              path="/trainings"
+              element={
+                <PermissionRoute permission="trainings.view">
+                  <Trainings />
                 </PermissionRoute>
               }
             />
             <Route
-              path="/forward"
+              path="/skillGapAnalysis"
               element={
-                <PermissionRoute permission="announcements.view">
-                  <Forward />
+                <PermissionRoute permission="trainings.skill_gap">
+                  <SkillAnalysis />
                 </PermissionRoute>
               }
             />
             <Route
-              path="/sent"
+              path="/trainingEffectiveness"
               element={
-                <PermissionRoute permission="announcements.view">
-                  <Sent />
+                <PermissionRoute permission="trainings.effectiveness">
+                  <TrainingEffectivenessPage />
                 </PermissionRoute>
               }
             />
-            <Route
-              path="/manpower"
-              element={
-                <PermissionRoute permission="manpower.view">
-                  <ManPower />
-                </PermissionRoute>
-              }
-            />
+
+            {/* ── SPMS ── */}
             <Route
               path="/IPCR"
               element={
@@ -243,6 +278,52 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+
+            {/* ── Announcements ── */}
+            <Route
+              path="/inbox"
+              element={
+                <PermissionRoute permission="announcements.view">
+                  <Inbox />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/forward"
+              element={
+                <PermissionRoute permission="announcements.view">
+                  <Forward />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/sent"
+              element={
+                <PermissionRoute permission="announcements.view">
+                  <Sent />
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── Manpower ── */}
+            <Route
+              path="/manpower"
+              element={
+                <PermissionRoute permission="manpower.view">
+                  <ManPower />
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── System Management ── */}
+            <Route
+              path="/accounts"
+              element={
+                <PermissionRoute permission="accounts.view">
+                  <Accounts />
+                </PermissionRoute>
+              }
+            />
             <Route
               path="/departments"
               element={
@@ -259,27 +340,70 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
-
-            <Route path="/updates" element={<Updates />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/account" element={<AccountPage />} />
             <Route
-              path="/TopDepartment"
-              element={<TopPeformerDepartmentPage />}
+              path="/COSList"
+              element={
+                <PermissionRoute permission="positions.view">
+                  <CosPage />
+                </PermissionRoute>
+              }
             />
-            <Route path="/TopHospital" element={<TopPeformerHospitalPage />} />
-            <Route
-              path="/trainingEffectiveness"
-              element={<TrainingEffectivenessPage />}
-            />
-            <Route path="/COSList" element={<CosPage />} />
             <Route
               path="/ConsultantList"
-              element={<ConsultantPositionsPage />}
+              element={
+                <PermissionRoute permission="positions.view">
+                  <ConsultantPositionsPage />
+                </PermissionRoute>
+              }
             />
-            <Route path="task-monitoring" element={<TaskMonitoringPage />} />
-            <Route path="/bug-reports" element={<BugReportsPage />} />
-            <Route path="/release-manager" element={<ReleaseManagerPage />} />
+
+            {/* ── Rewards & Recognition ── */}
+            <Route
+              path="/TopDepartment"
+              element={
+                <PermissionRoute permission="rewards.view">
+                  <TopPeformerDepartmentPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/TopHospital"
+              element={
+                <PermissionRoute permission="rewards.view">
+                  <TopPeformerHospitalPage />
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── Task Monitoring ── */}
+            <Route
+              path="/task-monitoring"
+              element={
+                <PermissionRoute permission="task_monitoring.view">
+                  <TaskMonitoringPage />
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── Bug Reports ── */}
+            <Route
+              path="/bug-reports"
+              element={
+                <PermissionRoute permission="bug-reports.view">
+                  <BugReportsPage />
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── Release Manager ── */}
+            <Route
+              path="/release-manager"
+              element={
+                <PermissionRoute permission="accounts.manage">
+                  <ReleaseManagerPage />
+                </PermissionRoute>
+              }
+            />
           </Route>
         </Route>
       </Routes>
