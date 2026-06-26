@@ -2,20 +2,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "./PageHeader";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/Card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FormField, Input, Textarea, Select } from "./FormField";
 import { useToast } from "./Toast";
 import { LEAVE_TYPES, CURRENT_USER, LEAVE_BALANCES } from "./mockData";
-import {
-  LEAVE_TYPE_MAP,
-  HIDE_DATE_SELECTION,
-} from "./leavePolicy";
+import { LEAVE_TYPE_MAP, HIDE_DATE_SELECTION } from "./leavePolicy";
 import { LeaveTypeFields } from "./components/LeaveTypeFields";
 import { LeaveRequirementsPanel } from "./components/LeaveRequirementsPanel";
 import { CalendarDays, User, Building2, Briefcase } from "lucide-react";
@@ -40,12 +32,7 @@ export default function NewRequestPage({ onNavigate }) {
   const employee = CURRENT_USER;
   const balance = LEAVE_BALANCES.find((b) => b.employeeId === employee.id);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-  } = useForm({
+  const { register, handleSubmit, watch, reset } = useForm({
     defaultValues: {
       leaveType: "",
       startDate: "",
@@ -64,7 +51,10 @@ export default function NewRequestPage({ onNavigate }) {
   const typeConfig = LEAVE_TYPE_MAP[leaveType];
 
   const days =
-    !hideDates && startDate && endDate && new Date(endDate) >= new Date(startDate)
+    !hideDates &&
+    startDate &&
+    endDate &&
+    new Date(endDate) >= new Date(startDate)
       ? daysBetween(startDate, endDate)
       : hideDates && leaveType === "monetization"
         ? watch("creditsToMonetize") || "—"
@@ -105,15 +95,17 @@ export default function NewRequestPage({ onNavigate }) {
   const LeaveTypeIcon = typeConfig?.icon;
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-screeen mx-auto">
       <PageHeader
         title="Leave Application"
         description="Submit a leave request in accordance with CSC leave policies"
-        breadcrumbs={["Leave Management", "Apply for Leave"]}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="xl:col-span-2 space-y-5">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="xl:col-span-2 space-y-5"
+        >
           {/* Employee Information */}
           <Card>
             <CardHeader>
@@ -125,7 +117,9 @@ export default function NewRequestPage({ onNavigate }) {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-[var(--muted)]/40 border border-[var(--border)]">
                 <div>
-                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5">Full Name</p>
+                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5">
+                    Full Name
+                  </p>
                   <p className="text-sm font-semibold">{employee.name}</p>
                 </div>
                 <div>
@@ -138,11 +132,17 @@ export default function NewRequestPage({ onNavigate }) {
                   <p className="text-xs text-[var(--muted-foreground)] mb-0.5 flex items-center gap-1">
                     <Briefcase className="w-3 h-3" /> Designation
                   </p>
-                  <p className="text-sm font-semibold">{employee.designation}</p>
+                  <p className="text-sm font-semibold">
+                    {employee.designation}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5">Email</p>
-                  <p className="text-sm font-semibold truncate">{employee.email}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] mb-0.5">
+                    Email
+                  </p>
+                  <p className="text-sm font-semibold truncate">
+                    {employee.email}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -168,7 +168,10 @@ export default function NewRequestPage({ onNavigate }) {
               {typeConfig && LeaveTypeIcon && (
                 <div
                   className="flex items-center gap-2 p-2.5 rounded-lg text-sm"
-                  style={{ backgroundColor: typeConfig.bg, color: typeConfig.color }}
+                  style={{
+                    backgroundColor: typeConfig.bg,
+                    color: typeConfig.color,
+                  }}
                 >
                   <LeaveTypeIcon className="w-4 h-4" />
                   <span className="font-medium">{typeConfig.label}</span>
@@ -190,10 +193,15 @@ export default function NewRequestPage({ onNavigate }) {
                     </FormField>
                   </div>
 
-                  <FormField label="Number of Days" hint="Auto-calculated from date range">
+                  <FormField
+                    label="Number of Days"
+                    hint="Auto-calculated from date range"
+                  >
                     <Input
                       readOnly
-                      value={days > 0 ? `${days} day${days !== 1 ? "s" : ""}` : "—"}
+                      value={
+                        days > 0 ? `${days} day${days !== 1 ? "s" : ""}` : "—"
+                      }
                       className="bg-[var(--muted)]/50 cursor-not-allowed"
                     />
                   </FormField>
@@ -274,7 +282,9 @@ export default function NewRequestPage({ onNavigate }) {
               ) : (
                 <div className="text-center p-4 bg-[var(--muted)] rounded-xl">
                   <p className="text-sm text-[var(--muted-foreground)]">
-                    {hideDates ? "No date range required" : "Select dates to preview"}
+                    {hideDates
+                      ? "No date range required"
+                      : "Select dates to preview"}
                   </p>
                 </div>
               )}
@@ -308,14 +318,21 @@ export default function NewRequestPage({ onNavigate }) {
               </CardHeader>
               <CardContent className="space-y-3">
                 {[
-                  { label: "Vacation", data: balance.vacation, color: "#3b82f6" },
+                  {
+                    label: "Vacation",
+                    data: balance.vacation,
+                    color: "#3b82f6",
+                  },
                   { label: "Sick", data: balance.sick, color: "#f59e0b" },
                 ].map((b) => {
-                  const remaining = b.data.total - b.data.used + b.data.carryForward;
+                  const remaining =
+                    b.data.total - b.data.used + b.data.carryForward;
                   return (
                     <div key={b.label}>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-[var(--muted-foreground)]">{b.label}</span>
+                        <span className="text-[var(--muted-foreground)]">
+                          {b.label}
+                        </span>
                         <span className="font-medium">
                           {remaining}/{b.data.total}
                         </span>

@@ -92,21 +92,13 @@ const NAV_MAIN = [
         ],
       },
       {
-        title: "Leave",
-        permission: "leave.view",
-        items: [
-          { title: "Dashboard", url: "/leaveDashboard" },
-          { title: "Approval", url: "/leaveApproval" },
-          { title: "Balance", url: "/leaveBalance" },
-          { title: "Calendar", url: "/leaveCalendar" },
-          { title: "Leave Request", url: "/leaveRequest" },
-          { title: "New Leave Request", url: "/newLeaveRequest" },
-        ],
+        title: "Employees Management",
+        url: "/employees",
+        permission: "employees.view",
       },
       {
-        title: "Employees",
-        url: "/employees",
-        icon: IconUsers,
+        title: "Renewal of Contract",
+        url: "",
         permission: "employees.view",
       },
       {
@@ -225,6 +217,18 @@ const NAV_MAIN = [
               {
                 title: "Hazard",
               },
+            ],
+          },
+          {
+            title: "Leave",
+            permission: "leave.view",
+            items: [
+              { title: "Dashboard", url: "/leaveDashboard" },
+              { title: "Approval", url: "/leaveApproval" },
+              { title: "Balance", url: "/leaveBalance" },
+              { title: "Calendar", url: "/leaveCalendar" },
+              { title: "Leave Request", url: "/leaveRequest" },
+              { title: "New Leave Request", url: "/newLeaveRequest" },
             ],
           },
         ],
@@ -389,6 +393,12 @@ const NAV_MAIN = [
     title: "Release Manager",
     url: "/release-manager",
     icon: IconRocket,
+    permission: "team.view",
+  },
+  {
+    title: "Audit Logs",
+    url: "/audit-logs",
+    icon: IconFileText,
     permission: "team.view",
   },
 ];
