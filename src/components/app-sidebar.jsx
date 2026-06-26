@@ -402,6 +402,12 @@ const NAV_MAIN = [
     icon: IconRocket,
     permission: "accounts.manage",
   },
+  {
+    title: "Audit Logs",
+    url: "/audit-logs",
+    icon: IconFileText,
+    permission: "team.view",
+  },
 ];
 
 const NAV_SECONDARY = [];
