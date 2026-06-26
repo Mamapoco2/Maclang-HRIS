@@ -1,3 +1,4 @@
+// app-sidebar.jsx
 import * as React from "react";
 import { useContext } from "react";
 import {
@@ -45,7 +46,6 @@ const NAV_MAIN = [
     icon: IconDashboard,
     permission: "dashboard.view",
   },
-
   {
     title: "Recruitment, Selection, Placement",
     icon: IconBriefcase,
@@ -53,86 +53,129 @@ const NAV_MAIN = [
     items: [
       {
         title: "Hiring",
+        permission: "hiring.view",
         items: [
           {
             title: "Plantilla (PSB)",
+            permission: "hiring.view",
             items: [
               {
                 title: "Applicants",
                 url: "/hiring/plantilla/applicants",
+                permission: "hiring.view",
               },
               {
                 title: "Applications",
                 url: "/hiring/plantilla/applications",
+                permission: "hiring.view",
               },
               {
                 title: "Onboarding",
                 url: "/hiring/plantilla/onboarding",
+                permission: "hiring.view",
               },
             ],
           },
-
           {
             title: "Non-Plantilla",
+            permission: "hiring.view",
             items: [
               {
                 title: "Applicants",
                 url: "/hiring/non-plantilla/applicants",
+                permission: "hiring.view",
               },
               {
                 title: "Applications",
                 url: "/hiring/non-plantilla/applications",
+                permission: "hiring.view",
               },
               {
                 title: "Onboarding",
                 url: "/hiring/non-plantilla/onboarding",
+                permission: "hiring.view",
               },
             ],
           },
         ],
       },
       {
-        title: "Employees Management",
-        url: "/employees",
-        permission: "employees.view",
+        title: "Leave",
+        permission: "leave.view",
+        items: [
+          {
+            title: "Dashboard",
+            url: "/leaveDashboard",
+            permission: "leave.view",
+          },
+          {
+            title: "Approval",
+            url: "/leaveApproval",
+            permission: "leave.view",
+          },
+          { title: "Balance", url: "/leaveBalance", permission: "leave.view" },
+          {
+            title: "Calendar",
+            url: "/leaveCalendar",
+            permission: "leave.view",
+          },
+          {
+            title: "Leave Request",
+            url: "/leaveRequest",
+            permission: "leave.view",
+          },
+          {
+            title: "New Leave Request",
+            url: "/newLeaveRequest",
+            permission: "leave.view",
+          },
+        ],
       },
       {
-        title: "Renewal of Contract",
-        url: "",
+        title: "Employees",
+        url: "/employees",
+        icon: IconUsers,
         permission: "employees.view",
       },
       {
         title: "Team",
         url: "/team",
+        permission: "team.view",
       },
       {
         title: "Orientation Compliance Monitoring",
         url: "/orientationMonitoring",
+        permission: "orientation.view",
       },
     ],
   },
   {
-    title: "Learning & Development ",
+    title: "Learning & Development",
     icon: IconSchool,
-    permission: "hiring.view",
+    permission: "trainings.view",
     items: [
       {
         title: "Training",
+        permission: "trainings.view",
         items: [
           {
             title: "Trainings",
             url: "/trainings",
+            permission: "trainings.view",
           },
           {
             title: "Skill Gap Analysis",
             url: "/skillGapAnalysis",
+            permission: "trainings.skill_gap",
           },
           {
             title: "Training Effectiveness Analysis",
             url: "/trainingEffectiveness",
+            permission: "trainings.effectiveness",
           },
           {
             title: "Coaching & Mentoring",
+            permission: "trainings.coaching",
           },
         ],
       },
@@ -141,49 +184,39 @@ const NAV_MAIN = [
   {
     title: "SPMS",
     icon: IconTarget,
-    permission: "hiring.view",
+    permission: "spms.view",
     items: [
       {
         title: "Plantilla",
+        permission: "spms.view",
         items: [
-          {
-            title: "MFO",
-          },
-          {
-            title: "KPI",
-          },
-          {
-            title: "QET",
-          },
+          { title: "MFO", permission: "spms.view" },
+          { title: "KPI", permission: "spms.view" },
+          { title: "QET", permission: "spms.view" },
         ],
       },
-      {
-        title: "IPCR",
-        url: "/IPCR",
-      },
-      {
-        title: "DPCR",
-        url: "/DPCR",
-      },
-      {
-        title: "OPCR",
-        url: "/OPCR",
-      },
+      { title: "IPCR", url: "/IPCR", permission: "spms.view" },
+      { title: "DPCR", url: "/DPCR", permission: "spms.view" },
+      { title: "OPCR", url: "/OPCR", permission: "spms.view" },
       {
         title: "Non-Plantilla",
+        permission: "spms.view",
         items: [
           {
             title: "Appraisal Form",
             url: "/appraisalForm",
+            permission: "spms.view",
           },
         ],
       },
       {
         title: "SPMS Management",
+        permission: "spms.view",
         items: [
           {
             title: "Performance Period",
             url: "/PerformancePeriod",
+            permission: "spms.view",
           },
         ],
       },
@@ -192,86 +225,69 @@ const NAV_MAIN = [
   {
     title: "Compensation & Benefits",
     icon: IconWallet,
-    permission: "hiring.view",
+    permission: "compensation.view",
     items: [
       {
         title: "Compensation",
+        permission: "compensation.view",
         items: [
           {
             title: "Regular",
+            permission: "compensation.view",
             items: [
               {
                 title: "Salary",
+                permission: "compensation.view",
                 items: [
                   {
                     title: "Attendance & Report Generation",
+                    permission: "compensation.view",
                   },
-                  {
-                    title: "Certification",
-                  },
-                  {
-                    title: "Transmittal",
-                  },
+                  { title: "Certification", permission: "compensation.view" },
+                  { title: "Transmittal", permission: "compensation.view" },
                 ],
               },
-              {
-                title: "Hazard",
-              },
-            ],
-          },
-          {
-            title: "Leave",
-            permission: "leave.view",
-            items: [
-              { title: "Dashboard", url: "/leaveDashboard" },
-              { title: "Approval", url: "/leaveApproval" },
-              { title: "Balance", url: "/leaveBalance" },
-              { title: "Calendar", url: "/leaveCalendar" },
-              { title: "Leave Request", url: "/leaveRequest" },
-              { title: "New Leave Request", url: "/newLeaveRequest" },
+              { title: "Hazard", permission: "compensation.view" },
             ],
           },
         ],
       },
       {
         title: "Special",
+        permission: "compensation.view",
         items: [
           {
             title: "Salary",
+            permission: "compensation.view",
             items: [
               {
                 title: "Attendance & Report Generation",
+                permission: "compensation.view",
               },
-              {
-                title: "Certification",
-              },
-              {
-                title: "Transmittal",
-              },
+              { title: "Certification", permission: "compensation.view" },
+              { title: "Transmittal", permission: "compensation.view" },
             ],
           },
           {
             title: "Hazard",
+            permission: "compensation.view",
             items: [
               {
                 title: "Attendance & Report Generation",
+                permission: "compensation.view",
               },
-              {
-                title: "Certification",
-              },
-              {
-                title: "Transmittal",
-              },
+              { title: "Certification", permission: "compensation.view" },
+              { title: "Transmittal", permission: "compensation.view" },
             ],
           },
-          {
-            title: "Night Diff",
-          },
+          { title: "Night Diff", permission: "compensation.view" },
           {
             title: "Salary Diff",
+            permission: "compensation.view",
             items: [
               {
                 title: "Same as Spec & Rec Sal",
+                permission: "compensation.view",
               },
             ],
           },
@@ -282,36 +298,40 @@ const NAV_MAIN = [
   {
     title: "System Management",
     icon: IconSettings2,
-    permission: "hiring.view",
+    permission: "accounts.manage",
     items: [
       {
         title: "Role Management",
+        permission: "accounts.manage",
       },
       {
         title: "Accounts Management",
         url: "/accounts",
+        permission: "accounts.view",
       },
       {
         title: "Departments",
         url: "/departments",
+        permission: "departments.view",
       },
       {
         title: "Positions",
+        permission: "positions.view",
         items: [
           {
             title: "Plantilla",
             url: "/plantillaItems",
+            permission: "plantilla_items.view",
           },
           {
             title: "Non-Plantilla",
+            permission: "positions.view",
             items: [
-              {
-                title: "COS",
-                url: "/COSList",
-              },
+              { title: "COS", url: "/COSList", permission: "positions.view" },
               {
                 title: "CONS",
                 url: "/ConsultantList",
+                permission: "positions.view",
               },
             ],
           },
@@ -322,55 +342,42 @@ const NAV_MAIN = [
   {
     title: "Rewards & Recognition",
     icon: IconAward,
-    permission: "hiring.view",
+    permission: "rewards.view",
     items: [
       {
         title: "Top Performer",
+        permission: "rewards.view",
         items: [
           {
             title: "Hospital",
             url: "/TopHospital",
+            permission: "rewards.view",
           },
           {
             title: "Department",
             url: "/TopDepartment",
+            permission: "rewards.view",
           },
         ],
       },
     ],
   },
-
   {
     title: "Analytics",
     url: "/analytics",
     icon: IconChartBar,
     permission: "analytics.view",
   },
-
-  {
-    title: "Team",
-    url: "/team",
-    icon: IconUsersGroup,
-    permission: "team.view",
-  },
-
-  // {
-  //   title: "Orientation",
-  //   url: "/Orientation",
-  //   icon: IconCompass,
-  // },
-
   {
     title: "Announcement",
     icon: IconSpeakerphone,
     permission: "announcements.view",
     items: [
-      { title: "Inbox", url: "/inbox" },
-      { title: "Forwarded", url: "/forward" },
-      { title: "Sent", url: "/sent" },
+      { title: "Inbox", url: "/inbox", permission: "announcements.view" },
+      { title: "Forwarded", url: "/forward", permission: "announcements.view" },
+      { title: "Sent", url: "/sent", permission: "announcements.view" },
     ],
   },
-
   {
     title: "Manpower Mapping",
     url: "/manpower",
@@ -381,19 +388,19 @@ const NAV_MAIN = [
     title: "Task Monitoring",
     url: "/task-monitoring",
     icon: IconUsersGroup,
-    permission: "manpower.view",
+    permission: "task_monitoring.view",
   },
   {
     title: "Bug Reports",
     url: "/bug-reports",
     icon: IconBug,
-    permission: "team.view",
+    permission: "bug-reports.view",
   },
   {
     title: "Release Manager",
     url: "/release-manager",
     icon: IconRocket,
-    permission: "team.view",
+    permission: "accounts.manage",
   },
   {
     title: "Audit Logs",
@@ -403,13 +410,8 @@ const NAV_MAIN = [
   },
 ];
 
-const NAV_SECONDARY = [
-  // { title: "Settings", url: "/settings", icon: IconSettings },
-];
-
+const NAV_SECONDARY = [];
 const NAV_DOCUMENTS = [{ name: "Reports", url: "#", icon: IconReport }];
-
-// ── Permission filter ─────────────────────────────────────────────────────────
 
 function canSee(item, userPermissions, isSuperUser) {
   if (isSuperUser) return true;
@@ -419,20 +421,16 @@ function canSee(item, userPermissions, isSuperUser) {
 
 function filterNav(navItems, userPermissions, isSuperUser) {
   return navItems.reduce((acc, item) => {
-    if (!item.items) {
-      if (canSee(item, userPermissions, isSuperUser)) {
-        acc.push(item);
-      }
-      return acc;
-    }
-
     if (!canSee(item, userPermissions, isSuperUser)) {
       return acc;
     }
 
-    const visibleChildren = item.items.filter((child) =>
-      canSee(child, userPermissions, isSuperUser),
-    );
+    if (!item.items) {
+      acc.push(item);
+      return acc;
+    }
+
+    const visibleChildren = filterNav(item.items, userPermissions, isSuperUser);
 
     if (visibleChildren.length > 0) {
       acc.push({ ...item, items: visibleChildren });
@@ -441,8 +439,6 @@ function filterNav(navItems, userPermissions, isSuperUser) {
     return acc;
   }, []);
 }
-
-// ── Sidebar component ─────────────────────────────────────────────────────────
 
 export function AppSidebar({ ...props }) {
   const { user } = useContext(AuthContext);
@@ -454,15 +450,7 @@ export function AppSidebar({ ...props }) {
   const userRoles = (user?.roles ?? []).map((r) => String(r).toLowerCase());
 
   const isSuperUser = userRoles.some((r) =>
-    [
-      "superadmin",
-      "super-admin",
-      "admin",
-      "director",
-      "hr",
-      "head",
-      "supervisor",
-    ].includes(r),
+    ["superadmin", "super-admin"].includes(r),
   );
 
   const filteredNav = filterNav(NAV_MAIN, userPermissions, isSuperUser);

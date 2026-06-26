@@ -4,15 +4,7 @@ import { Navigate } from "react-router-dom";
 import { AuthContext } from "@/context/authContext";
 import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
 
-const SUPER_ROLES = [
-  "superadmin",
-  "super-admin",
-  "admin",
-  "director",
-  "hr",
-  "head",
-  "supervisor",
-];
+const SUPER_ROLES = ["superadmin", "super-admin"];
 
 export default function PermissionRoute({ permission, children }) {
   const { user } = useContext(AuthContext);
