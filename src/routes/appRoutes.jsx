@@ -57,6 +57,7 @@ import TaskMonitoringPage from "../pages/taskMonitoring/taskMonitoringPage";
 import BugReportsPage from "../pages/bugReport/bugReportPage";
 import ReleaseManagerPage from "../pages/releaseManager/releaseManagerPage";
 import AuditLogsPage from "../pages/audit/auditLogsPage";
+import RenewalsPage from "../pages/renewals/renewalsPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -406,6 +407,7 @@ function AppRoutes() {
               }
             />
             <Route path="/audit-logs" element={<AuditLogsPage />} />
+            <Route path="/renewals" element={<RenewalsPage />} />
           </Route>
         </Route>
       </Routes>

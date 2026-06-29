@@ -132,8 +132,14 @@ const NAV_MAIN = [
         ],
       },
       {
-        title: "Employees",
+        title: "Employee Management",
         url: "/employees",
+        icon: IconUsers,
+        permission: "employees.view",
+      },
+      {
+        title: "Renewal Management",
+        url: "/renewals",
         icon: IconUsers,
         permission: "employees.view",
       },

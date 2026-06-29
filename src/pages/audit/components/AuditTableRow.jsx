@@ -35,7 +35,6 @@ export const AuditTableRow = memo(({ log, onView }) => {
             <div className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate max-w-[110px]">
               {log.username}
             </div>
-            <div className="text-xs text-slate-400">ID #{log.userId}</div>
           </div>
         </div>
       </td>
@@ -51,9 +50,6 @@ export const AuditTableRow = memo(({ log, onView }) => {
         <div className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[120px]">
           {log.subjectLabel ?? log.subjectType?.split("\\").pop() ?? "—"}
         </div>
-        {log.subjectId && (
-          <div className="text-xs text-slate-400 mt-0.5">#{log.subjectId}</div>
-        )}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-mono">

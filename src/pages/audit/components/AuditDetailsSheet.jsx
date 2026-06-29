@@ -64,9 +64,6 @@ export const AuditDetailsSheet = ({ log, onClose }) => {
                 <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                   {log.username}
                 </div>
-                <div className="text-xs text-slate-500">
-                  user_id: #{log.userId}
-                </div>
               </div>
             </div>
           </section>
