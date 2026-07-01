@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +89,16 @@ const positionLabel = (pos) => {
   return slot && title ? `${slot} — ${title}` : slot || title;
 };
 
+// ─── Loader components ────────────────────────────────────────────────────────
+function FormLoader({ label = "Loading employee data..." }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
+      <Loader2 className="w-6 h-6 animate-spin" />
+      <p className="text-xs font-semibold uppercase tracking-widest">{label}</p>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function EmployeeForm({ employee, refresh, onClose }) {
   const [activeTab, setActiveTab] = useState("employment");
@@ -133,6 +144,10 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const fileInputRef = useRef(null);
   const isInitialMount = useRef(true);
 
+  // ── Loading states ──────────────────────────────────────────────────────
+  const [initializing, setInitializing] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
   const [pdsValues, setPdsValues] = useState({});
   const [pdsStepIdx, setPdsStepIdx] = useState(0);
 
@@ -161,6 +176,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
 
   useEffect(() => {
     const fetchAndInit = async () => {
+      setInitializing(true);
       try {
         const [dept, positionList] = await Promise.all([
           employeeService.getDepartments(),
@@ -248,6 +264,9 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         if (employee.profile) setPdsValues(employee.profile);
       } catch (err) {
         console.error(err);
+        toast.error("Failed to load employee data.");
+      } finally {
+        setInitializing(false);
       }
     };
     fetchAndInit();
@@ -391,6 +410,9 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   // ─── Submit ──────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+
     const up = (v) => (v ? String(v).toUpperCase() : "");
     const form = new FormData();
     form.append("employee_number", up(formData.employeeNumber));
@@ -488,6 +510,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message ?? "Save failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -548,7 +572,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col bg-white w-full"
+      className="flex flex-col bg-white w-full relative"
       style={{ maxHeight: "90vh", fontFamily: "inherit" }}
     >
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -682,546 +706,567 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
 
       {/* ── Scrollable body ──────────────────────────────────────────────────── */}
       <div className="overflow-y-auto flex-1 px-6 py-6 space-y-8">
-        {/* ══════════════════════════════════════════════════════════════════
-            TAB: EMPLOYMENT
-        ══════════════════════════════════════════════════════════════════ */}
-        {activeTab === "employment" && (
+        {initializing ? (
+          <FormLoader
+            label={employee ? "Loading employee data..." : "Preparing form..."}
+          />
+        ) : (
           <>
-            {/* ── Employee Information ─────────────────────────────────── */}
-            <FormSection label="Employee information">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <FieldSelect
-                  label="Employee No."
-                  className="sm:col-span-1"
-                  custom
-                >
-                  <input
-                    type="text"
-                    value={formData.employeeNumber}
-                    onChange={(e) =>
-                      handleChange("employeeNumber", e.target.value)
-                    }
-                    className="field-input"
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Prefix">
-                  <NativeSelect
-                    value={formData.prefix}
-                    onChange={(v) => handleChange("prefix", v)}
-                    options={[
-                      "MR.",
-                      "MS.",
-                      "MRS.",
-                      "DR.",
-                      "ENGR.",
-                      "ATTY.",
-                      "HON.",
-                    ]}
-                    placeholder="—"
-                  />
-                </FieldSelect>
-
-                <FieldSelect
-                  label="First name"
-                  className="sm:col-span-1"
-                  custom
-                >
-                  <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) => handleChange("firstName", e.target.value)}
-                    className="field-input"
-                  />
-                </FieldSelect>
-
-                <FieldSelect
-                  label="Middle name"
-                  className="sm:col-span-1"
-                  custom
-                >
-                  <input
-                    type="text"
-                    value={formData.middleName}
-                    onChange={(e) => handleChange("middleName", e.target.value)}
-                    className="field-input"
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Last name" className="sm:col-span-1" custom>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) => handleChange("lastName", e.target.value)}
-                    className="field-input"
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Suffix">
-                  <NativeSelect
-                    value={formData.suffix}
-                    onChange={(v) => handleChange("suffix", v)}
-                    options={["JR.", "SR.", "II", "III", "IV"]}
-                    placeholder="—"
-                  />
-                </FieldSelect>
-
-                <FieldSelect
-                  label="Title / profession"
-                  className="sm:col-span-2"
-                  custom
-                >
-                  <MultiCombobox
-                    value={formData.title}
-                    onChange={(v) => handleChange("title", v)}
-                    placeholder="Select titles"
-                    options={[
-                      "MD",
-                      "RN",
-                      "RM",
-                      "CPA",
-                      "RND",
-                      "RSW",
-                      "MAN",
-                      "DBA",
-                      "RMT",
-                      "RPH",
-                      "RADT",
-                      "RRT",
-                      "RTRP",
-                      "PT",
-                      "OT",
-                      "SLP",
-                      "ND",
-                      "DMD",
-                      "DPBS",
-                      "DPBO",
-                      "DPBU",
-                      "DPIM",
-                      "DPOGS",
-                      "FPCS",
-                      "FPSGS",
-                      "FPAO",
-                      "FPUA",
-                      "FPCR",
-                      "FICS",
-                      "FPOA",
-                      "FPALES",
-                      "MBA",
-                      "MHM",
-                      "MMHOA",
-                      "MPH",
-                      "MET III",
-                      "HD TECHNICIAN",
-                    ].map((v) => ({ value: v, label: v }))}
-                  />
-                </FieldSelect>
-              </div>
-            </FormSection>
-
-            {/* ── Employment Information ────────────────────────────────── */}
-            <FormSection label="Employment information">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                <FieldSelect
-                  label="Position classification"
-                  className="sm:col-span-1"
-                  custom
-                >
-                  <MultiCombobox
-                    value={formData.rolePosition}
-                    onChange={(v) => handleChange("rolePosition", v)}
-                    placeholder="Select classification"
-                    options={[
-                      "CHIEF",
-                      "DIRECTOR",
-                      "ASSISTANT DIRECTOR",
-                      "OFFICER IN CHARGE",
-                      "COMMITTEE",
-                      "CHAIRMAN",
-                      "HEAD",
-                      "SUPERVISOR",
-                      "STAFF",
-                    ].map((v) => ({ value: v, label: v }))}
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Sex">
-                  <NativeSelect
-                    value={formData.gender}
-                    onChange={(v) => handleChange("gender", v)}
-                    options={["MALE", "FEMALE"]}
-                    placeholder="Select sex"
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Division" custom>
-                  <SingleCombobox
-                    value={formData.division}
-                    onChange={(v) => handleChange("division", v)}
-                    placeholder="Select division"
-                    options={allDivisions.map((d) => ({
-                      value: String(d.id),
-                      label: d.name,
-                    }))}
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Department" custom>
-                  <MultiCombobox
-                    value={formData.department}
-                    onChange={(v) => handleChange("department", v)}
-                    placeholder="Select department"
-                    options={departments.map((d) => ({
-                      value: String(d.id),
-                      label: d.name,
-                    }))}
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Deployment area" custom>
-                  <MultiCombobox
-                    value={formData.designation}
-                    onChange={(v) => handleChange("designation", v)}
-                    placeholder="Select area"
-                    options={departments.map((d) => ({
-                      value: d.name.toUpperCase(),
-                      label: d.name.toUpperCase(),
-                    }))}
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Annual salary" custom>
-                  <input
-                    type="number"
-                    value={formData.annualSalary}
-                    onChange={(e) =>
-                      handleChange("annualSalary", e.target.value)
-                    }
-                    className="field-input"
-                  />
-                </FieldSelect>
-
-                <FieldSelect label="Status">
-                  <NativeSelect
-                    value={formData.status}
-                    onChange={(v) => handleChange("status", v)}
-                    options={["ACTIVE", "INACTIVE", "RESIGN"]}
-                    placeholder="Select status"
-                  />
-                </FieldSelect>
-              </div>
-
-              {/* Employee type pills */}
-              <div className="space-y-1 mb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                  Employee type
-                </p>
-                <div className="flex gap-2">
-                  {EMPLOYEE_TYPES.map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => handleChange("employeeType", t.value)}
-                      className={cn(
-                        "flex-1 py-2 px-3 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all duration-150",
-                        formData.employeeType === t.value
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-700",
-                      )}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Plantilla block */}
-              {formData.employeeType === "Plantilla" && (
-                <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                    Plantilla position details
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* ══════════════════════════════════════════════════════════════════
+                TAB: EMPLOYMENT
+            ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "employment" && (
+              <>
+                {/* ── Employee Information ─────────────────────────────────── */}
+                <FormSection label="Employee information">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <FieldSelect
-                      label="Position slot"
-                      className="sm:col-span-2"
-                      custom
-                    >
-                      <SingleCombobox
-                        value={formData.plantillaPositionId}
-                        displayLabel={selectedPositionLabel}
-                        onChange={handlePositionChange}
-                        placeholder="Select position"
-                        options={
-                          Array.isArray(positions)
-                            ? positions
-                                .filter(
-                                  (pos) =>
-                                    pos.is_assignable ||
-                                    pos.is_current_employee ||
-                                    String(pos.id) ===
-                                      String(formData.plantillaPositionId),
-                                )
-                                .map((pos) => ({
-                                  value: String(pos.id),
-                                  label: positionLabel(pos),
-                                  disabled:
-                                    !pos.is_assignable &&
-                                    !pos.is_current_employee,
-                                }))
-                            : []
-                        }
-                      />
-                    </FieldSelect>
-
-                    <FieldSelect label="Salary grade" custom>
-                      <div className="field-input flex items-center bg-gray-100 text-gray-500 cursor-default">
-                        {formData.sgLevel ? `SG ${formData.sgLevel}` : "—"}
-                      </div>
-                    </FieldSelect>
-
-                    <FieldSelect label="Step increment" custom>
-                      <SingleCombobox
-                        value={formData.stepIncrementId}
-                        onChange={(v) => handleChange("stepIncrementId", v)}
-                        placeholder={
-                          !formData.plantillaPositionId
-                            ? "Select a position first"
-                            : steps.length === 0
-                              ? "No steps available"
-                              : "Select step"
-                        }
-                        disabled={
-                          !formData.plantillaPositionId || steps.length === 0
-                        }
-                        options={steps.map((s) => ({
-                          value: String(s.id),
-                          label: `Step ${s.step}`,
-                        }))}
-                      />
-                    </FieldSelect>
-
-                    <FieldSelect
-                      label="Annual salary"
-                      className="sm:col-span-2"
+                      label="Employee No."
+                      className="sm:col-span-1"
                       custom
                     >
                       <input
                         type="text"
-                        value={formData.annualSalary}
-                        readOnly
-                        className="field-input bg-gray-100 text-gray-500 cursor-default"
+                        value={formData.employeeNumber}
+                        onChange={(e) =>
+                          handleChange("employeeNumber", e.target.value)
+                        }
+                        className="field-input"
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect label="Prefix">
+                      <NativeSelect
+                        value={formData.prefix}
+                        onChange={(v) => handleChange("prefix", v)}
+                        options={[
+                          "MR.",
+                          "MS.",
+                          "MRS.",
+                          "DR.",
+                          "ENGR.",
+                          "ATTY.",
+                          "HON.",
+                        ]}
+                        placeholder="—"
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect
+                      label="First name"
+                      className="sm:col-span-1"
+                      custom
+                    >
+                      <input
+                        type="text"
+                        value={formData.firstName}
+                        onChange={(e) =>
+                          handleChange("firstName", e.target.value)
+                        }
+                        className="field-input"
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect
+                      label="Middle name"
+                      className="sm:col-span-1"
+                      custom
+                    >
+                      <input
+                        type="text"
+                        value={formData.middleName}
+                        onChange={(e) =>
+                          handleChange("middleName", e.target.value)
+                        }
+                        className="field-input"
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect
+                      label="Last name"
+                      className="sm:col-span-1"
+                      custom
+                    >
+                      <input
+                        type="text"
+                        value={formData.lastName}
+                        onChange={(e) =>
+                          handleChange("lastName", e.target.value)
+                        }
+                        className="field-input"
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect label="Suffix">
+                      <NativeSelect
+                        value={formData.suffix}
+                        onChange={(v) => handleChange("suffix", v)}
+                        options={["JR.", "SR.", "II", "III", "IV"]}
+                        placeholder="—"
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect
+                      label="Title / profession"
+                      className="sm:col-span-2"
+                      custom
+                    >
+                      <MultiCombobox
+                        value={formData.title}
+                        onChange={(v) => handleChange("title", v)}
+                        placeholder="Select titles"
+                        options={[
+                          "MD",
+                          "RN",
+                          "RM",
+                          "CPA",
+                          "RND",
+                          "RSW",
+                          "MAN",
+                          "DBA",
+                          "RMT",
+                          "RPH",
+                          "RADT",
+                          "RRT",
+                          "RTRP",
+                          "PT",
+                          "OT",
+                          "SLP",
+                          "ND",
+                          "DMD",
+                          "DPBS",
+                          "DPBO",
+                          "DPBU",
+                          "DPIM",
+                          "DPOGS",
+                          "FPCS",
+                          "FPSGS",
+                          "FPAO",
+                          "FPUA",
+                          "FPCR",
+                          "FICS",
+                          "FPOA",
+                          "FPALES",
+                          "MBA",
+                          "MHM",
+                          "MMHOA",
+                          "MPH",
+                          "MET III",
+                          "HD TECHNICIAN",
+                        ].map((v) => ({ value: v, label: v }))}
                       />
                     </FieldSelect>
                   </div>
-                </div>
-              )}
+                </FormSection>
 
-              {/* COS block */}
-              {formData.employeeType === "Contract of Service" && (
-                <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                    Contract of service position
-                  </p>
-                  <FieldSelect label="COS position" custom>
-                    <SingleCombobox
-                      value={formData.cosPositionId}
-                      onChange={(v) => handleChange("cosPositionId", v)}
-                      placeholder="Select COS position"
-                      options={
-                        Array.isArray(cosPositions)
-                          ? cosPositions.map((p) => ({
-                              value: String(p.id),
-                              label: p.title.toUpperCase(),
-                            }))
-                          : []
-                      }
-                    />
-                  </FieldSelect>
-                </div>
-              )}
+                {/* ── Employment Information ────────────────────────────────── */}
+                <FormSection label="Employment information">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                    <FieldSelect
+                      label="Position classification"
+                      className="sm:col-span-1"
+                      custom
+                    >
+                      <MultiCombobox
+                        value={formData.rolePosition}
+                        onChange={(v) => handleChange("rolePosition", v)}
+                        placeholder="Select classification"
+                        options={[
+                          "CHIEF",
+                          "DIRECTOR",
+                          "ASSISTANT DIRECTOR",
+                          "OFFICER IN CHARGE",
+                          "COMMITTEE",
+                          "CHAIRMAN",
+                          "HEAD",
+                          "SUPERVISOR",
+                          "STAFF",
+                        ].map((v) => ({ value: v, label: v }))}
+                      />
+                    </FieldSelect>
 
-              {/* Consultant block */}
-              {formData.employeeType === "Consultant" && (
-                <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                    Consultant position
-                  </p>
-                  <FieldSelect label="Consultant position" custom>
-                    <SingleCombobox
-                      value={formData.consultantPositionId}
-                      onChange={(v) => handleChange("consultantPositionId", v)}
-                      placeholder="Select consultant position"
-                      options={
-                        Array.isArray(consultantPositions)
-                          ? consultantPositions.map((p) => ({
-                              value: String(p.id),
-                              label: p.title.toUpperCase(),
-                            }))
-                          : []
-                      }
-                    />
-                  </FieldSelect>
-                </div>
-              )}
-            </FormSection>
+                    <FieldSelect label="Sex">
+                      <NativeSelect
+                        value={formData.gender}
+                        onChange={(v) => handleChange("gender", v)}
+                        options={["MALE", "FEMALE"]}
+                        placeholder="Select sex"
+                      />
+                    </FieldSelect>
 
-            {/* ── Parent Assignment ──────────────────────────────────────── */}
-            <FormSection label="Parent assignment">
-              <div className="space-y-2 mb-3">
-                {parents.map((parent, index) => {
-                  const selectedEmployee = parentCandidates.find(
-                    (emp) => String(emp.id) === parent.parentId,
-                  );
-                  return (
-                    <div key={index} className="flex gap-2 items-center">
-                      <Popover
-                        open={openIndex === index}
-                        onOpenChange={(open) =>
-                          setOpenIndex(open ? index : null)
+                    <FieldSelect label="Division" custom>
+                      <SingleCombobox
+                        value={formData.division}
+                        onChange={(v) => handleChange("division", v)}
+                        placeholder="Select division"
+                        options={allDivisions.map((d) => ({
+                          value: String(d.id),
+                          label: d.name,
+                        }))}
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect label="Department" custom>
+                      <MultiCombobox
+                        value={formData.department}
+                        onChange={(v) => handleChange("department", v)}
+                        placeholder="Select department"
+                        options={departments.map((d) => ({
+                          value: String(d.id),
+                          label: d.name,
+                        }))}
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect label="Deployment area" custom>
+                      <MultiCombobox
+                        value={formData.designation}
+                        onChange={(v) => handleChange("designation", v)}
+                        placeholder="Select area"
+                        options={departments.map((d) => ({
+                          value: d.name.toUpperCase(),
+                          label: d.name.toUpperCase(),
+                        }))}
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect label="Annual salary" custom>
+                      <input
+                        type="number"
+                        value={formData.annualSalary}
+                        onChange={(e) =>
+                          handleChange("annualSalary", e.target.value)
                         }
-                      >
-                        <PopoverTrigger asChild>
+                        className="field-input"
+                      />
+                    </FieldSelect>
+
+                    <FieldSelect label="Status">
+                      <NativeSelect
+                        value={formData.status}
+                        onChange={(v) => handleChange("status", v)}
+                        options={["ACTIVE", "INACTIVE", "RESIGN"]}
+                        placeholder="Select status"
+                      />
+                    </FieldSelect>
+                  </div>
+
+                  {/* Employee type pills */}
+                  <div className="space-y-1 mb-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                      Employee type
+                    </p>
+                    <div className="flex gap-2">
+                      {EMPLOYEE_TYPES.map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => handleChange("employeeType", t.value)}
+                          className={cn(
+                            "flex-1 py-2 px-3 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all duration-150",
+                            formData.employeeType === t.value
+                              ? "bg-gray-900 text-white border-gray-900"
+                              : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-700",
+                          )}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Plantilla block */}
+                  {formData.employeeType === "Plantilla" && (
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                        Plantilla position details
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <FieldSelect
+                          label="Position slot"
+                          className="sm:col-span-2"
+                          custom
+                        >
+                          <SingleCombobox
+                            value={formData.plantillaPositionId}
+                            displayLabel={selectedPositionLabel}
+                            onChange={handlePositionChange}
+                            placeholder="Select position"
+                            options={
+                              Array.isArray(positions)
+                                ? positions
+                                    .filter(
+                                      (pos) =>
+                                        pos.is_assignable ||
+                                        pos.is_current_employee ||
+                                        String(pos.id) ===
+                                          String(formData.plantillaPositionId),
+                                    )
+                                    .map((pos) => ({
+                                      value: String(pos.id),
+                                      label: positionLabel(pos),
+                                      disabled:
+                                        !pos.is_assignable &&
+                                        !pos.is_current_employee,
+                                    }))
+                                : []
+                            }
+                          />
+                        </FieldSelect>
+
+                        <FieldSelect label="Salary grade" custom>
+                          <div className="field-input flex items-center bg-gray-100 text-gray-500 cursor-default">
+                            {formData.sgLevel ? `SG ${formData.sgLevel}` : "—"}
+                          </div>
+                        </FieldSelect>
+
+                        <FieldSelect label="Step increment" custom>
+                          <SingleCombobox
+                            value={formData.stepIncrementId}
+                            onChange={(v) => handleChange("stepIncrementId", v)}
+                            placeholder={
+                              !formData.plantillaPositionId
+                                ? "Select a position first"
+                                : steps.length === 0
+                                  ? "No steps available"
+                                  : "Select step"
+                            }
+                            disabled={
+                              !formData.plantillaPositionId ||
+                              steps.length === 0
+                            }
+                            options={steps.map((s) => ({
+                              value: String(s.id),
+                              label: `Step ${s.step}`,
+                            }))}
+                          />
+                        </FieldSelect>
+
+                        <FieldSelect
+                          label="Annual salary"
+                          className="sm:col-span-2"
+                          custom
+                        >
+                          <input
+                            type="text"
+                            value={formData.annualSalary}
+                            readOnly
+                            className="field-input bg-gray-100 text-gray-500 cursor-default"
+                          />
+                        </FieldSelect>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* COS block */}
+                  {formData.employeeType === "Contract of Service" && (
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                        Contract of service position
+                      </p>
+                      <FieldSelect label="COS position" custom>
+                        <SingleCombobox
+                          value={formData.cosPositionId}
+                          onChange={(v) => handleChange("cosPositionId", v)}
+                          placeholder="Select COS position"
+                          options={
+                            Array.isArray(cosPositions)
+                              ? cosPositions.map((p) => ({
+                                  value: String(p.id),
+                                  label: p.title.toUpperCase(),
+                                }))
+                              : []
+                          }
+                        />
+                      </FieldSelect>
+                    </div>
+                  )}
+
+                  {/* Consultant block */}
+                  {formData.employeeType === "Consultant" && (
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                        Consultant position
+                      </p>
+                      <FieldSelect label="Consultant position" custom>
+                        <SingleCombobox
+                          value={formData.consultantPositionId}
+                          onChange={(v) =>
+                            handleChange("consultantPositionId", v)
+                          }
+                          placeholder="Select consultant position"
+                          options={
+                            Array.isArray(consultantPositions)
+                              ? consultantPositions.map((p) => ({
+                                  value: String(p.id),
+                                  label: p.title.toUpperCase(),
+                                }))
+                              : []
+                          }
+                        />
+                      </FieldSelect>
+                    </div>
+                  )}
+                </FormSection>
+
+                {/* ── Parent Assignment ──────────────────────────────────────── */}
+                <FormSection label="Parent assignment">
+                  <div className="space-y-2 mb-3">
+                    {parents.map((parent, index) => {
+                      const selectedEmployee = parentCandidates.find(
+                        (emp) => String(emp.id) === parent.parentId,
+                      );
+                      return (
+                        <div key={index} className="flex gap-2 items-center">
+                          <Popover
+                            open={openIndex === index}
+                            onOpenChange={(open) =>
+                              setOpenIndex(open ? index : null)
+                            }
+                          >
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className={cn(
+                                  "flex-1 field-input flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors",
+                                  !selectedEmployee && "text-gray-400",
+                                )}
+                              >
+                                <span className="truncate uppercase text-sm">
+                                  {selectedEmployee
+                                    ? selectedEmployee.full_name
+                                    : "Select employee"}
+                                </span>
+                                <ChevronsUpDown className="w-3.5 h-3.5 opacity-50 flex-shrink-0 ml-2" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-72 p-0">
+                              <Command>
+                                <CommandInput placeholder="Search employee..." />
+                                <CommandEmpty>No employee found.</CommandEmpty>
+                                <CommandGroup className="max-h-56 overflow-y-auto">
+                                  {parentCandidates
+                                    .filter(
+                                      (emp) =>
+                                        !parents
+                                          .map((p) => p.parentId)
+                                          .includes(String(emp.id)) ||
+                                        String(emp.id) === parent.parentId,
+                                    )
+                                    .map((emp) => (
+                                      <CommandItem
+                                        key={emp.id}
+                                        value={emp.full_name}
+                                        className="uppercase"
+                                        onSelect={() =>
+                                          updateParent(index, String(emp.id))
+                                        }
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 w-4 h-4 flex-shrink-0",
+                                            parent.parentId === String(emp.id)
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                        {emp.full_name}
+                                      </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <button
                             type="button"
-                            className={cn(
-                              "flex-1 field-input flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors",
-                              !selectedEmployee && "text-gray-400",
-                            )}
+                            onClick={() => removeParent(index)}
+                            className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all duration-150 flex-shrink-0"
+                            aria-label="Remove parent"
                           >
-                            <span className="truncate uppercase text-sm">
-                              {selectedEmployee
-                                ? selectedEmployee.full_name
-                                : "Select employee"}
-                            </span>
-                            <ChevronsUpDown className="w-3.5 h-3.5 opacity-50 flex-shrink-0 ml-2" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-72 p-0">
-                          <Command>
-                            <CommandInput placeholder="Search employee..." />
-                            <CommandEmpty>No employee found.</CommandEmpty>
-                            <CommandGroup className="max-h-56 overflow-y-auto">
-                              {parentCandidates
-                                .filter(
-                                  (emp) =>
-                                    !parents
-                                      .map((p) => p.parentId)
-                                      .includes(String(emp.id)) ||
-                                    String(emp.id) === parent.parentId,
-                                )
-                                .map((emp) => (
-                                  <CommandItem
-                                    key={emp.id}
-                                    value={emp.full_name}
-                                    className="uppercase"
-                                    onSelect={() =>
-                                      updateParent(index, String(emp.id))
-                                    }
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 w-4 h-4 flex-shrink-0",
-                                        parent.parentId === String(emp.id)
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                    {emp.full_name}
-                                  </CommandItem>
-                                ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <button
-                        type="button"
-                        onClick={() => removeParent(index)}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all duration-150 flex-shrink-0"
-                        aria-label="Remove parent"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-              <button
-                type="button"
-                onClick={addParent}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 border border-dashed border-gray-200 hover:border-gray-400 rounded-lg px-3 py-2 transition-all duration-150"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add parent
-              </button>
-            </FormSection>
-          </>
-        )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addParent}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 border border-dashed border-gray-200 hover:border-gray-400 rounded-lg px-3 py-2 transition-all duration-150"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add parent
+                  </button>
+                </FormSection>
+              </>
+            )}
 
-        {/* ══════════════════════════════════════════════════════════════════
-            TAB: PERSONAL DATA SHEET
-        ══════════════════════════════════════════════════════════════════ */}
-        {activeTab === "pds" && (
-          <div className="space-y-5">
-            {/* Step pills */}
-            <div className="flex gap-1.5 flex-wrap">
-              {STEPS.map((s, i) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setPdsStepIdx(i)}
-                  className={cn(
-                    "text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider transition-all duration-150 border",
-                    i === pdsStepIdx
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : i < pdsStepIdx
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-white text-gray-400 border-gray-200 hover:border-gray-400",
+            {/* ══════════════════════════════════════════════════════════════════
+                TAB: PERSONAL DATA SHEET
+            ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "pds" && (
+              <div className="space-y-5">
+                {/* Step pills */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {STEPS.map((s, i) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setPdsStepIdx(i)}
+                      className={cn(
+                        "text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider transition-all duration-150 border",
+                        i === pdsStepIdx
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : i < pdsStepIdx
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-white text-gray-400 border-gray-200 hover:border-gray-400",
+                      )}
+                    >
+                      {i + 1}. {s.short}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Step heading */}
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-gray-900 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                    {pdsStepIdx + 1}
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                    {pdsStep?.label}
+                  </p>
+                </div>
+
+                {/* Step content */}
+                <div className="rounded-xl border border-gray-100 bg-gray-50 p-5">
+                  {PdsStepComponent && (
+                    <PdsStepComponent v={pdsValues} set={setPdsField} fe={{}} />
                   )}
-                >
-                  {i + 1}. {s.short}
-                </button>
-              ))}
-            </div>
+                </div>
 
-            {/* Step heading */}
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-full bg-gray-900 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                {pdsStepIdx + 1}
+                {/* Navigation */}
+                <div className="flex gap-2 pt-1 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setPdsStepIdx((i) => Math.max(0, i - 1))}
+                    disabled={pdsStepIdx === 0}
+                    className="flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-30 disabled:cursor-default transition-all duration-150"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPdsStepIdx((i) => Math.min(STEPS.length - 1, i + 1))
+                    }
+                    disabled={pdsStepIdx === STEPS.length - 1}
+                    className="flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-30 disabled:cursor-default transition-all duration-150"
+                  >
+                    Next <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-                {pdsStep?.label}
-              </p>
-            </div>
-
-            {/* Step content */}
-            <div className="rounded-xl border border-gray-100 bg-gray-50 p-5">
-              {PdsStepComponent && (
-                <PdsStepComponent v={pdsValues} set={setPdsField} fe={{}} />
-              )}
-            </div>
-
-            {/* Navigation */}
-            <div className="flex gap-2 pt-1 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setPdsStepIdx((i) => Math.max(0, i - 1))}
-                disabled={pdsStepIdx === 0}
-                className="flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-30 disabled:cursor-default transition-all duration-150"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" /> Back
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setPdsStepIdx((i) => Math.min(STEPS.length - 1, i + 1))
-                }
-                disabled={pdsStepIdx === STEPS.length - 1}
-                className="flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-30 disabled:cursor-default transition-all duration-150"
-              >
-                Next <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1230,18 +1275,41 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          className="text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 transition-colors px-3 py-2"
+          disabled={submitting}
+          className="text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 transition-colors px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="inline-flex items-center gap-2 h-9 px-5 rounded-lg bg-gray-900 text-white text-xs font-semibold uppercase tracking-wider hover:bg-gray-700 transition-colors duration-150"
+          disabled={submitting || initializing}
+          className="inline-flex items-center gap-2 h-9 px-5 rounded-lg bg-gray-900 text-white text-xs font-semibold uppercase tracking-wider hover:bg-gray-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Save className="w-3.5 h-3.5" />
-          {employee ? "Update employee" : "Add employee"}
+          {submitting ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-3.5 h-3.5" />
+              {employee ? "Update employee" : "Add employee"}
+            </>
+          )}
         </button>
       </div>
+
+      {/* ── Submitting overlay ───────────────────────────────────────────────── */}
+      {submitting && (
+        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+          <div className="flex flex-col items-center gap-2 text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <p className="text-xs font-semibold uppercase tracking-widest">
+              Saving employee...
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Inline styles ─────────────────────────────────────────────────────── */}
       <style>{`

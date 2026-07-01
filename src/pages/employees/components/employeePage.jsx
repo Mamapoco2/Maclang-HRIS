@@ -50,6 +50,13 @@ export default function EmployeePage() {
   const departmentRef = useRef(departmentFilter);
   const employmentTypeRef = useRef(employmentTypeFilter);
 
+  // Guards against the filter-watching effects firing again on initial
+  // mount (alongside the dedicated mount effect below). Without this,
+  // 5 requests fire simultaneously on first load, which is what was
+  // causing requests to queue up and time out against the single-threaded
+  // `php artisan serve` dev server.
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
     searchRef.current = search;
   }, [search]);
@@ -111,6 +118,8 @@ export default function EmployeePage() {
     [],
   );
 
+  // Single fetch on mount. After this fires, isFirstRender flips to false
+  // so the filter-watching effects below won't double-fire on first load.
   useEffect(() => {
     loadEmployees({
       page: 1,
@@ -119,9 +128,14 @@ export default function EmployeePage() {
       department_id: "",
       employment_type: "",
     });
+    const t = setTimeout(() => {
+      isFirstRender.current = false;
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
+    if (isFirstRender.current) return;
     const t = setTimeout(() => {
       loadEmployees({ page: 1, searchValue: search });
     }, 400);
@@ -129,12 +143,17 @@ export default function EmployeePage() {
   }, [search]);
 
   useEffect(() => {
+    if (isFirstRender.current) return;
     loadEmployees({ page: 1, division_id: divisionFilter, department_id: "" });
   }, [divisionFilter]);
+
   useEffect(() => {
+    if (isFirstRender.current) return;
     loadEmployees({ page: 1, department_id: departmentFilter });
   }, [departmentFilter]);
+
   useEffect(() => {
+    if (isFirstRender.current) return;
     loadEmployees({ page: 1, employment_type: employmentTypeFilter });
   }, [employmentTypeFilter]);
 

@@ -32,16 +32,11 @@ import {
   ArrowLeft,
   Info,
 } from "lucide-react";
+import { employeeService } from "../../services/employeeService";
+import { contractService } from "../../services/contractService";
+import AutoRenewalPanel from "./components/autorenewalpanels";
 
-// ─── SERVICE IMPORT ────────────────────────────────────────────────────────────
-// Adjust this path to match your project's actual service location.
-// The service is expected to export employeeService with at minimum:
-//   getAll(params)   → { data: Employee[], ... }  (or plain Employee[])
-//   getById(id)      → Employee
-//   getDepartments() → Department[]  (objects with at least { id, name })
-import { employeeService } from "@/services/employeeService";
-
-// ─── STATIC CONSTANTS (non-API) ────────────────────────────────────────────────
+// ─── STATIC CONSTANTS ─────────────────────────────────────────────────────────
 
 const CONTRACT_TYPES = [
   "Regular",
@@ -65,11 +60,16 @@ const SCHEDULES = [
   "Remote Work",
 ];
 
-// ─── DATA NORMALISATION ────────────────────────────────────────────────────────
-// Maps whatever shape the API returns into a consistent shape for this module.
+const RENEWABLE_EMPLOYMENT_TYPES = [
+  "Contract of Service",
+  "Consultant",
+  "contract of service",
+  "consultant",
+  "COS",
+  "cos",
+];
 
 function normaliseEmployee(raw) {
-  // Support both snake_case (Laravel) and camelCase backends.
   const endDate =
     raw.contract_end_date ??
     raw.contractEndDate ??
@@ -117,23 +117,56 @@ function normaliseEmployee(raw) {
     raw.name ??
     "—";
 
+  const employmentType =
+    raw.employment_type ??
+    raw.employmentType ??
+    raw.contract_type ??
+    raw.contractType ??
+    "";
+
+  const departmentFromDesignation = Array.isArray(raw.position_designation)
+    ? raw.position_designation.filter(Boolean)
+    : [];
+
+  const departmentList = Array.isArray(raw.departments)
+    ? raw.departments
+        .map((d) => (typeof d === "string" ? d : d?.name))
+        .filter(Boolean)
+    : [];
+
+  const positionTitle =
+    raw.cos_position?.title ?? raw.consultant_position?.title ?? null;
+
+  const positionFromRole = Array.isArray(raw.role_position)
+    ? raw.role_position.filter(Boolean)
+    : [];
+
   return {
-    // identity
     id: raw.id ?? raw.employee_id ?? raw.employeeId,
-    employeeCode: raw.employee_code ?? raw.employeeCode ?? raw.id,
+    employeeNumber:
+      raw.employee_number ??
+      raw.employeeNumber ??
+      raw.employee_code ??
+      raw.employeeCode ??
+      raw.id,
     name,
     department:
-      raw.department?.name ?? raw.department_name ?? raw.department ?? "—",
-    position: raw.position?.name ?? raw.position_name ?? raw.position ?? "—",
-    employmentType:
-      raw.employment_type ??
-      raw.employmentType ??
-      raw.contract_type ??
-      raw.contractType ??
-      "Regular",
-    // contract
+      departmentList.length > 0
+        ? departmentList.join(", ")
+        : departmentFromDesignation.length > 0
+          ? departmentFromDesignation.join(", ")
+          : (raw.department?.name ??
+            raw.department_name ??
+            raw.department ??
+            "—"),
+    position:
+      positionTitle ??
+      (positionFromRole.length > 0
+        ? positionFromRole.join(", ")
+        : (raw.position?.name ?? raw.position_name ?? raw.position ?? "—")),
+    employmentType,
     contractType:
-      raw.contract_type ?? raw.contractType ?? raw.employment_type ?? "Regular",
+      raw.contract_type ?? raw.contractType ?? employmentType ?? "Regular",
     contractNumber:
       raw.contract_number ?? raw.contractNumber ?? `CTR-${raw.id}`,
     startDate,
@@ -152,7 +185,6 @@ function normaliseEmployee(raw) {
       raw.employment_status ??
       raw.employmentStatus ??
       (daysRemaining !== null && daysRemaining < 0 ? "For Renewal" : "Active"),
-    // avatar
     photo:
       raw.avatar_url ??
       raw.avatarUrl ??
@@ -162,7 +194,6 @@ function normaliseEmployee(raw) {
   };
 }
 
-// Extracts a plain array from common API response shapes.
 function extractList(response) {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.data)) return response.data;
@@ -170,7 +201,7 @@ function extractList(response) {
   return [];
 }
 
-// ─── LOCAL HISTORY / TIMELINE DEFAULTS (mock, per-employee) ───────────────────
+// ─── MOCK HISTORY / TIMELINE ──────────────────────────────────────────────────
 
 function defaultHistory(employee) {
   return [
@@ -214,7 +245,7 @@ const TIMELINE_STEPS_TEMPLATE = [
   { label: "Completed", date: null, done: false, icon: CheckCircle2 },
 ];
 
-// ─── UTILITIES ─────────────────────────────────────────────────────────────────
+// ─── UTILITIES ────────────────────────────────────────────────────────────────
 
 function formatDate(d) {
   if (!d) return "—";
@@ -231,7 +262,7 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-// ─── BADGE ─────────────────────────────────────────────────────────────────────
+// ─── BADGE ────────────────────────────────────────────────────────────────────
 
 function Badge({ status }) {
   const map = {
@@ -246,14 +277,15 @@ function Badge({ status }) {
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${map[status] || "bg-slate-100 text-slate-600 border-slate-200"}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
+      ${map[status] || "bg-slate-100 text-slate-600 border-slate-200"}`}
     >
       {status}
     </span>
   );
 }
 
-// ─── SKELETON ──────────────────────────────────────────────────────────────────
+// ─── SKELETON ─────────────────────────────────────────────────────────────────
 
 function Skeleton({ className = "" }) {
   return <div className={`animate-pulse bg-slate-200 rounded ${className}`} />;
@@ -293,7 +325,7 @@ function CardSkeleton() {
   );
 }
 
-// ─── EMPTY STATE ───────────────────────────────────────────────────────────────
+// ─── EMPTY / ERROR STATE ──────────────────────────────────────────────────────
 
 function EmptyState({ icon: Icon, title, desc, action }) {
   return (
@@ -328,7 +360,7 @@ function ErrorState({ message, onRetry }) {
   );
 }
 
-// ─── TOAST ─────────────────────────────────────────────────────────────────────
+// ─── TOAST ────────────────────────────────────────────────────────────────────
 
 function Toast({ toasts, remove }) {
   return (
@@ -337,7 +369,7 @@ function Toast({ toasts, remove }) {
         <div
           key={t.id}
           className={`flex items-start gap-3 p-4 rounded-lg shadow-lg border text-sm
-          ${t.type === "success" ? "bg-white border-emerald-200" : "bg-white border-red-200"}`}
+            ${t.type === "success" ? "bg-white border-emerald-200" : "bg-white border-red-200"}`}
         >
           {t.type === "success" ? (
             <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
@@ -368,7 +400,7 @@ function useToast() {
   return { toasts, add, remove };
 }
 
-// ─── DIALOG ────────────────────────────────────────────────────────────────────
+// ─── DIALOG ───────────────────────────────────────────────────────────────────
 
 function Dialog({ open, onClose, title, children, size = "md" }) {
   if (!open) return null;
@@ -430,9 +462,8 @@ function ConfirmDialog({
   );
 }
 
-// ─── HOOKS ─────────────────────────────────────────────────────────────────────
+// ─── HOOKS ────────────────────────────────────────────────────────────────────
 
-// Fetches the paginated / full employee list from the API.
 function useEmployeeList(filters) {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -442,16 +473,20 @@ function useEmployeeList(filters) {
     setLoading(true);
     setError(null);
     try {
-      // Pass filters the API understands; local-only keys are stripped below.
       const params = {};
       if (filters.search) params.search = filters.search;
       if (filters.department) params.department = filters.department;
       if (filters.position) params.position = filters.position;
-      // contractStatus / renewalStatus are derived fields — kept local.
+      params.employment_type = ["Contract of Service", "Consultant"];
 
       const response = await employeeService.getAll(params);
       const raw = extractList(response);
-      setEmployees(raw.map(normaliseEmployee));
+
+      const normalised = raw
+        .map(normaliseEmployee)
+        .filter((e) => RENEWABLE_EMPLOYMENT_TYPES.includes(e.employmentType));
+
+      setEmployees(normalised);
     } catch (err) {
       setError(err?.response?.data?.message ?? err?.message ?? "Unknown error");
     } finally {
@@ -466,7 +501,6 @@ function useEmployeeList(filters) {
   return { employees, loading, error, reload: load };
 }
 
-// Fetches a single employee by id from the API.
 function useEmployeeDetail(id) {
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -501,7 +535,6 @@ function useEmployeeDetail(id) {
   return { employee, loading, error };
 }
 
-// Fetches departments for the filter dropdown.
 function useDepartments() {
   const [departments, setDepartments] = useState([]);
 
@@ -510,20 +543,75 @@ function useDepartments() {
       .getDepartments()
       .then((res) => {
         const list = extractList(res);
-        // Each item may be a string or { id, name } object.
         setDepartments(
           list.map((d) =>
             typeof d === "string" ? d : (d.name ?? d.label ?? String(d.id)),
           ),
         );
       })
-      .catch(() => setDepartments([])); // Silently fall back — filter just won't populate.
+      .catch(() => setDepartments([]));
   }, []);
 
   return departments;
 }
 
-// ─── SUMMARY CARDS ─────────────────────────────────────────────────────────────
+function useActiveContract(employee) {
+  const [activeContract, setActiveContract] = useState(null);
+  const [contractLoading, setContractLoading] = useState(false);
+
+  useEffect(() => {
+    if (!employee?.id && !employee?.name) {
+      setActiveContract(null);
+      return;
+    }
+
+    let cancelled = false;
+    setContractLoading(true);
+
+    contractService
+      .getAll()
+      .then((contracts) => {
+        if (cancelled) return;
+
+        // ── Primary: ID-based match via employee_id ──
+        let match = contracts
+          .filter(
+            (c) =>
+              c.employee_id != null &&
+              String(c.employee_id) === String(employee.id) &&
+              c.status !== "Expired",
+          )
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+        // ── Fallback: name-based match (uppercase + trim) for legacy records ──
+        if (!match && employee.name) {
+          const normalName = employee.name.toUpperCase().trim();
+          match = contracts
+            .filter((c) => {
+              const cName = (c.employee_name ?? "").toUpperCase().trim();
+              return cName === normalName && c.status !== "Expired";
+            })
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        }
+
+        setActiveContract(match ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveContract(null);
+      })
+      .finally(() => {
+        if (!cancelled) setContractLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employee?.id, employee?.name]);
+
+  return { activeContract, setActiveContract, contractLoading };
+}
+
+// ─── SUMMARY CARDS ────────────────────────────────────────────────────────────
 
 function SummaryCards({ employees }) {
   const summary = useMemo(
@@ -551,7 +639,7 @@ function SummaryCards({ employees }) {
     {
       label: "Total Contracts",
       value: summary.total,
-      desc: "All employee contracts",
+      desc: "COS & Consultant only",
       icon: FileText,
       color: "blue",
     },
@@ -584,6 +672,7 @@ function SummaryCards({ employees }) {
       color: "emerald",
     },
   ];
+
   const colorMap = {
     blue: "bg-blue-50 text-blue-600",
     amber: "bg-amber-50 text-amber-600",
@@ -591,6 +680,7 @@ function SummaryCards({ employees }) {
     indigo: "bg-indigo-50 text-indigo-600",
     emerald: "bg-emerald-50 text-emerald-600",
   };
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {cards.map(({ label, value, desc, icon: Icon, color }) => (
@@ -614,7 +704,7 @@ function SummaryCards({ employees }) {
   );
 }
 
-// ─── FILTERS ───────────────────────────────────────────────────────────────────
+// ─── FILTERS ──────────────────────────────────────────────────────────────────
 
 function RenewalFilters({ filters, onChange, onReset, departments }) {
   return (
@@ -629,7 +719,6 @@ function RenewalFilters({ filters, onChange, onReset, departments }) {
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
           />
         </div>
-        {/* Department — populated from API */}
         <select
           value={filters.department}
           onChange={(e) => onChange("department", e.target.value)}
@@ -642,7 +731,6 @@ function RenewalFilters({ filters, onChange, onReset, departments }) {
             </option>
           ))}
         </select>
-        {/* Contract / Renewal status — local derived values */}
         {[
           {
             key: "contractStatus",
@@ -680,7 +768,7 @@ function RenewalFilters({ filters, onChange, onReset, departments }) {
   );
 }
 
-// ─── EMPLOYEE TABLE ────────────────────────────────────────────────────────────
+// ─── EMPLOYEE TABLE ───────────────────────────────────────────────────────────
 
 function EmployeeRenewalTable({
   employees,
@@ -710,7 +798,6 @@ function EmployeeRenewalTable({
     [employees, sortKey, sortDir],
   );
 
-  // Reset to page 1 when list changes
   useEffect(() => setPage(1), [employees]);
 
   const paginated = sorted.slice((page - 1) * pageSize, page * pageSize);
@@ -756,11 +843,11 @@ function EmployeeRenewalTable({
           <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
             <tr>
               {[
-                ["employeeCode", "Employee ID"],
+                ["employeeNumber", "Employee Number"],
                 ["name", "Employee Name"],
                 ["department", "Department"],
                 ["position", "Position"],
-                ["contractType", "Contract Type"],
+                ["employmentType", "Employment Type"],
                 ["startDate", "Start Date"],
                 ["endDate", "End Date"],
                 ["daysRemaining", "Days Remaining"],
@@ -789,8 +876,8 @@ function EmployeeRenewalTable({
                 <td colSpan={11}>
                   <EmptyState
                     icon={Users}
-                    title="No employees found"
-                    desc="Try adjusting your filters to see results."
+                    title="No COS or Consultant employees found"
+                    desc="Plantilla employees are excluded from contract renewal. Adjust your filters to see results."
                   />
                 </td>
               </tr>
@@ -801,7 +888,7 @@ function EmployeeRenewalTable({
                   className="hover:bg-slate-50/60 transition-colors"
                 >
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                    {emp.employeeCode}
+                    {emp.employeeNumber}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -822,8 +909,18 @@ function EmployeeRenewalTable({
                   <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                     {emp.position}
                   </td>
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                    {emp.contractType}
+                  <td className="px-4 py-3">
+                    {/* FIX: Show employment type with color-coded badge */}
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                      ${
+                        emp.employmentType?.toLowerCase().includes("consultant")
+                          ? "bg-purple-50 text-purple-700"
+                          : "bg-sky-50 text-sky-700"
+                      }`}
+                    >
+                      {emp.employmentType || "—"}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                     {formatDate(emp.startDate)}
@@ -836,7 +933,14 @@ function EmployeeRenewalTable({
                       <span className="text-slate-400 text-xs">—</span>
                     ) : (
                       <span
-                        className={`font-semibold text-sm ${emp.daysRemaining < 0 ? "text-red-600" : emp.daysRemaining <= 30 ? "text-amber-600" : "text-slate-700"}`}
+                        className={`font-semibold text-sm
+                        ${
+                          emp.daysRemaining < 0
+                            ? "text-red-600"
+                            : emp.daysRemaining <= 30
+                              ? "text-amber-600"
+                              : "text-slate-700"
+                        }`}
                       >
                         {emp.daysRemaining < 0
                           ? `${Math.abs(emp.daysRemaining)}d overdue`
@@ -882,7 +986,8 @@ function EmployeeRenewalTable({
               <button
                 key={i}
                 onClick={() => setPage(i + 1)}
-                className={`w-7 h-7 rounded text-xs font-medium ${page === i + 1 ? "bg-blue-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
+                className={`w-7 h-7 rounded text-xs font-medium
+                  ${page === i + 1 ? "bg-blue-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
               >
                 {i + 1}
               </button>
@@ -901,7 +1006,7 @@ function EmployeeRenewalTable({
   );
 }
 
-// ─── UPLOAD CARD (local state) ─────────────────────────────────────────────────
+// ─── UPLOAD CARD ──────────────────────────────────────────────────────────────
 
 function UploadDocumentsCard({ toast }) {
   const [docs, setDocs] = useState([]);
@@ -1004,9 +1109,9 @@ function UploadDocumentsCard({ toast }) {
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
+            onClick={() => document.getElementById("fileInput").click()}
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer
               ${dragging ? "border-blue-400 bg-blue-50/50" : "border-slate-200 hover:border-blue-300 hover:bg-slate-50/50"}`}
-            onClick={() => document.getElementById("fileInput").click()}
           >
             <input
               id="fileInput"
@@ -1035,7 +1140,6 @@ function UploadDocumentsCard({ toast }) {
               </>
             )}
           </div>
-
           {docs.length === 0 ? (
             <EmptyState
               icon={Paperclip}
@@ -1140,7 +1244,7 @@ function UploadDocumentsCard({ toast }) {
   );
 }
 
-// ─── GENERATE CONTRACT CARD (local state) ─────────────────────────────────────
+// ─── GENERATE CONTRACT CARD ───────────────────────────────────────────────────
 
 function GenerateContractCard({ employee, toast }) {
   const [form, setForm] = useState({
@@ -1208,116 +1312,64 @@ function GenerateContractCard({ employee, toast }) {
             </div>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs">
-            <Info className="w-3.5 h-3.5" />
-            Available regardless of uploaded documents
+            <Info className="w-3.5 h-3.5" /> Available regardless of uploaded
+            documents
           </div>
         </div>
         <div className="p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Contract Template</label>
-              <select
-                value={form.template}
-                onChange={(e) => set("template", e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Select template</option>
-                {TEMPLATES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>New Contract Type</label>
-              <select
-                value={form.contractType}
-                onChange={(e) => set("contractType", e.target.value)}
-                className={inputCls}
-              >
-                {CONTRACT_TYPES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Start Date</label>
-              <input
-                type="date"
-                value={form.startDate}
-                onChange={(e) => set("startDate", e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>End Date</label>
-              <input
-                type="date"
-                value={form.endDate}
-                onChange={(e) => set("endDate", e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Salary (PHP)</label>
-              <input
-                type="number"
-                value={form.salary}
-                onChange={(e) => set("salary", e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Allowances</label>
-              <input
-                type="text"
-                value={form.allowances}
-                onChange={(e) => set("allowances", e.target.value)}
-                placeholder="e.g. Transportation, Meal"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Work Schedule</label>
-              <select
-                value={form.schedule}
-                onChange={(e) => set("schedule", e.target.value)}
-                className={inputCls}
-              >
-                {SCHEDULES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Position</label>
-              <input
-                type="text"
-                value={form.position}
-                onChange={(e) => set("position", e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Department</label>
-              <input
-                type="text"
-                value={form.department}
-                onChange={(e) => set("department", e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Probation Status</label>
-              <select
-                value={form.probation}
-                onChange={(e) => set("probation", e.target.value)}
-                className={inputCls}
-              >
-                <option>No</option>
-                <option>Yes — 3 months</option>
-                <option>Yes — 6 months</option>
-              </select>
-            </div>
+            {[
+              ["template", "Contract Template", "select", TEMPLATES, true],
+              [
+                "contractType",
+                "New Contract Type",
+                "select",
+                CONTRACT_TYPES,
+                false,
+              ],
+              ["startDate", "Start Date", "date", null],
+              ["endDate", "End Date", "date", null],
+              ["salary", "Salary (PHP)", "number", null],
+              ["allowances", "Allowances", "text", null],
+              ["schedule", "Work Schedule", "select", SCHEDULES, false],
+              ["position", "Position", "text", null],
+              ["department", "Department", "text", null],
+              [
+                "probation",
+                "Probation Status",
+                "select",
+                ["No", "Yes — 3 months", "Yes — 6 months"],
+                false,
+              ],
+            ].map(([key, label, type, options, withBlank]) => (
+              <div key={key}>
+                <label className={labelCls}>{label}</label>
+                {type === "select" ? (
+                  <select
+                    value={form[key]}
+                    onChange={(e) => set(key, e.target.value)}
+                    className={inputCls}
+                  >
+                    {withBlank && <option value="">Select template</option>}
+                    {options.map((o) => (
+                      <option key={o}>{o}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={type}
+                    value={form[key]}
+                    onChange={(e) => set(key, e.target.value)}
+                    placeholder={
+                      key === "allowances"
+                        ? "e.g. Transportation, Meal"
+                        : undefined
+                    }
+                    className={inputCls}
+                  />
+                )}
+              </div>
+            ))}
           </div>
           <div>
             <label className={labelCls}>Remarks</label>
@@ -1498,7 +1550,7 @@ function RenewalTimeline() {
   );
 }
 
-// ─── RENEWAL HISTORY (local mock per employee) ────────────────────────────────
+// ─── RENEWAL HISTORY ──────────────────────────────────────────────────────────
 
 function RenewalHistoryTable({ employee }) {
   const rows = useMemo(() => defaultHistory(employee), [employee]);
@@ -1557,26 +1609,39 @@ function RenewalHistoryTable({ employee }) {
   );
 }
 
-// ─── EMPLOYEE CONTRACT CARD ────────────────────────────────────────────────────
+// ─── EMPLOYEE CONTRACT CARD ───────────────────────────────────────────────────
 
-function EmployeeContractCard({ employee }) {
+function EmployeeContractCard({ employee, contract }) {
+  const startDate = contract?.start_date ?? employee.startDate;
+  const endDate = contract?.end_date ?? employee.endDate;
+  const salary =
+    contract?.salary ?? (employee.salary !== "—" ? employee.salary : null);
+
+  const daysRemaining = endDate
+    ? Math.round((new Date(endDate) - new Date()) / 86_400_000)
+    : null;
+
   const fields = [
-    ["Contract Number", employee.contractNumber],
-    ["Contract Type", employee.contractType],
-    ["Start Date", formatDate(employee.startDate)],
-    ["End Date", formatDate(employee.endDate)],
-    ["Salary", employee.salary !== "—" ? `PHP ${employee.salary}` : "—"],
+    [
+      "Contract Number",
+      contract?.id ? `CTR-${contract.id}` : employee.contractNumber,
+    ],
+    ["Employment Type", employee.employmentType],
+    ["Start Date", formatDate(startDate)],
+    ["End Date", formatDate(endDate)],
+    ["Salary", salary ? `PHP ${Number(salary).toLocaleString()}` : "—"],
     ["Work Schedule", employee.schedule],
     ["Employment Status", employee.employmentStatus],
     [
       "Days Remaining",
-      employee.daysRemaining == null
+      daysRemaining == null
         ? "—"
-        : employee.daysRemaining < 0
-          ? `${Math.abs(employee.daysRemaining)} days overdue`
-          : `${employee.daysRemaining} days`,
+        : daysRemaining < 0
+          ? `${Math.abs(daysRemaining)} days overdue`
+          : `${daysRemaining} days`,
     ],
   ];
+
   return (
     <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
       <div className="flex items-center gap-2 mb-4">
@@ -1592,7 +1657,14 @@ function EmployeeContractCard({ employee }) {
               {k}
             </p>
             <p
-              className={`text-sm font-medium mt-0.5 ${k === "Days Remaining" && employee.daysRemaining != null && employee.daysRemaining < 0 ? "text-red-600" : "text-slate-800"}`}
+              className={`text-sm font-medium mt-0.5
+              ${
+                k === "Days Remaining" &&
+                daysRemaining != null &&
+                daysRemaining < 0
+                  ? "text-red-600"
+                  : "text-slate-800"
+              }`}
             >
               {v}
             </p>
@@ -1603,12 +1675,15 @@ function EmployeeContractCard({ employee }) {
   );
 }
 
-// ─── DETAIL PAGE ───────────────────────────────────────────────────────────────
+// ─── DETAIL PAGE ──────────────────────────────────────────────────────────────
 
 function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
-  // Fetch full detail from API; fall back to the list snapshot while loading.
   const { employee: fetched, loading, error } = useEmployeeDetail(employeeId);
   const employee = fetched ?? listSnapshot;
+
+  // ── FIX: Extracted into dedicated hook with uppercase-safe name matching ──
+  const { activeContract, setActiveContract, contractLoading } =
+    useActiveContract(employee);
 
   if (loading && !employee) {
     return (
@@ -1653,12 +1728,12 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
         <span className="text-sm text-slate-800 font-medium">
           {employee.name}
         </span>
-        {loading && (
+        {(loading || contractLoading) && (
           <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin" />
         )}
       </div>
 
-      {/* Employee Header */}
+      {/* Header */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
           <img
@@ -1671,7 +1746,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <p className="text-xs font-mono text-slate-400">
-                  {employee.employeeCode}
+                  {employee.employeeNumber}
                 </p>
                 <h2 className="text-xl font-bold text-slate-800 mt-0.5">
                   {employee.name}
@@ -1687,7 +1762,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="w-3.5 h-3.5" />
-                    {employee.contractType}
+                    {employee.employmentType}
                   </span>
                 </div>
               </div>
@@ -1702,7 +1777,30 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <EmployeeContractCard employee={employee} />
+          <EmployeeContractCard employee={employee} contract={activeContract} />
+
+          {/* ── AutoRenewalPanel — only shown when a matching active contract exists ── */}
+          {activeContract ? (
+            <AutoRenewalPanel
+              contract={activeContract}
+              toast={toast}
+              onUpdated={(updated) => setActiveContract(updated)}
+            />
+          ) : (
+            !contractLoading && (
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Info className="w-4 h-4" />
+                  <p className="text-sm">
+                    No active contract found in the hiring module for this
+                    employee. Create one via the{" "}
+                    <strong>Hiring → Contracts</strong> section first.
+                  </p>
+                </div>
+              </div>
+            )
+          )}
+
           <UploadDocumentsCard toast={toast} />
           <GenerateContractCard employee={employee} toast={toast} />
           <RenewalHistoryTable employee={employee} />
@@ -1715,12 +1813,12 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
   );
 }
 
-// ─── MAIN APP ──────────────────────────────────────────────────────────────────
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
 
 export default function App() {
   const toast = useToast();
-  const departments = useDepartments(); // API
-  const [selected, setSelected] = useState(null); // { id, snapshot }
+  const departments = useDepartments();
+  const [selected, setSelected] = useState(null);
   const [filters, setFilters] = useState({
     search: "",
     department: "",
@@ -1728,10 +1826,8 @@ export default function App() {
     renewalStatus: "",
   });
 
-  const { employees, loading, error, reload } = useEmployeeList(filters); // API
+  const { employees, loading, error, reload } = useEmployeeList(filters);
 
-  // Client-side filter for derived fields (contractStatus, renewalStatus)
-  // that the API doesn't know about.
   const filtered = useMemo(
     () =>
       employees.filter((e) => {
@@ -1799,8 +1895,10 @@ export default function App() {
               <h1 className="text-lg font-bold text-slate-800">
                 Employee Contract Renewals
               </h1>
+              {/* FIX: Clarify scope — Plantilla excluded */}
               <p className="text-sm text-slate-400 mt-0.5">
-                Manage and process contract renewals for all eligible employees
+                Manage renewals for Contract of Service and Consultant
+                employees. Plantilla positions are excluded.
               </p>
             </div>
             <SummaryCards employees={filtered} />
@@ -1812,7 +1910,7 @@ export default function App() {
             />
             {!loading && !error && (
               <p className="text-xs text-slate-500">
-                {filtered.length} employee(s) found
+                {filtered.length} COS/Consultant employee(s) found
               </p>
             )}
             <EmployeeRenewalTable
