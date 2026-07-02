@@ -8,6 +8,7 @@ import {
   IconZoomOut,
   IconRefresh,
   IconBuilding,
+  IconBuildingSkyscraper,
   IconSitemap,
 } from "@tabler/icons-react";
 import { FolderOpen, FolderClosed } from "lucide-react";
@@ -50,51 +51,97 @@ function setAllExpanded(nodes, expanded) {
   }));
 }
 
+/**
+ * Normalizes a Laravel collection response that may or may not be wrapped
+ * in a `data` key, guarding against non-array payloads (e.g. error bodies).
+ */
+function normalizeListResponse(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+}
+
 export default function OrgChart() {
-  const [orgData, setOrgData] = useState([]);
   const [treeData, setTreeData] = useState([]);
   const [chartKey, setChartKey] = useState(0);
+
   const [division, setDivision] = useState("All");
   const [department, setDepartment] = useState("All");
+
+  const [divisionList, setDivisionList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
+
   const [scale, setScale] = useState(0.8);
   const [loading, setLoading] = useState(false);
   const [openDept, setOpenDept] = useState(false);
+  const [openDivision, setOpenDivision] = useState(false);
 
-  // Fetch departments
+  // Guards against a slow in-flight tree fetch overwriting a newer one
+  // when the user switches filters in quick succession.
+  const abortRef = useRef(null);
+
+  // Fetch departments (for dropdown listing only — not filtered by division,
+  // per current "independent filter" requirement).
   useEffect(() => {
+    let cancelled = false;
     api
       .get("/departments")
       .then((res) => {
-        const list = Array.isArray(res.data)
-          ? res.data
-          : (res.data?.data ?? []);
-        setDepartmentList(list);
+        if (cancelled) return;
+        setDepartmentList(normalizeListResponse(res.data));
       })
-      .catch(() => setDepartmentList([]));
+      .catch(() => {
+        if (!cancelled) setDepartmentList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Fetch tree
+  // Fetch divisions/directorates for the new filter dropdown.
   useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/divisions")
+      .then((res) => {
+        if (cancelled) return;
+        setDivisionList(normalizeListResponse(res.data));
+      })
+      .catch(() => {
+        if (!cancelled) setDivisionList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fetch tree whenever either filter changes.
+  useEffect(() => {
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+
     const fetchTree = async () => {
       try {
         setLoading(true);
         const res = await api.get("/manpower/tree", {
           params: { division_id: division, department_id: department },
+          signal: controller.signal,
         });
         const nodes = Array.isArray(res.data?.nodes) ? res.data.nodes : [];
-        setOrgData(nodes);
         setTreeData(buildSafeTree(nodes, false));
         setChartKey((k) => k + 1);
       } catch (err) {
+        if (err.name === "CanceledError" || err.name === "AbortError") return;
         console.error("Tree fetch error:", err);
-        setOrgData([]);
         setTreeData([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
+
     fetchTree();
+    return () => controller.abort();
   }, [division, department]);
 
   const expandAll = useCallback(() => {
@@ -107,11 +154,57 @@ export default function OrgChart() {
     setChartKey((k) => k + 1);
   }, []);
 
+  // Selecting a specific Division clears the Department filter, and vice
+  // versa. This isn't a UI preference — it mirrors a real backend
+  // constraint: ManpowerMappingController@tree gives department_id full
+  // priority and silently ignores division_id when both are present.
+  // Without this, the UI could show a division selected while the tree
+  // actually renders department-scoped data.
+  const handleSelectDivision = useCallback((id) => {
+    setDivision(id);
+    setDepartment("All");
+    setOpenDivision(false);
+  }, []);
+
+  const handleSelectDepartment = useCallback((id) => {
+    setDepartment(id);
+    setDivision("All");
+    setOpenDept(false);
+  }, []);
+
   const selectedDepartment =
     department === "All"
       ? "All Departments"
       : (departmentList.find((d) => d.id === department)?.name ??
-        "Select Department");
+        "All Departments");
+
+  const selectedDivision =
+    division === "All"
+      ? "All Divisions"
+      : (divisionList.find((d) => d.id === division)?.name ?? "All Divisions");
+
+  // Defensive reset: if the currently selected id no longer exists in a
+  // freshly-fetched list (e.g. it was deleted), fall back to "All" instead
+  // of silently querying a dead id.
+  useEffect(() => {
+    if (
+      department !== "All" &&
+      departmentList.length > 0 &&
+      !departmentList.some((d) => d.id === department)
+    ) {
+      setDepartment("All");
+    }
+  }, [departmentList, department]);
+
+  useEffect(() => {
+    if (
+      division !== "All" &&
+      divisionList.length > 0 &&
+      !divisionList.some((d) => d.id === division)
+    ) {
+      setDivision("All");
+    }
+  }, [divisionList, division]);
 
   return (
     <div className="w-full h-full bg-slate-50 flex flex-col overflow-hidden">
@@ -132,6 +225,65 @@ export default function OrgChart() {
           <div className="flex flex-col h-full">
             {/* ── TOOLBAR ─────────────────────────────────────── */}
             <div className="flex items-center gap-2 px-4 py-2 bg-white border-b shadow-sm flex-wrap shrink-0">
+              {/* Division / Directorate filter */}
+              <div className="flex items-center gap-2">
+                <IconBuildingSkyscraper size={16} className="text-gray-400" />
+                <span className="text-xs font-semibold uppercase text-gray-400 tracking-wide">
+                  Division
+                </span>
+                <Popover open={openDivision} onOpenChange={setOpenDivision}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-[220px] justify-between text-sm h-9"
+                    >
+                      <span className="truncate">{selectedDivision}</span>
+                      <IconSelector className="ml-2 h-4 w-4 opacity-40 flex-shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[220px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search division..." />
+                      <CommandEmpty>No division found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="All"
+                          onSelect={() => handleSelectDivision("All")}
+                        >
+                          <IconCheck
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              division === "All" ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          All Divisions
+                        </CommandItem>
+                        {divisionList.map((div) => (
+                          <CommandItem
+                            key={div.id}
+                            value={div.name}
+                            onSelect={() => handleSelectDivision(div.id)}
+                          >
+                            <IconCheck
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                division === div.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {div.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="w-px h-6 bg-gray-200" />
+
+              {/* Department filter */}
               <div className="flex items-center gap-2">
                 <IconBuilding size={16} className="text-gray-400" />
                 <span className="text-xs font-semibold uppercase text-gray-400 tracking-wide">
@@ -154,10 +306,7 @@ export default function OrgChart() {
                       <CommandGroup>
                         <CommandItem
                           value="All"
-                          onSelect={() => {
-                            setDepartment("All");
-                            setOpenDept(false);
-                          }}
+                          onSelect={() => handleSelectDepartment("All")}
                         >
                           <IconCheck
                             className={cn(
@@ -173,10 +322,7 @@ export default function OrgChart() {
                           <CommandItem
                             key={dept.id}
                             value={dept.name}
-                            onSelect={() => {
-                              setDepartment(dept.id);
-                              setOpenDept(false);
-                            }}
+                            onSelect={() => handleSelectDepartment(dept.id)}
                           >
                             <IconCheck
                               className={cn(
