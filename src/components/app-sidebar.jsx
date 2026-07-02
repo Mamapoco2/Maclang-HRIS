@@ -74,6 +74,11 @@ const NAV_MAIN = [
                 url: "/hiring/plantilla/onboarding",
                 permission: "hiring.view",
               },
+              {
+                title: "Plantilla Positions",
+                url: "/hiring/plantilla/positions",
+                permission: "hiring.view",
+              },
             ],
           },
           {

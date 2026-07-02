@@ -2,14 +2,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { IconSun, IconMoon, IconBug } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconBug, IconSparkles } from "@tabler/icons-react";
 import { useTheme } from "@/components/theme-provider";
 import { NotificationBell } from "@/components/Notification-bell";
 import ReportIssueModal from "@/components/ReportIssueModal";
+import { useChatbot } from "@/components/chatbot-context";
 
 export function SiteHeader() {
   const { theme, setTheme } = useTheme();
   const [reportOpen, setReportOpen] = useState(false);
+  const { openChat } = useChatbot();
 
   return (
     <>
@@ -24,7 +26,25 @@ export function SiteHeader() {
 
           <h1 className="text-base font-medium"></h1>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              onClick={openChat}
+              className="animate-gradient-move relative overflow-hidden border-0 text-white shadow-sm transition-transform hover:scale-[1.03] active:scale-[0.98]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #6366f1)",
+                backgroundSize: "300% 300%",
+              }}
+            >
+              <IconSparkles size={16} stroke={1.75} />
+              Chat with AI
+            </Button>
+
+            <Separator
+              orientation="vertical"
+              className="mx-1 data-[orientation=vertical]:h-4"
+            />
+
             <Button
               variant="ghost"
               size="icon"

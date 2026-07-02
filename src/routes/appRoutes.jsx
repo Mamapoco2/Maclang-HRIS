@@ -58,6 +58,7 @@ import BugReportsPage from "../pages/bugReport/bugReportPage";
 import ReleaseManagerPage from "../pages/releaseManager/releaseManagerPage";
 import AuditLogsPage from "../pages/audit/auditLogsPage";
 import RenewalsPage from "../pages/renewals/renewalsPage";
+import PlantillaPositionsPage from "../pages/hiring/posting/plantillaPostingPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -408,6 +409,14 @@ function AppRoutes() {
             />
             <Route path="/audit-logs" element={<AuditLogsPage />} />
             <Route path="/renewals" element={<RenewalsPage />} />
+            <Route
+              path="/hiring/plantilla/positions"
+              element={
+                <PermissionRoute permission="hiring.view">
+                  <PlantillaPositionsPage />
+                </PermissionRoute>
+              }
+            />
           </Route>
         </Route>
       </Routes>
