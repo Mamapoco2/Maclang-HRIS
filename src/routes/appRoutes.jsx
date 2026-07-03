@@ -292,9 +292,9 @@ function AppRoutes() {
               }
             />
             <Route
-              path="/forward"
+              path="/Announcement"
               element={
-                <PermissionRoute permission="announcements.view">
+                <PermissionRoute permission={null}>
                   <Forward />
                 </PermissionRoute>
               }

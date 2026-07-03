@@ -1,4 +1,3 @@
-// src/pages/login/components/LoginForm.jsx
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/lib/validation";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useContext, useState, useRef } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
 import { IconLoader2 } from "@tabler/icons-react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
@@ -17,11 +16,12 @@ const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000;
 
 export default function LoginForm() {
-  const { login } = useContext(AuthContext);
+  const { login, isAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
   const [serverError, setServerError] = useState("");
   const [lockoutUntil, setLockoutUntil] = useState(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [loginSucceeded, setLoginSucceeded] = useState(false);
   const attempts = useRef(0);
 
   const {
@@ -35,6 +35,16 @@ export default function LoginForm() {
     ? Math.ceil((lockoutUntil - Date.now()) / 1000)
     : 0;
 
+  // Only navigate once AuthContext's `user` state is actually populated.
+  // This avoids a race condition where navigate() fires before
+  // isAuthenticated flips to true, which could bounce us back to /login
+  // via ProtectedRoute.
+  useEffect(() => {
+    if (loginSucceeded && isAuthenticated) {
+      navigate("/Announcement", { replace: true });
+    }
+  }, [loginSucceeded, isAuthenticated, navigate]);
+
   const onSubmit = async (data) => {
     if (isLockedOut) return;
 
@@ -44,7 +54,7 @@ export default function LoginForm() {
 
     if (res.success) {
       attempts.current = 0;
-      navigate("/dashboard", { replace: true });
+      setLoginSucceeded(true);
     } else {
       attempts.current += 1;
 

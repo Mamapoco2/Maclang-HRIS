@@ -15,7 +15,10 @@ export default function MainLayout() {
   const [showWhatsNew, setShowWhatsNew] = useState(false);
 
   useEffect(() => {
-    setShowWhatsNew(true); // always show, ignore localStorage
+    const hasSeen = localStorage.getItem(WHATS_NEW_KEY);
+    if (!hasSeen) {
+      setShowWhatsNew(true);
+    }
   }, []);
 
   const handleClose = () => {

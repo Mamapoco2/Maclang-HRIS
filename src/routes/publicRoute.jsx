@@ -9,7 +9,7 @@ export default function PublicRoute() {
   const firstAccessibleRoute = useFirstAccessibleRoute();
 
   if (loading) return null;
-  if (isAuthenticated) return <Navigate to={firstAccessibleRoute} replace />;
+  if (isAuthenticated) return <Navigate to="/Announcement" replace />;
 
   return <Outlet />;
 }

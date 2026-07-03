@@ -41,6 +41,12 @@ import { AuthContext } from "@/context/authContext";
 
 const NAV_MAIN = [
   {
+    title: "Announcement",
+    url: "/Announcement",
+    icon: IconSpeakerphone,
+    permission: "announcements.view",
+  },
+  {
     title: "Dashboard",
     url: "/dashboard",
     icon: IconDashboard,
@@ -379,16 +385,7 @@ const NAV_MAIN = [
     icon: IconChartBar,
     permission: "analytics.view",
   },
-  {
-    title: "Announcement",
-    icon: IconSpeakerphone,
-    permission: "announcements.view",
-    items: [
-      { title: "Inbox", url: "/inbox", permission: "announcements.view" },
-      { title: "Forwarded", url: "/forward", permission: "announcements.view" },
-      { title: "Sent", url: "/sent", permission: "announcements.view" },
-    ],
-  },
+
   {
     title: "Manpower Mapping",
     url: "/manpower",
