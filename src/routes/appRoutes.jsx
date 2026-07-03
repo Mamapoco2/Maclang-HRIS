@@ -18,15 +18,15 @@ import Team from "../pages/team/components/teamPage";
 import Analytics from "../pages/analytics/components/analyticsPage";
 import Trainings from "../pages/trainings/training/trainingPage";
 import SkillAnalysis from "../pages/trainings/skillGapAnalysis/skillGapTest";
-import Applications from "../pages/hiring/application/components/applicationPage";
-import OnboardingPage from "../pages/hiring/onboarding/onboardingPage";
+import Applications from "../pages/hiring/plantilla/application/components/applicationPage";
+import OnboardingPage from "../pages/hiring/plantilla/onboarding/onboardingPage";
 import Leave from "../pages/leave/DashboardPage";
 import LeaveBalance from "../pages/leave/BalancesPage";
 import LeaveCalendar from "../pages/leave/CalendarPage";
 import LeaveApproval from "../pages/leave/ApprovalsPage";
 import LeaveRequest from "../pages/leave/RequestsPage";
 import NewLeaveRequest from "../pages/leave/NewRequestPage";
-import Applicants from "../pages/hiring/applicants/components/applicantsPage";
+import Applicants from "../pages/hiring/plantilla/applicants/components/applicantsPage";
 import Accounts from "../pages/accounts/components/accountsPage";
 import ManPower from "../pages/manpower/manPowerPage";
 import IPCRForm from "../pages/spms/ipcr/IPCRForm";
@@ -58,7 +58,10 @@ import BugReportsPage from "../pages/bugReport/bugReportPage";
 import ReleaseManagerPage from "../pages/releaseManager/releaseManagerPage";
 import AuditLogsPage from "../pages/audit/auditLogsPage";
 import RenewalsPage from "../pages/renewals/renewalsPage";
-import PlantillaPositionsPage from "../pages/hiring/posting/plantillaPostingPage";
+import PlantillaPositionsPage from "../pages/hiring/plantilla/posting/plantillaPostingPage";
+import NonPlantillaApplicantsPage from "../pages/hiring/non-plantilla/applicants/components/applicantsPage";
+import NonPlantillaApplicationsPage from "../pages/hiring/non-plantilla/application/components/applicationPage";
+import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding/onboardingPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -414,6 +417,30 @@ function AppRoutes() {
               element={
                 <PermissionRoute permission="hiring.view">
                   <PlantillaPositionsPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/hiring/non-plantilla/applicants"
+              element={
+                <PermissionRoute permission="hiring.view">
+                  <NonPlantillaApplicantsPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/hiring/non-plantilla/applications"
+              element={
+                <PermissionRoute permission="hiring.view">
+                  <NonPlantillaApplicationsPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/hiring/non-plantilla/onboarding"
+              element={
+                <PermissionRoute permission="hiring.view">
+                  <NonPlantillaOnboardingPage />
                 </PermissionRoute>
               }
             />
