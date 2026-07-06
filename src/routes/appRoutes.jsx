@@ -36,9 +36,7 @@ import PerformancePeriod from "../pages/spms/PerformancePeriodPage";
 import Departments from "../pages/departments/departmentPage";
 import PlantillaItems from "../pages/plantillaItems/plantillaItemsPage";
 import Status403 from "../pages/status/403/403Status";
-import Inbox from "../pages/announcement/inbox/inbox";
-import Forward from "../pages/announcement/Forward/forward";
-import Sent from "../pages/announcement/sent/sent";
+import Announcement from "../pages/announcement/announcementPage";
 import ProtectedRoute from "./protectedRoutes";
 import PublicRoute from "./publicRoute";
 import PermissionRoute from "./permissionRoute";
@@ -286,27 +284,12 @@ function AppRoutes() {
             />
 
             {/* ── Announcements ── */}
-            <Route
-              path="/inbox"
-              element={
-                <PermissionRoute permission="announcements.view">
-                  <Inbox />
-                </PermissionRoute>
-              }
-            />
+
             <Route
               path="/Announcement"
               element={
                 <PermissionRoute permission={null}>
-                  <Forward />
-                </PermissionRoute>
-              }
-            />
-            <Route
-              path="/sent"
-              element={
-                <PermissionRoute permission="announcements.view">
-                  <Sent />
+                  <Announcement />
                 </PermissionRoute>
               }
             />
