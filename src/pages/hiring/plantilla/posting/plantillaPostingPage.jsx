@@ -279,15 +279,15 @@ export default function PlantillaPostingPage() {
   };
 
   return (
-    <div className="min-h-full w-full bg-slate-50 font-sans text-slate-900 antialiased">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-full w-full min-w-0 max-w-full overflow-x-hidden bg-slate-50 font-sans text-slate-900 antialiased [contain:inline-size]">
+      <div className="mx-auto w-full min-w-0 max-w-full px-4 py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
               <BriefcaseBusiness style={{ height: 22, width: 22 }} />
             </div>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                 {isAdmin ? "Plantilla Postings" : "Available Plantilla Items"}
               </h1>
               <p className="mt-0.5 text-sm text-slate-500">
@@ -317,8 +317,7 @@ export default function PlantillaPostingPage() {
             )}
           </div>
         </div>
-
-        <div className="mt-6">
+        <div className="mt-6 min-w-0">
           {loading ? (
             <StatsSkeleton />
           ) : (
@@ -354,10 +353,9 @@ export default function PlantillaPostingPage() {
             </div>
           )}
         </div>
-
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mt-6 min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
+            <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
@@ -366,7 +364,7 @@ export default function PlantillaPostingPage() {
                 className="pl-9"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={sortBy}
                 onChange={setSortBy}
@@ -470,8 +468,7 @@ export default function PlantillaPostingPage() {
             </div>
           )}
         </div>
-
-        <div className="mt-6">
+        <div className="mt-6 min-w-0">
           {loading ? (
             <TableSkeleton />
           ) : sorted.length === 0 ? (
@@ -481,8 +478,8 @@ export default function PlantillaPostingPage() {
             />
           ) : (
             <>
-              <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
-                <div className="max-h-[560px] overflow-auto">
+              <div className="hidden min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
+                <div className="max-h-[560px] w-full max-w-full overflow-x-auto overflow-y-auto">
                   <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
                     <thead className="sticky top-0 z-10 bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500">
                       <tr>
@@ -656,7 +653,6 @@ export default function PlantillaPostingPage() {
           )}
         </div>
       </div>
-
       <ViewDrawer
         item={viewItem}
         onClose={() => setViewItem(null)}
@@ -666,7 +662,6 @@ export default function PlantillaPostingPage() {
           setViewItem(null);
         }}
       />
-
       <ApplyDialog
         item={applyItem}
         user={user}
@@ -677,7 +672,6 @@ export default function PlantillaPostingPage() {
           loadPostings();
         }}
       />
-
       <Modal
         open={applySuccess}
         onClose={() => setApplySuccess(false)}
@@ -702,7 +696,6 @@ export default function PlantillaPostingPage() {
           </Button>
         </div>
       </Modal>
-
       <EditDialog
         state={editItem}
         onClose={() => setEditItem(undefined)}
@@ -728,7 +721,6 @@ export default function PlantillaPostingPage() {
           }
         }}
       />
-
       <Modal
         open={!!deleteItem}
         onClose={() => !deleting && setDeleteItem(null)}
@@ -772,7 +764,6 @@ export default function PlantillaPostingPage() {
           </div>
         )}
       </Modal>
-
       <ApplicationsDrawer
         posting={applicationsPosting}
         onClose={() => setApplicationsPosting(null)}

@@ -31,7 +31,7 @@ export default function MyApplicationsPage() {
   }, [load]);
 
   return (
-    <div className="min-h-full w-full bg-slate-50 font-sans text-slate-900 antialiased">
+    <div className="min-h-full w-screen bg-slate-50 font-sans text-slate-900 antialiased">
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
