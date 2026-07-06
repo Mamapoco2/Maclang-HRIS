@@ -15,8 +15,7 @@ export default function IPCRRate() {
   };
 
   const handleSubmit = () => {
-    console.log("Submitting rating:", ratings);
-    // TODO: API call
+    // console.log("Submitting rating:", ratings);
   };
 
   return (

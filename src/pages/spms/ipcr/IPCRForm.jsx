@@ -35,11 +35,9 @@ export default function IPCRForm() {
     const payload = getSubmitPayload();
 
     if (isEdit) {
-      console.log("Updating IPCR", payload);
-      // TODO: API call
+      // console.log("Updating IPCR", payload);
     } else {
-      console.log("Creating IPCR", payload);
-      // TODO: API call
+      // console.log("Creating IPCR", payload);
     }
 
     navigate("/spms/ipcr");

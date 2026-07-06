@@ -4,6 +4,7 @@ import {
   Pencil,
   Trash2,
   FileText,
+  CheckCircle2,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -90,6 +91,9 @@ export function RowActions({
   onApply,
   onViewApplications,
 }) {
+  const applyDisabled =
+    item.status === "Closed" || item.status === "Filled" || item.alreadyApplied;
+
   return (
     <div className="flex items-center justify-end gap-1">
       <Button variant="ghost" size="icon" onClick={onView} aria-label="View">
@@ -122,13 +126,23 @@ export function RowActions({
             <Trash2 className="h-4 w-4 text-rose-500" />
           </Button>
         </>
+      ) : item.alreadyApplied ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled
+          aria-label="Already Applied"
+          title="Naka-apply ka na sa position na ito"
+        >
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+        </Button>
       ) : (
         <Button
           variant="ghost"
           size="icon"
           onClick={onApply}
           aria-label="Apply"
-          disabled={item.status === "Closed" || item.status === "Filled"}
+          disabled={applyDisabled}
         >
           <FileText className="h-4 w-4" />
         </Button>

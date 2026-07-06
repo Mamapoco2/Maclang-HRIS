@@ -47,6 +47,8 @@ export function InfoGrid({ rows, stacked }) {
 export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
   if (!item) return <DrawerPanel open={false} onClose={onClose} />;
   const docsRequired = DOC_KEYS.filter((d) => item.requiredDocuments[d.key]);
+  const applyDisabled =
+    item.status === "Closed" || item.status === "Filled" || item.alreadyApplied;
   return (
     <DrawerPanel open={!!item} onClose={onClose}>
       <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
@@ -67,7 +69,15 @@ export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
         </button>
       </div>
       <div className="space-y-6 px-6 py-5">
-        <StatusBadge status={item.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={item.status} />
+          {item.alreadyApplied && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+              <CheckCircle2 className="h-3 w-3" />
+              Already Applied
+            </span>
+          )}
+        </div>
         <Section title="Position Information" icon={Briefcase}>
           <InfoGrid
             rows={[
@@ -145,13 +155,18 @@ export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
           Close
         </Button>
         {!isAdmin && (
-          <Button
-            className="flex-1"
-            onClick={onApply}
-            disabled={item.status === "Closed" || item.status === "Filled"}
-          >
-            <FileText className="h-4 w-4" />
-            Apply Now
+          <Button className="flex-1" onClick={onApply} disabled={applyDisabled}>
+            {item.alreadyApplied ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                Already Applied
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4" />
+                Apply Now
+              </>
+            )}
           </Button>
         )}
       </div>

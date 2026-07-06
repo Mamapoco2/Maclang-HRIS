@@ -23,7 +23,7 @@ const complete = async (formData) => {
     return { success: true, data: res.data };
   } catch (err) {
     if (err.response?.status === 422) {
-      console.log("422 errors:", err.response.data);
+      // console.log("422 errors:", err.response.data);
       return {
         success: false,
         validationErrors: err.response.data?.errors ?? {},

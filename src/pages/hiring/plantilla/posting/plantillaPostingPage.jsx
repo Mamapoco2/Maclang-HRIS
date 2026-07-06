@@ -599,10 +599,12 @@ export default function PlantillaPostingPage() {
                           className="flex-1"
                           onClick={() => setApplyItem(it)}
                           disabled={
-                            it.status === "Closed" || it.status === "Filled"
+                            it.status === "Closed" ||
+                            it.status === "Filled" ||
+                            it.alreadyApplied
                           }
                         >
-                          Apply
+                          {it.alreadyApplied ? "Already Applied" : "Apply"}
                         </Button>
                       ) : (
                         <>

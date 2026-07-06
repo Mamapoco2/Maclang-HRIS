@@ -71,12 +71,12 @@ export const AuthProvider = ({ children }) => {
     const channel = echo.private(`user.${user.id}`);
 
     channel.listen(".permissions.updated", (e) => {
-      console.log("[Echo] permissions.updated →", e);
+      // console.log("[Echo] permissions.updated →", e);
       refreshUserRef.current();
     });
 
     channel.listen(".logged.in.elsewhere", () => {
-      console.log("[Echo] logged.in.elsewhere → displacing session");
+      // console.log("[Echo] logged.in.elsewhere → displacing session");
       resetEcho();
       clearAuth();
       setUserState(null);

@@ -55,6 +55,8 @@ export function EditDialog({
         monthly_salary: String(d.monthlySalary),
         employment_status: d.employmentStatus,
         vacancies: String(d.vacancies),
+        immediate_supervisor:
+          d.immediateSupervisor === "—" ? "" : (d.immediateSupervisor ?? ""),
         qualification_education: d.qualifications.education,
         qualification_experience: d.qualifications.experience,
         qualification_training: d.qualifications.training,
@@ -246,14 +248,15 @@ export function EditDialog({
               />
             </div>
             <div>
-              <Label required>Employment Status</Label>
-              <Select
-                value={form.employment_status}
-                onChange={(v) => set("employment_status", v)}
-                options={EMP_STATUS.map((v) => ({ value: v, label: v }))}
-                placeholder="Select status"
+              <Label>Employment Status</Label>
+              <Input
+                value="Permanent"
+                disabled
+                className="bg-slate-50 text-slate-500"
               />
-              <FieldError>{errors.employment_status}</FieldError>
+              <p className="mt-1 text-[11px] text-slate-400">
+                Palagi nang Permanent ang plantilla items.
+              </p>
             </div>
             <div>
               <Label required>Vacancies Offered</Label>

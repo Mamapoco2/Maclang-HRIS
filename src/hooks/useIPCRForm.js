@@ -32,10 +32,6 @@ const DEFAULT_SUPPORT_FUNCTIONS = [
   { id: "s2", ...EMPTY_ROW },
 ];
 
-/**
- * Hook for managing IPCR form state (employee info, functions, ratings)
- * Handles row updates, additions, deletions, and calculations
- */
 export const useIPCRForm = (initialId = null) => {
   const [employeeInfo, setEmployeeInfo] = useState(DEFAULT_EMPLOYEE_INFO);
   const [coreFunctions, setCoreFunctions] = useState(DEFAULT_CORE_FUNCTIONS);
@@ -43,17 +39,12 @@ export const useIPCRForm = (initialId = null) => {
     DEFAULT_SUPPORT_FUNCTIONS,
   );
 
-  // Load data from API if editing
   useEffect(() => {
     if (initialId) {
-      // TODO: fetch data from API
-      console.log("Load IPCR:", initialId);
+      // console.log("Load IPCR:", initialId);
     }
   }, [initialId]);
 
-  /**
-   * Update a row field and auto-compute average if it's a rating field
-   */
   const updateRowWithComputation = (type, rowId, field, value) => {
     const setter = type === "core" ? setCoreFunctions : setSupportFunctions;
 
@@ -62,7 +53,6 @@ export const useIPCRForm = (initialId = null) => {
         if (row.id !== rowId) return row;
 
         const updated = { ...row, [field]: value };
-        // Auto-compute average when Q, E, or T changes
         if (["q", "e", "t"].includes(field)) {
           const { average } = useIPCRRating(updated.q, updated.e, updated.t);
           updated.a = average;
@@ -72,9 +62,6 @@ export const useIPCRForm = (initialId = null) => {
     );
   };
 
-  /**
-   * Update a row field without computation
-   */
   const updateRow = (type, rowId, field, value) => {
     const setter = type === "core" ? setCoreFunctions : setSupportFunctions;
     setter((prev) =>
@@ -82,9 +69,6 @@ export const useIPCRForm = (initialId = null) => {
     );
   };
 
-  /**
-   * Add a new row to either core or support functions
-   */
   const addRow = (type) => {
     const newRow = {
       id: generateRowId(),
@@ -98,17 +82,11 @@ export const useIPCRForm = (initialId = null) => {
     }
   };
 
-  /**
-   * Remove a row by ID from either core or support functions
-   */
   const removeRow = (type, rowId) => {
     const setter = type === "core" ? setCoreFunctions : setSupportFunctions;
     setter((prev) => prev.filter((row) => row.id !== rowId));
   };
 
-  /**
-   * Calculate part ratings (core and support averages with weights)
-   */
   const calculatePartRatings = () => {
     const coreScores = coreFunctions
       .map((r) => parseFloat(r.a))
@@ -137,9 +115,6 @@ export const useIPCRForm = (initialId = null) => {
     };
   };
 
-  /**
-   * Get payload for API submission
-   */
   const getSubmitPayload = () => {
     const ratings = calculatePartRatings();
     return {
@@ -151,36 +126,25 @@ export const useIPCRForm = (initialId = null) => {
   };
 
   return {
-    // State
     employeeInfo,
     coreFunctions,
     supportFunctions,
 
-    // Setters
     setEmployeeInfo,
 
-    // Row operations
     updateRow,
     updateRowWithComputation,
     addRow,
     removeRow,
 
-    // Computed values
     ...calculatePartRatings(),
 
-    // Utilities
     getSubmitPayload,
   };
 };
 
-/**
- * Generate a unique row ID
- */
 export const generateRowId = () => {
   return Math.random().toString(36).substr(2, 9);
 };
 
-/**
- * Constants
- */
 export { EMPTY_ROW, DEFAULT_EMPLOYEE_INFO };

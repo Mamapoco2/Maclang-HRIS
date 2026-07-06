@@ -1,5 +1,4 @@
-export const EMP_STATUS = ["Permanent", "Casual", "Job Order", "Contractual"];
-
+export const EMP_STATUS = ["Permanent"];
 export const DOC_KEYS = [
   { key: "resume", label: "Updated Resume" },
   { key: "pds", label: "Personal Data Sheet" },
@@ -34,7 +33,7 @@ export const EMPTY_FORM = {
   section: "",
   salary_grade_id: "",
   monthly_salary: "",
-  employment_status: "",
+  employment_status: "Permanent",
   vacancies: "",
   qualification_education: "",
   qualification_experience: "",

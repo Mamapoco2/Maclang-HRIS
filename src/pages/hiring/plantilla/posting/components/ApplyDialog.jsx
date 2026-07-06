@@ -35,8 +35,9 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
   if (!item) return <Modal open={false} onClose={onClose} />;
 
   const requiredDocs = DOC_KEYS.filter((d) => item.requiredDocuments[d.key]);
-  const allRequiredUploaded = requiredDocs.every((d) => files[d.key]);
-  const canSubmit = allRequiredUploaded && certified && !submitting;
+  const missingRequiredDocs = requiredDocs.filter((d) => !files[d.key]);
+  const canSubmit =
+    certified && !submitting && Object.values(fileErrors).every((e) => !e);
 
   const handleFile = (key, file, okType, okSize) => {
     if (!okType) {
@@ -131,12 +132,17 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Required Documents
             </h3>
-            {attempted && !allRequiredUploaded && (
-              <span className="text-xs font-medium text-rose-600">
-                Upload all required documents
+            {attempted && missingRequiredDocs.length > 0 && (
+              <span className="text-xs font-medium text-amber-600">
+                {missingRequiredDocs.length} not yet uploaded
               </span>
             )}
           </div>
+          <p className="mb-2 text-xs text-slate-400">
+            Optional na ang pag-upload ng mga sumusunod — pwede ka pa ring
+            mag-apply kahit hindi kumpleto, pero puwedeng balikan ka ng HR para
+            hingin ang kulang.
+          </p>
           <div className="space-y-2">
             {requiredDocs.map((d) => (
               <UploadCard
@@ -149,9 +155,7 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
                 onRemove={() => setFiles((f) => ({ ...f, [d.key]: undefined }))}
                 error={
                   fileErrors[d.key] ||
-                  (attempted && !files[d.key]
-                    ? "This document is required."
-                    : undefined)
+                  (attempted && !files[d.key] ? "Not yet uploaded." : undefined)
                 }
               />
             ))}

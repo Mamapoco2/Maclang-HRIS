@@ -25,13 +25,13 @@ export function usePendingUsersCount() {
 
     // New registration — count goes UP
     channel.listen(".user.registered", () => {
-      console.log("👤 user.registered received — refreshing count");
+      // console.log("👤 user.registered received — refreshing count");
       fetchCount();
     });
 
     // User activated — count goes DOWN
     channel.listen(".user.activated", () => {
-      console.log("👤 user.registered received — refreshing count");
+      // console.log("👤 user.registered received — refreshing count");
       fetchCount();
     });
 

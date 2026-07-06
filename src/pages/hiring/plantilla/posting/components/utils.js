@@ -24,6 +24,7 @@ export function normalisePosting(p) {
     status: p.effective_status || p.status,
     applicants: p.applications_count ?? 0,
     immediateSupervisor: p.immediate_supervisor || "—",
+    alreadyApplied: !!p.already_applied,
     qualifications: {
       education: p.qualification_education || "",
       experience: p.qualification_experience || "",
