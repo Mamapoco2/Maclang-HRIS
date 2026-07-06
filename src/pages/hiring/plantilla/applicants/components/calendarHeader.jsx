@@ -3,7 +3,6 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconChevronDown,
-  IconPlus,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +20,9 @@ export default function Header({
   nextMonth,
   prevMonth,
   goToToday,
-  onOpenDialog,
 }) {
   return (
-    <div className="flex items-center justify-between p-6 border-b">
+    <div className="flex items-center justify-between border-b p-6">
       <div className="flex items-center gap-4">
         <Button onClick={goToToday} variant="outline">
           Today
@@ -65,13 +63,6 @@ export default function Header({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Button
-          className="bg-black text-white hover:bg-gray-800"
-          onClick={onOpenDialog}
-        >
-          <IconPlus className="h-4 w-4 mr-2" /> New event
-        </Button>
       </div>
     </div>
   );

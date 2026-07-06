@@ -8,11 +8,76 @@ export const PERMISSION_GROUPS = [
     permissions: [
       { key: "hiring.view", label: "View Hiring" },
       { key: "hiring.manage", label: "Manage Hiring" },
-      { key: "leave.view", label: "View Leave" },
-      { key: "leave.manage", label: "Manage Leave" },
-      { key: "leave.approve", label: "Approve Leave" },
+      {
+        key: "hiring.plantilla.applicants.view",
+        label: "View Plantilla Applicants",
+      },
+      {
+        key: "hiring.plantilla.applicants.manage",
+        label: "Manage Plantilla Applicants",
+      },
+      {
+        key: "hiring.plantilla.applications.view",
+        label: "View Plantilla Applications",
+      },
+      {
+        key: "hiring.plantilla.applications.manage",
+        label: "Manage Plantilla Applications",
+      },
+      {
+        key: "hiring.plantilla.onboarding.view",
+        label: "View Plantilla Onboarding",
+      },
+      {
+        key: "hiring.plantilla.onboarding.manage",
+        label: "Manage Plantilla Onboarding",
+      },
+      {
+        key: "hiring.plantilla.positions.view",
+        label: "View Plantilla Positions",
+      },
+      {
+        key: "hiring.plantilla.positions.manage",
+        label: "Manage Plantilla Positions",
+      },
+      {
+        key: "hiring.nonplantilla.applicants.view",
+        label: "View Non-Plantilla Applicants",
+      },
+      {
+        key: "hiring.nonplantilla.applicants.manage",
+        label: "Manage Non-Plantilla Applicants",
+      },
+      {
+        key: "hiring.nonplantilla.applications.view",
+        label: "View Non-Plantilla Applications",
+      },
+      {
+        key: "hiring.nonplantilla.applications.manage",
+        label: "Manage Non-Plantilla Applications",
+      },
+      {
+        key: "hiring.nonplantilla.onboarding.view",
+        label: "View Non-Plantilla Onboarding",
+      },
+      {
+        key: "hiring.nonplantilla.onboarding.manage",
+        label: "Manage Non-Plantilla Onboarding",
+      },
+      { key: "leave.dashboard.view", label: "View Leave Dashboard" },
+      { key: "leave.approval.view", label: "View Leave Approval Screen" },
+      {
+        key: "leave.approval.manage",
+        label: "Approve / Reject Leave Requests",
+      },
+      { key: "leave.balance.view", label: "View Leave Balance" },
+      { key: "leave.calendar.view", label: "View Leave Calendar" },
+      { key: "leave.request.view", label: "View Leave Requests" },
+      { key: "leave.request.manage", label: "Submit New Leave Request" },
       { key: "employees.view", label: "View Employees" },
       { key: "employees.manage", label: "Manage Employees" },
+      { key: "renewals.view", label: "View Renewal Management" },
+      { key: "renewals.manage", label: "Manage Renewal Management" },
       { key: "team.view", label: "View Team" },
       {
         key: "orientation.view",

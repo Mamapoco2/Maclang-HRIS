@@ -20,7 +20,6 @@ import { getInterviews, updateInterview } from "@/services/hiringService";
 import { getEcho } from "@/lib/echo";
 import { toast } from "sonner";
 
-// UPPERCASE values
 const STAGE_STATUS = ["PENDING", "SCHEDULED", "COMPLETED", "NO SHOW"];
 
 const STATUS_COLORS = {
@@ -40,23 +39,34 @@ const computeOverallStatus = ({ hr_status, head_status, final_status }) => {
   return "PENDING";
 };
 
+const normalizeInterview = (i) => ({
+  ...i,
+  hr_status: (i.hr_status ?? "PENDING").toUpperCase(),
+  head_status: (i.head_status ?? "PENDING").toUpperCase(),
+  final_status: (i.final_status ?? "PENDING").toUpperCase(),
+  overall_status: (i.overall_status ?? "PENDING").toUpperCase(),
+});
+
 export default function InterviewTable() {
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingKey, setUpdatingKey] = useState(null);
   const channelRef = useRef(null);
 
   useEffect(() => {
     loadData();
 
-    // Subscribe to Reverb channel
     const echo = getEcho();
     channelRef.current = echo
       .channel("interviews")
       .listen(".interview.updated", (e) => {
         const updated = e.interview;
+        if (!updated?.applicant_id) return;
         setInterviews((prev) =>
           prev.map((i) =>
-            i.applicant_id === updated.applicant_id ? { ...i, ...updated } : i,
+            i.applicant_id === updated.applicant_id
+              ? normalizeInterview({ ...i, ...updated })
+              : i,
           ),
         );
       });
@@ -69,25 +79,44 @@ export default function InterviewTable() {
 
   const loadData = async () => {
     setLoading(true);
-    const data = await getInterviews();
-    // Ensure all statuses are uppercase on load (in case of old data)
-    const normalized = data.map((i) => ({
-      ...i,
-      hr_status: (i.hr_status ?? "PENDING").toUpperCase(),
-      head_status: (i.head_status ?? "PENDING").toUpperCase(),
-      final_status: (i.final_status ?? "PENDING").toUpperCase(),
-      overall_status: (i.overall_status ?? "PENDING").toUpperCase(),
-    }));
-    setInterviews(normalized);
-    setLoading(false);
+    try {
+      const data = await getInterviews();
+      const list = Array.isArray(data) ? data : [];
+
+      if (!Array.isArray(data)) {
+        console.error("getInterviews() did not return an array:", data);
+      }
+
+      setInterviews(list.map(normalizeInterview));
+    } catch (err) {
+      console.error("loadData (interviews) failed:", err);
+      toast.error("HINDI MA-LOAD ANG MGA INTERVIEW.");
+      setInterviews([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStageUpdate = async (interview, field, value) => {
     const upperValue = value.toUpperCase();
-    try {
-      const merged = { ...interview, [field]: upperValue };
-      const newOverallStatus = computeOverallStatus(merged);
+    const updateKey = `${interview.id}-${field}`;
 
+    const previousSnapshot = interview;
+
+    setUpdatingKey(updateKey);
+
+    const merged = { ...interview, [field]: upperValue };
+    const newOverallStatus = computeOverallStatus(merged);
+
+    setInterviews((prev) =>
+      prev.map((i) =>
+        i.id === interview.id
+          ? { ...i, [field]: upperValue, overall_status: newOverallStatus }
+          : i,
+      ),
+    );
+
+    try {
       const updated = await updateInterview(interview.applicant_id, {
         [field]: upperValue,
         overall_status: newOverallStatus,
@@ -96,18 +125,27 @@ export default function InterviewTable() {
       setInterviews((prev) =>
         prev.map((i) => {
           if (i.id !== interview.id) return i;
-          return {
+          return normalizeInterview({
             ...i,
             ...updated,
             [field]: upperValue,
             overall_status: newOverallStatus,
-          };
+          });
         }),
       );
 
       toast.success("INTERVIEW UPDATED.");
-    } catch {
+    } catch (err) {
+      console.error("handleStageUpdate failed:", err);
+
+      // Rollback on failure
+      setInterviews((prev) =>
+        prev.map((i) => (i.id === interview.id ? previousSnapshot : i)),
+      );
+
       toast.error("FAILED TO UPDATE INTERVIEW.");
+    } finally {
+      setUpdatingKey(null);
     }
   };
 
@@ -150,39 +188,50 @@ export default function InterviewTable() {
                     {interview.applicant?.full_name?.toUpperCase() ?? "—"}
                   </TableCell>
 
-                  {["hr_status", "head_status", "final_status"].map((field) => (
-                    <TableCell key={field}>
-                      <Select
-                        value={interview[field]?.toUpperCase()}
-                        onValueChange={(val) =>
-                          handleStageUpdate(interview, field, val)
-                        }
-                      >
-                        <SelectTrigger className="h-7 w-36 text-xs border-0 p-0 shadow-none focus:ring-0">
-                          <SelectValue>
-                            <span
-                              className={`text-xs font-medium ${STATUS_COLORS[interview[field]?.toUpperCase()] ?? ""}`}
-                            >
-                              {interview[field]?.toUpperCase()}
-                            </span>
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STAGE_STATUS.map((s) => (
-                            <SelectItem key={s} value={s} className="text-xs">
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  ))}
+                  {["hr_status", "head_status", "final_status"].map((field) => {
+                    const updateKey = `${interview.id}-${field}`;
+                    const isUpdating = updatingKey === updateKey;
+
+                    return (
+                      <TableCell key={field}>
+                        <Select
+                          value={interview[field]}
+                          disabled={isUpdating}
+                          onValueChange={(val) =>
+                            handleStageUpdate(interview, field, val)
+                          }
+                        >
+                          <SelectTrigger className="h-7 w-36 text-xs border-0 p-0 shadow-none focus:ring-0">
+                            <SelectValue>
+                              <span
+                                className={`text-xs font-medium ${
+                                  STATUS_COLORS[interview[field]] ?? ""
+                                } ${isUpdating ? "opacity-50" : ""}`}
+                              >
+                                {interview[field]}
+                              </span>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STAGE_STATUS.map((s) => (
+                              <SelectItem key={s} value={s} className="text-xs">
+                                {s}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    );
+                  })}
 
                   <TableCell>
                     <span
-                      className={`text-xs font-medium ${STATUS_COLORS[interview.overall_status?.toUpperCase()] ?? "text-gray-600"}`}
+                      className={`text-xs font-medium ${
+                        STATUS_COLORS[interview.overall_status] ??
+                        "text-gray-600"
+                      }`}
                     >
-                      {interview.overall_status?.toUpperCase()}
+                      {interview.overall_status}
                     </span>
                   </TableCell>
                 </TableRow>

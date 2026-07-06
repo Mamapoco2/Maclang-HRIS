@@ -1,5 +1,5 @@
 import React from "react";
-import { IconClock, IconMapPin } from "@tabler/icons-react";
+import { IconClock } from "@tabler/icons-react";
 
 export default function AgendaView({ currentDate, getEventsForDay }) {
   const getDates = () => {
@@ -17,18 +17,18 @@ export default function AgendaView({ currentDate, getEventsForDay }) {
 
   if (schedule.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-400">
-        <p>No upcoming events found.</p>
+      <div className="flex h-full flex-col items-center justify-center text-gray-400">
+        <p>No upcoming interviews found.</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6 bg-gray-50">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="h-full overflow-y-auto bg-gray-50 p-6">
+      <div className="mx-auto max-w-3xl space-y-6">
         {schedule.map((day, idx) => (
           <div key={idx}>
-            <div className="sticky top-0 bg-gray-50 py-2 font-bold text-gray-700 border-b mb-3">
+            <div className="sticky top-0 mb-3 border-b bg-gray-50 py-2 font-bold text-gray-700">
               {day.date.toLocaleDateString(undefined, {
                 weekday: "long",
                 month: "long",
@@ -40,25 +40,15 @@ export default function AgendaView({ currentDate, getEventsForDay }) {
               {day.events.map((event) => (
                 <div
                   key={event.id}
-                  className="bg-white p-4 rounded-lg shadow-sm border-l-4 flex flex-col"
-                  style={{
-                    borderLeftColor: event.color.replace("bg-", ""),
-                  }}
+                  className="flex flex-col rounded-lg border-l-4 border-purple-500 bg-white p-4 shadow-sm"
                 >
                   <h4 className="font-bold text-gray-900">{event.title}</h4>
 
-                  <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                  <div className="mt-2 flex gap-4 text-sm text-gray-500">
                     <span className="flex items-center gap-1">
                       <IconClock size={14} stroke={1.5} />
                       {event.startTime}
                     </span>
-
-                    {event.location && (
-                      <span className="flex items-center gap-1">
-                        <IconMapPin size={14} stroke={1.5} />
-                        {event.location}
-                      </span>
-                    )}
                   </div>
                 </div>
               ))}

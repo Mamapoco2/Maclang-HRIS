@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Loader2 } from "lucide-react";
 import {
   Button,
   Input,
@@ -36,11 +36,12 @@ export function EditDialog({
   const mode = state?.mode;
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
-  const [initializedFor, setInitializedFor] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const sourceId = state ? (mode === "edit" ? state.data.id : "create") : null;
-  if (open && sourceId !== initializedFor) {
-    setInitializedFor(sourceId);
+
+  useEffect(() => {
+    if (!open) return;
     if (mode === "edit") {
       const d = state.data;
       setForm({
@@ -70,7 +71,7 @@ export function EditDialog({
       setForm(EMPTY_FORM);
     }
     setErrors({});
-  }
+  }, [sourceId, open]);
 
   if (!open) return <Modal open={false} onClose={onClose} />;
 
@@ -120,8 +121,8 @@ export function EditDialog({
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (saving) return;
     if (!validate()) return;
     const payload = {
       ...form,
@@ -132,17 +133,27 @@ export function EditDialog({
       vacancies: Number(form.vacancies),
       expected_appointment_date: form.expected_appointment_date || null,
     };
-    onSave(payload, mode);
+    setSaving(true);
+    try {
+      await onSave(payload, mode);
+    } catch {
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Modal open={open} onClose={onClose} widthClass="max-w-3xl">
+    <Modal
+      open={open}
+      onClose={() => !saving && onClose()}
+      widthClass="max-w-3xl"
+    >
       <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-6 py-4">
         <h2 className="text-base font-semibold text-slate-900">
           {mode === "create" ? "New Posting" : "Edit Posting"}
         </h2>
         <button
-          onClick={onClose}
+          onClick={() => !saving && onClose()}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
           aria-label="Close"
         >
@@ -379,11 +390,24 @@ export function EditDialog({
         </FormSection>
       </div>
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4">
-        <Button variant="secondary" onClick={onClose}>
+        <Button
+          variant="secondary"
+          onClick={() => !saving && onClose()}
+          disabled={saving}
+        >
           Cancel
         </Button>
-        <Button onClick={handleSave}>
-          {mode === "create" ? "Save" : "Update"}
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : mode === "create" ? (
+            "Save"
+          ) : (
+            "Update"
+          )}
         </Button>
       </div>
     </Modal>

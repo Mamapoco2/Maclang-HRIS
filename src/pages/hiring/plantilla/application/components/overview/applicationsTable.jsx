@@ -1,11 +1,12 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
   TableHeader,
+  TableBody,
   TableRow,
+  TableHead,
+  TableCell,
 } from "@/components/ui/table";
 import {
   Select,
@@ -14,214 +15,229 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { IconLoader2, IconTrash, IconArrowRight } from "@tabler/icons-react";
-import { useState } from "react";
-import { moveToOnboarding } from "@/services/hiringService";
+import { Textarea } from "@/components/ui/textarea";
+import { IconNotes } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { plantillaPostingService } from "@/services/plantillaPostingService";
+import { SummaryCard } from "./summaryCard";
+import {
+  candidateName,
+  APPLICATION_STATUS_OPTIONS,
+  APPLICATION_STATUS_BG,
+} from "../psbUtils";
 
-const STATUS_OPTIONS = [
-  "FOR INTERVIEW",
-  "HIRED",
-  "REJECTED",
-  "NO SHOW",
-  "PENDING",
-];
-
-const STATUS_BG = {
-  "FOR INTERVIEW": "bg-blue-50 text-blue-700 border-blue-200",
-  HIRED: "bg-green-50 text-green-700 border-green-200",
-  REJECTED: "bg-red-50 text-red-700 border-red-200",
-  "NO SHOW": "bg-orange-50 text-orange-700 border-orange-200",
-  PENDING: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-export function ApplicantsTable({
-  applicants = [],
-  loading = false,
-  onDelete,
-  onStatusChange,
-  onRefresh,
-  showOnboardButton = false,
+export default function ApplicationsTable({
+  applications,
+  onUpdate,
+  showSummary = true,
 }) {
-  const [movingId, setMovingId] = useState(null);
+  const [remarksDraft, setRemarksDraft] = useState({});
 
-  const handleMoveToOnboarding = async (applicant) => {
-    if (
-      !confirm(
-        `MOVE ${applicant.full_name.toUpperCase()} TO ONBOARDING?\n\nThis will:\n• Mark them as HIRED\n• Create an onboarding record\n• Create a draft contract`,
-      )
-    )
-      return;
-    setMovingId(applicant.id);
+  const summary = {
+    total: applications.length,
+    pending: applications.filter((a) => a.status === "Pending").length,
+    underReview: applications.filter((a) => a.status === "Under Review").length,
+    approved: applications.filter((a) => a.status === "Approved").length,
+  };
+
+  const handleStatusChange = async (application, status) => {
     try {
-      const res = await moveToOnboarding(applicant.id);
-      toast.success(
-        res.message?.toUpperCase() ?? "MOVED TO ONBOARDING SUCCESSFULLY.",
+      const updated = await plantillaPostingService.reviewApplication(
+        application.id,
+        { status, remarks: application.remarks ?? null },
       );
-      onRefresh?.();
+      onUpdate(application.id, updated);
+      toast.success("APPLICATION UPDATED.");
     } catch (err) {
-      toast.error(
-        err?.response?.data?.message?.toUpperCase() ??
-          "FAILED TO MOVE TO ONBOARDING.",
-      );
-    } finally {
-      setMovingId(null);
+      const message =
+        err?.response?.data?.errors?.status?.[0] ||
+        err?.response?.data?.message ||
+        "FAILED TO UPDATE APPLICATION.";
+      toast.error(message.toUpperCase());
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <IconLoader2 size={24} className="animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  const handleSaveRemarks = async (application) => {
+    const remarks = remarksDraft[application.id] ?? application.remarks ?? "";
+    try {
+      const updated = await plantillaPostingService.reviewApplication(
+        application.id,
+        { status: application.status, remarks },
+      );
+      onUpdate(application.id, updated);
+      toast.success("REMARKS SAVED.");
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message?.toUpperCase() ??
+          "FAILED TO SAVE REMARKS.",
+      );
+    }
+  };
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <Table className="w-full text-left">
-          <TableHeader>
-            <TableRow className="bg-gray-50">
-              <TableHead>NAME</TableHead>
-              <TableHead>EMAIL</TableHead>
-              <TableHead>POSITION</TableHead>
-              <TableHead>CONTACT</TableHead>
-              <TableHead>DEPARTMENT</TableHead>
-              <TableHead>DATE APPLIED</TableHead>
-              <TableHead>SUBMISSION</TableHead>
-              <TableHead>STATUS</TableHead>
-              <TableHead>DOCUMENTS</TableHead>
-              <TableHead>LINKED TO</TableHead>
-              <TableHead>REMARKS</TableHead>
-              <TableHead className="text-right">ACTIONS</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {applicants.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={12}
-                  className="py-14 text-center text-sm text-gray-400"
-                >
-                  NO APPLICANTS FOUND.
-                </TableCell>
+    <div className="grid gap-6">
+      {showSummary && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <SummaryCard
+            title="TOTAL APPLICATIONS"
+            value={summary.total}
+            status="ALL PSB APPLICATIONS"
+          />
+          <SummaryCard
+            title="PENDING"
+            value={summary.pending}
+            status="AWAITING INITIAL REVIEW"
+          />
+          <SummaryCard
+            title="UNDER REVIEW"
+            value={summary.underReview}
+            status="CURRENTLY BEING EVALUATED"
+          />
+          <SummaryCard
+            title="APPROVED"
+            value={summary.approved}
+            status="SUCCESSFULLY APPROVED"
+          />
+        </div>
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead>CANDIDATE</TableHead>
+                <TableHead>ITEM NO.</TableHead>
+                <TableHead>POSITION</TableHead>
+                <TableHead>SUBMITTED</TableHead>
+                <TableHead>INTERVIEW</TableHead>
+                <TableHead>STATUS</TableHead>
+                <TableHead>REMARKS</TableHead>
               </TableRow>
-            ) : (
-              applicants.map((a) => (
-                <TableRow key={a.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium uppercase">
-                    {a.full_name}
-                  </TableCell>
-                  <TableCell className="uppercase">{a.email}</TableCell>
-                  <TableCell className="uppercase">{a.position}</TableCell>
-                  <TableCell className="uppercase">{a.phone}</TableCell>
-                  <TableCell className="uppercase">{a.department}</TableCell>
-                  <TableCell className="uppercase">
-                    {a.date_applied ?? "—"}
-                  </TableCell>
-                  <TableCell className="uppercase">
-                    {a.submission ?? "—"}
-                  </TableCell>
-
-                  <TableCell>
-                    <Select
-                      value={(a.status ?? "").toUpperCase()}
-                      onValueChange={(val) => onStatusChange?.(a.id, val)}
-                    >
-                      <SelectTrigger className="h-7 w-36 text-xs border-0 p-0 shadow-none focus:ring-0">
-                        <SelectValue>
-                          <span
-                            className={`font-medium text-xs px-2 py-0.5 rounded-full border ${STATUS_BG[(a.status ?? "").toUpperCase()] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}
-                          >
-                            {(a.status ?? "").toUpperCase()}
-                          </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((s) => (
-                          <SelectItem key={s} value={s} className="text-xs">
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-
-                  <TableCell>
-                    {a.documents?.length > 0 ? (
-                      <ul className="list-disc list-inside text-xs uppercase">
-                        {a.documents.map((doc) => (
-                          <li key={doc.id}>{doc.name}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-gray-400 text-xs italic">NONE</span>
-                    )}
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      {a.onboarding ? (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 inline-block w-fit">
-                          ✓ ONBOARDING
-                        </span>
-                      ) : null}
-                      {a.contract ? (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 inline-block w-fit">
-                          ✓ CONTRACT
-                        </span>
-                      ) : null}
-                      {!a.onboarding && !a.contract && (
-                        <span className="text-xs text-gray-400 italic">—</span>
-                      )}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="uppercase">
-                    {a.remarks ?? "—"}
-                  </TableCell>
-
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {showOnboardButton && !a.onboarding && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleMoveToOnboarding(a)}
-                          disabled={movingId === a.id}
-                          className="h-7 text-xs px-2 border-purple-200 text-purple-700 hover:bg-purple-50 gap-1"
-                        >
-                          {movingId === a.id ? (
-                            <IconLoader2 size={11} className="animate-spin" />
-                          ) : (
-                            <IconArrowRight size={11} />
-                          )}
-                          ONBOARD
-                        </Button>
-                      )}
-                      {showOnboardButton && a.onboarding && (
-                        <span className="text-[10px] text-purple-500 font-medium px-2">
-                          ✓ ONBOARDED
-                        </span>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onDelete?.(a.id)}
-                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <IconTrash size={14} />
-                      </Button>
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {applications.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="py-14 text-center text-sm text-gray-400"
+                  >
+                    NO PSB APPLICATIONS FOUND.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+              ) : (
+                applications.map((application) => {
+                  const canApprove =
+                    application.interview?.overall_status?.toUpperCase() ===
+                    "COMPLETED";
+                  return (
+                    <TableRow key={application.id}>
+                      <TableCell className="font-medium uppercase">
+                        {candidateName(application.employee)}
+                      </TableCell>
+                      <TableCell className="uppercase">
+                        {application.posting?.base_item_number ?? "—"}
+                      </TableCell>
+                      <TableCell className="uppercase">
+                        {application.posting?.title ?? "—"}
+                      </TableCell>
+                      <TableCell className="uppercase">
+                        {application.submitted_at?.slice(0, 10) ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-xs uppercase text-gray-500">
+                        {application.interview?.overall_status ??
+                          "NO INTERVIEW"}
+                      </TableCell>
+                      <TableCell>
+                        {application.status === "Pending" ? (
+                          <span
+                            className={`inline-block w-fit rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG.Pending}`}
+                          >
+                            PENDING
+                          </span>
+                        ) : (
+                          <Select
+                            value={application.status}
+                            onValueChange={(val) =>
+                              handleStatusChange(application, val)
+                            }
+                          >
+                            <SelectTrigger className="h-7 w-36 border-0 p-0 text-xs shadow-none focus:ring-0">
+                              <SelectValue>
+                                <span
+                                  className={`rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG.Pending}`}
+                                >
+                                  {application.status.toUpperCase()}
+                                </span>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {APPLICATION_STATUS_OPTIONS.map((s) => (
+                                <SelectItem
+                                  key={s}
+                                  value={s}
+                                  className="text-xs"
+                                >
+                                  {s.toUpperCase()}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {application.status !== "Approved" && !canApprove && (
+                          <p className="mt-1 text-[10px] text-gray-400">
+                            NEEDS COMPLETED INTERVIEW TO APPROVE
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 gap-1 px-2 text-xs"
+                            >
+                              <IconNotes size={13} />
+                              {application.remarks ? "VIEW" : "ADD"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 p-3" align="start">
+                            <Textarea
+                              rows={3}
+                              defaultValue={application.remarks ?? ""}
+                              onChange={(e) =>
+                                setRemarksDraft((d) => ({
+                                  ...d,
+                                  [application.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="REMARKS FOR THE EMPLOYEE"
+                            />
+                            <Button
+                              size="sm"
+                              className="mt-2 w-full"
+                              onClick={() => handleSaveRemarks(application)}
+                            >
+                              SAVE REMARKS
+                            </Button>
+                          </PopoverContent>
+                        </Popover>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

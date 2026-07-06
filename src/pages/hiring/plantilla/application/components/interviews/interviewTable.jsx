@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -15,109 +15,62 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { IconLoader2 } from "@tabler/icons-react";
-import { getInterviews, updateInterview } from "@/services/hiringService";
-import { getEcho } from "@/lib/echo";
 import { toast } from "sonner";
+import { plantillaPostingService } from "@/services/plantillaPostingService";
+import ScheduleInterviewDialog from "./scheduleInterviewDialog";
+import {
+  candidateName,
+  STAGE_STATUS,
+  OVERALL_STATUS,
+  STAGE_COLORS,
+} from "../psbUtils";
 
-// UPPERCASE values
-const STAGE_STATUS = ["PENDING", "SCHEDULED", "COMPLETED", "NO SHOW"];
-
-const STATUS_COLORS = {
-  COMPLETED: "text-green-600",
-  SCHEDULED: "text-blue-600",
-  PENDING: "text-gray-400",
-  "NO SHOW": "text-red-600",
+const SCHEDULE_FIELD = {
+  hr_status: "hr_scheduled_at",
+  head_status: "head_scheduled_at",
+  final_status: "final_scheduled_at",
 };
 
-const computeOverallStatus = ({ hr_status, head_status, final_status }) => {
-  const statuses = [hr_status, head_status, final_status];
+function formatScheduledAt(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString("en-PH", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
-  if (statuses.includes("NO SHOW")) return "NO SHOW";
-  if (statuses.every((s) => s === "COMPLETED")) return "COMPLETED";
-  if (statuses.some((s) => s === "SCHEDULED" || s === "COMPLETED"))
-    return "SCHEDULED";
-  return "PENDING";
-};
+export default function InterviewTable({ applications, onUpdate }) {
+  const [scheduleTarget, setScheduleTarget] = useState(null);
 
-export default function InterviewTable() {
-  const [interviews, setInterviews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const channelRef = useRef(null);
+  const handleFieldChange = async (application, field, value) => {
+    if (value === "SCHEDULED" && SCHEDULE_FIELD[field]) {
+      setScheduleTarget({ application, field });
+      return;
+    }
 
-  useEffect(() => {
-    loadData();
-
-    // Subscribe to Reverb channel
-    const echo = getEcho();
-    channelRef.current = echo
-      .channel("interviews")
-      .listen(".interview.updated", (e) => {
-        const updated = e.interview;
-        setInterviews((prev) =>
-          prev.map((i) =>
-            i.applicant_id === updated.applicant_id ? { ...i, ...updated } : i,
-          ),
-        );
-      });
-
-    return () => {
-      channelRef.current?.stopListening(".interview.updated");
-      echo.leave("interviews");
-    };
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    const data = await getInterviews();
-    // Ensure all statuses are uppercase on load (in case of old data)
-    const normalized = data.map((i) => ({
-      ...i,
-      hr_status: (i.hr_status ?? "PENDING").toUpperCase(),
-      head_status: (i.head_status ?? "PENDING").toUpperCase(),
-      final_status: (i.final_status ?? "PENDING").toUpperCase(),
-      overall_status: (i.overall_status ?? "PENDING").toUpperCase(),
-    }));
-    setInterviews(normalized);
-    setLoading(false);
-  };
-
-  const handleStageUpdate = async (interview, field, value) => {
-    const upperValue = value.toUpperCase();
     try {
-      const merged = { ...interview, [field]: upperValue };
-      const newOverallStatus = computeOverallStatus(merged);
-
-      const updated = await updateInterview(interview.applicant_id, {
-        [field]: upperValue,
-        overall_status: newOverallStatus,
-      });
-
-      setInterviews((prev) =>
-        prev.map((i) => {
-          if (i.id !== interview.id) return i;
-          return {
-            ...i,
-            ...updated,
-            [field]: upperValue,
-            overall_status: newOverallStatus,
-          };
-        }),
+      const updated = await plantillaPostingService.saveApplicationInterview(
+        application.id,
+        { [field]: value },
       );
-
+      onUpdate(application.id, { interview: updated });
       toast.success("INTERVIEW UPDATED.");
-    } catch {
-      toast.error("FAILED TO UPDATE INTERVIEW.");
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message?.toUpperCase() ??
+          "FAILED TO UPDATE INTERVIEW.",
+      );
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <IconLoader2 size={24} className="animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  const handleScheduled = (updatedInterview) => {
+    onUpdate(scheduleTarget.application.id, { interview: updatedInterview });
+    setScheduleTarget(null);
+  };
 
   return (
     <Card>
@@ -126,49 +79,110 @@ export default function InterviewTable() {
           <TableHeader>
             <TableRow className="bg-gray-50">
               <TableHead>CANDIDATE</TableHead>
+              <TableHead>ITEM NO.</TableHead>
+              <TableHead>POSITION</TableHead>
               <TableHead>HR</TableHead>
               <TableHead>HEAD</TableHead>
               <TableHead>FINAL</TableHead>
               <TableHead>OVERALL STATUS</TableHead>
             </TableRow>
           </TableHeader>
-
           <TableBody>
-            {interviews.length === 0 ? (
+            {applications.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="py-14 text-center text-sm text-gray-400"
                 >
-                  NO INTERVIEWS FOUND.
+                  NO APPLICATIONS FOUND.
                 </TableCell>
               </TableRow>
             ) : (
-              interviews.map((interview) => (
-                <TableRow key={interview.id}>
-                  <TableCell className="font-medium">
-                    {interview.applicant?.full_name?.toUpperCase() ?? "—"}
-                  </TableCell>
+              applications.map((application) => {
+                const interview = application.interview;
+                return (
+                  <TableRow key={application.id}>
+                    <TableCell className="font-medium uppercase">
+                      {candidateName(application.employee)}
+                    </TableCell>
+                    <TableCell className="uppercase">
+                      {application.posting?.base_item_number ?? "—"}
+                    </TableCell>
+                    <TableCell className="uppercase">
+                      {application.posting?.title ?? "—"}
+                    </TableCell>
 
-                  {["hr_status", "head_status", "final_status"].map((field) => (
-                    <TableCell key={field}>
+                    {["hr_status", "head_status", "final_status"].map(
+                      (field) => {
+                        const currentStatus = interview?.[field]?.toUpperCase();
+                        const scheduledAt =
+                          currentStatus === "SCHEDULED"
+                            ? formatScheduledAt(
+                                interview?.[SCHEDULE_FIELD[field]],
+                              )
+                            : null;
+                        return (
+                          <TableCell key={field}>
+                            <Select
+                              value={currentStatus ?? ""}
+                              onValueChange={(val) =>
+                                handleFieldChange(application, field, val)
+                              }
+                            >
+                              <SelectTrigger className="h-7 w-36 border-0 p-0 text-xs shadow-none focus:ring-0">
+                                <SelectValue placeholder="—">
+                                  <span
+                                    className={`text-xs font-medium ${STAGE_COLORS[currentStatus] ?? "text-gray-400"}`}
+                                  >
+                                    {currentStatus || "—"}
+                                  </span>
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STAGE_STATUS.map((s) => (
+                                  <SelectItem
+                                    key={s}
+                                    value={s}
+                                    className="text-xs"
+                                  >
+                                    {s}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {scheduledAt && (
+                              <button
+                                onClick={() =>
+                                  setScheduleTarget({ application, field })
+                                }
+                                className="mt-0.5 block text-[10px] text-gray-400 hover:text-indigo-600 hover:underline"
+                              >
+                                {scheduledAt}
+                              </button>
+                            )}
+                          </TableCell>
+                        );
+                      },
+                    )}
+
+                    <TableCell>
                       <Select
-                        value={interview[field]?.toUpperCase()}
+                        value={interview?.overall_status?.toUpperCase() ?? ""}
                         onValueChange={(val) =>
-                          handleStageUpdate(interview, field, val)
+                          handleFieldChange(application, "overall_status", val)
                         }
                       >
-                        <SelectTrigger className="h-7 w-36 text-xs border-0 p-0 shadow-none focus:ring-0">
-                          <SelectValue>
+                        <SelectTrigger className="h-7 w-32 border-0 p-0 text-xs shadow-none focus:ring-0">
+                          <SelectValue placeholder="—">
                             <span
-                              className={`text-xs font-medium ${STATUS_COLORS[interview[field]?.toUpperCase()] ?? ""}`}
+                              className={`text-xs font-medium ${STAGE_COLORS[interview?.overall_status?.toUpperCase()] ?? "text-gray-400"}`}
                             >
-                              {interview[field]?.toUpperCase()}
+                              {interview?.overall_status?.toUpperCase() || "—"}
                             </span>
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          {STAGE_STATUS.map((s) => (
+                          {OVERALL_STATUS.map((s) => (
                             <SelectItem key={s} value={s} className="text-xs">
                               {s}
                             </SelectItem>
@@ -176,21 +190,19 @@ export default function InterviewTable() {
                         </SelectContent>
                       </Select>
                     </TableCell>
-                  ))}
-
-                  <TableCell>
-                    <span
-                      className={`text-xs font-medium ${STATUS_COLORS[interview.overall_status?.toUpperCase()] ?? "text-gray-600"}`}
-                    >
-                      {interview.overall_status?.toUpperCase()}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </CardContent>
+
+      <ScheduleInterviewDialog
+        target={scheduleTarget}
+        onClose={() => setScheduleTarget(null)}
+        onSaved={handleScheduled}
+      />
     </Card>
   );
 }

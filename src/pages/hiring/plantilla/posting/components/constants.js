@@ -56,3 +56,52 @@ export const EMPTY_FORM = {
     others: false,
   },
 };
+
+// ── PSB Applications / Interviews ──────────────────────────────────────────
+
+export const APPLICATION_STATUSES = [
+  "Pending",
+  "Under Review",
+  "Approved",
+  "Rejected",
+];
+
+export const APPLICATION_STATUS_STYLES = {
+  Pending: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  "Under Review": "bg-amber-50 text-amber-700 ring-amber-600/20",
+  Approved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  Rejected: "bg-rose-50 text-rose-700 ring-rose-600/20",
+};
+
+export const APPLICATION_STATUS_DOT = {
+  Pending: "bg-slate-400",
+  "Under Review": "bg-amber-500",
+  Approved: "bg-emerald-500",
+  Rejected: "bg-rose-500",
+};
+
+export const INTERVIEW_STAGE_STATUS_OPTIONS = [
+  "Pending",
+  "Scheduled",
+  "Passed",
+  "Failed",
+  "Skipped",
+];
+
+export const INTERVIEW_OVERALL_STATUS_OPTIONS = [
+  "Pending",
+  "Scheduled",
+  "In Progress",
+  "Completed",
+  "Failed",
+  "Cancelled",
+];
+
+export const INTERVIEW_OVERALL_STYLES = {
+  PENDING: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  SCHEDULED: "bg-sky-50 text-sky-700 ring-sky-600/20",
+  "IN PROGRESS": "bg-amber-50 text-amber-700 ring-amber-600/20",
+  COMPLETED: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  FAILED: "bg-rose-50 text-rose-700 ring-rose-600/20",
+  CANCELLED: "bg-slate-100 text-slate-500 ring-slate-400/20",
+};

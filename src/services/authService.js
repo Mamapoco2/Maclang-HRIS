@@ -21,6 +21,22 @@ const normalizeUser = (user) => ({
   last_name: user.last_name ?? null,
   avatar_url: user.avatar_url ?? null,
   employee_id: user.employee_id ?? null,
+  employee: user.employee
+    ? {
+        id: user.employee.id ?? null,
+        employee_number: user.employee.employee_number ?? null,
+        full_name: user.employee.full_name ?? null,
+        first_name: user.employee.first_name ?? null,
+        middle_name: user.employee.middle_name ?? null,
+        last_name: user.employee.last_name ?? null,
+        employment_status: user.employee.employment_status ?? null,
+        employment_type: user.employee.employment_type ?? null,
+        position: user.employee.position ?? null,
+        position_designation: user.employee.position_designation ?? [],
+        role_position: user.employee.role_position ?? [],
+        department: user.employee.department ?? null,
+      }
+    : null,
   department_ids: user.department_ids ?? [],
   departments: user.departments ?? [],
   division: user.division ?? null,
@@ -82,11 +98,6 @@ const register = async (
   }
 };
 
-/**
- * Fire-and-forget server call — caller is responsible for clearing local auth
- * BEFORE calling this so the token is still available for the request header.
- * Returns the axios promise so caller can .catch() if needed.
- */
 const logout = () => api.post("/logout");
 
 const me = async () => {

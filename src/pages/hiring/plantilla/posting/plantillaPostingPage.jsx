@@ -15,21 +15,22 @@ import {
   Eye,
   Pencil,
   Trash2,
-  FileText,
-  ChevronDown,
+  Users,
   CheckCircle2,
   AlertTriangle,
-  Users,
   Clock,
   Briefcase,
   Building2,
+  Loader2,
   SlidersHorizontal,
   ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/api/api";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { AuthContext } from "@/context/authContext";
+import { hasManagerAccess } from "@/lib/authHelpers";
 
 import { Button, Input, Select, Modal } from "./components/ui";
 import { StatCard, StatsSkeleton } from "./components/StatCard";
@@ -45,7 +46,7 @@ import {
 import { ViewDrawer } from "./components/ViewDrawer";
 import { ApplyDialog } from "./components/ApplyDialog";
 import { EditDialog } from "./components/EditDialog";
-
+import { ApplicationsDrawer } from "./components/ApplicationsDrawer";
 import { EMP_STATUS, EMPTY_FORM } from "./components/constants";
 import {
   normalisePosting,
@@ -53,10 +54,20 @@ import {
   formatDate,
 } from "./components/utils";
 
+const SEARCH_DEBOUNCE_MS = 350;
+
+function sanitizeCsvCell(value) {
+  const str = String(value ?? "");
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  return str;
+}
+
 export default function PlantillaPostingPage() {
-  const { user, hasPermission, hasRole } = useContext(AuthContext) || {};
-  const isAdmin =
-    !!hasPermission?.("manage-plantilla-postings") || !!hasRole?.("SuperAdmin");
+  const { user } = useContext(AuthContext) || {};
+
+  const isAdmin = hasManagerAccess(user);
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +77,7 @@ export default function PlantillaPostingPage() {
   const [vacantItems, setVacantItems] = useState([]);
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
     department_id: "",
     division_id: "",
@@ -83,40 +95,54 @@ export default function PlantillaPostingPage() {
   const [applyItem, setApplyItem] = useState(null);
   const [editItem, setEditItem] = useState(undefined);
   const [deleteItem, setDeleteItem] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
-
-  /* ---------------- data loading ---------------- */
-
-  const loadPostings = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page,
-        per_page: pageSize,
-        search: search || undefined,
-        department_id: filters.department_id || undefined,
-        division_id: filters.division_id || undefined,
-        salary_grade_id: filters.salary_grade_id || undefined,
-        employment_status: filters.employment_status || undefined,
-        status: filters.status || undefined,
-      };
-      const fetcher = isAdmin
-        ? plantillaPostingService.getPostings
-        : plantillaPostingService.getAvailablePostings;
-      const res = await fetcher(params);
-      const raw = res.data ?? res;
-      setItems(raw.map(normalisePosting));
-      setTotalCount(res.total ?? raw.length);
-    } catch (err) {
-      console.error(err);
-      toast?.error?.("Hindi ma-load ang mga plantilla postings.");
-    } finally {
-      setLoading(false);
-    }
-  }, [isAdmin, page, pageSize, search, filters]);
+  const [applicationsPosting, setApplicationsPosting] = useState(null);
 
   useEffect(() => {
-    loadPostings();
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [search]);
+
+  const loadPostings = useCallback(
+    async (signal) => {
+      setLoading(true);
+      try {
+        const params = {
+          page,
+          per_page: pageSize,
+          search: debouncedSearch || undefined,
+          department_id: filters.department_id || undefined,
+          division_id: filters.division_id || undefined,
+          salary_grade_id: filters.salary_grade_id || undefined,
+          employment_status: filters.employment_status || undefined,
+          status: filters.status || undefined,
+        };
+        const fetcher = isAdmin
+          ? plantillaPostingService.getPostings
+          : plantillaPostingService.getAvailablePostings;
+        const res = await fetcher(params, { signal });
+        setItems((res.data ?? []).map(normalisePosting));
+        setTotalCount(res.total ?? 0);
+      } catch (err) {
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED")
+          return;
+        console.error(err);
+        toast?.error?.("Hindi ma-load ang mga plantilla postings.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isAdmin, page, pageSize, debouncedSearch, filters],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadPostings(controller.signal);
+    return () => controller.abort();
   }, [loadPostings]);
 
   useEffect(() => {
@@ -128,11 +154,11 @@ export default function PlantillaPostingPage() {
       .get("/divisions")
       .then((res) => setDivisions(res.data?.data ?? res.data ?? []))
       .catch(console.error);
-    plantillaPostingService.getPostings?.({ per_page: 1 }).catch(() => {}); // warm auth, ignore
     api
       .get("/salary-grades")
       .then((res) => setSalaryGrades(res.data?.data ?? res.data ?? []))
       .catch(console.error);
+
     if (isAdmin) {
       plantillaPostingService
         .getVacantItems()
@@ -178,6 +204,7 @@ export default function PlantillaPostingPage() {
 
   const resetFilters = () => {
     setSearch("");
+    setDebouncedSearch("");
     setFilters({
       department_id: "",
       division_id: "",
@@ -190,6 +217,8 @@ export default function PlantillaPostingPage() {
   };
 
   const handleDelete = async () => {
+    if (deleting || !deleteItem) return;
+    setDeleting(true);
     try {
       await plantillaPostingService.deletePosting(deleteItem.id);
       toast?.success?.("Naalis na ang posting.");
@@ -199,6 +228,8 @@ export default function PlantillaPostingPage() {
       toast?.error?.(
         err?.response?.data?.message ?? "Hindi na-delete ang posting.",
       );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -234,7 +265,9 @@ export default function PlantillaPostingPage() {
       ]),
     ];
     const csv = rows
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .map((r) =>
+        r.map((c) => `"${sanitizeCsvCell(c).replace(/"/g, '""')}"`).join(","),
+      )
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -248,7 +281,6 @@ export default function PlantillaPostingPage() {
   return (
     <div className="min-h-full w-full bg-slate-50 font-sans text-slate-900 antialiased">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
@@ -286,7 +318,6 @@ export default function PlantillaPostingPage() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="mt-6">
           {loading ? (
             <StatsSkeleton />
@@ -324,17 +355,13 @@ export default function PlantillaPostingPage() {
           )}
         </div>
 
-        {/* Search & Filters */}
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search position, item number..."
                 className="pl-9"
               />
@@ -372,7 +399,7 @@ export default function PlantillaPostingPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={loadPostings}
+                onClick={() => loadPostings()}
                 aria-label="Refresh"
               >
                 <RefreshCw
@@ -444,7 +471,6 @@ export default function PlantillaPostingPage() {
           )}
         </div>
 
-        {/* List */}
         <div className="mt-6">
           {loading ? (
             <TableSkeleton />
@@ -517,6 +543,9 @@ export default function PlantillaPostingPage() {
                               }
                               onDelete={() => setDeleteItem(it)}
                               onApply={() => setApplyItem(it)}
+                              onViewApplications={() =>
+                                setApplicationsPosting(it)
+                              }
                             />
                           </Td>
                         </tr>
@@ -573,11 +602,18 @@ export default function PlantillaPostingPage() {
                             it.status === "Closed" || it.status === "Filled"
                           }
                         >
-                          <FileText className="h-3.5 w-3.5" />
                           Apply
                         </Button>
                       ) : (
                         <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setApplicationsPosting(it)}
+                            aria-label="View Applications"
+                          >
+                            <Users className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -686,13 +722,14 @@ export default function PlantillaPostingPage() {
             toast?.error?.(
               err?.response?.data?.message ?? "May error sa pag-save.",
             );
+            throw err;
           }
         }}
       />
 
       <Modal
         open={!!deleteItem}
-        onClose={() => setDeleteItem(null)}
+        onClose={() => !deleting && setDeleteItem(null)}
         widthClass="max-w-sm"
       >
         {deleteItem && (
@@ -710,17 +747,35 @@ export default function PlantillaPostingPage() {
               {deleteItem.positionTitle} · {deleteItem.baseItemNumber}
             </p>
             <div className="mt-5 flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setDeleteItem(null)}>
+              <Button
+                variant="secondary"
+                onClick={() => setDeleteItem(null)}
+                disabled={deleting}
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4" />
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
                 Delete
               </Button>
             </div>
           </div>
         )}
       </Modal>
+
+      <ApplicationsDrawer
+        posting={applicationsPosting}
+        onClose={() => setApplicationsPosting(null)}
+        onChanged={loadPostings}
+      />
     </div>
   );
 }

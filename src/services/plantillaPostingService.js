@@ -1,16 +1,42 @@
-// src/services/plantillaPostingService.js
 import api from "@/api/api";
 
-export const plantillaPostingService = {
-  /* ---------------------------------------------------------------
-   * Employee-facing
-   * ------------------------------------------------------------- */
+// ── Shared helpers ────────────────────────────────────────────────────────────
 
-  // Only postings that currently have a vacant slot (backend already
-  // filters this — do NOT re-filter "vacant only" on the frontend).
-  async getAvailablePostings(params = {}) {
-    const res = await api.get("/plantilla-postings/available", { params });
-    return res.data;
+function unwrapPaginated(payload) {
+  if (Array.isArray(payload)) {
+    return { data: payload, total: payload.length };
+  }
+  if (payload && Array.isArray(payload.data)) {
+    return payload;
+  }
+  return { data: [], total: 0 };
+}
+
+function unwrapArray(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+}
+
+function isCancellation(err) {
+  return err?.name === "CanceledError" || err?.code === "ERR_CANCELED";
+}
+
+export const plantillaPostingService = {
+  // ── Employee-facing ──────────────────────────────────────────────────────
+
+  async getAvailablePostings(params = {}, config = {}) {
+    try {
+      const res = await api.get("/plantilla-postings/available", {
+        params,
+        signal: config.signal,
+      });
+      return unwrapPaginated(res.data);
+    } catch (err) {
+      if (isCancellation(err)) throw err;
+      console.error("getAvailablePostings:", err);
+      return { data: [], total: 0 };
+    }
   },
 
   async applyToPosting(postingId, { notes, certified, documents }) {
@@ -31,17 +57,29 @@ export const plantillaPostingService = {
   },
 
   async getMyApplications() {
-    const res = await api.get("/plantilla-postings/my-applications");
-    return res.data;
+    try {
+      const res = await api.get("/plantilla-postings/my-applications");
+      return unwrapArray(res.data);
+    } catch (err) {
+      console.error("getMyApplications:", err);
+      return [];
+    }
   },
 
-  /* ---------------------------------------------------------------
-   * Admin
-   * ------------------------------------------------------------- */
+  // ── Admin: postings CRUD ─────────────────────────────────────────────────
 
-  async getPostings(params = {}) {
-    const res = await api.get("/plantilla-postings", { params });
-    return res.data;
+  async getPostings(params = {}, config = {}) {
+    try {
+      const res = await api.get("/plantilla-postings", {
+        params,
+        signal: config.signal,
+      });
+      return unwrapPaginated(res.data);
+    } catch (err) {
+      if (isCancellation(err)) throw err;
+      console.error("getPostings:", err);
+      return { data: [], total: 0 };
+    }
   },
 
   async getPosting(id) {
@@ -50,8 +88,13 @@ export const plantillaPostingService = {
   },
 
   async getVacantItems() {
-    const res = await api.get("/plantilla-postings/vacant-items");
-    return res.data;
+    try {
+      const res = await api.get("/plantilla-postings/vacant-items");
+      return unwrapArray(res.data);
+    } catch (err) {
+      console.error("getVacantItems:", err);
+      return [];
+    }
   },
 
   async createPosting(data) {
@@ -69,9 +112,28 @@ export const plantillaPostingService = {
     return res.data;
   },
 
+  // ── Admin: applications review ───────────────────────────────────────────
+
   async getApplicationsForPosting(postingId) {
-    const res = await api.get(`/plantilla-postings/${postingId}/applications`);
-    return res.data;
+    try {
+      const res = await api.get(
+        `/plantilla-postings/${postingId}/applications`,
+      );
+      return unwrapArray(res.data);
+    } catch (err) {
+      console.error("getApplicationsForPosting:", err);
+      return [];
+    }
+  },
+
+  async getAllApplications(params = {}) {
+    try {
+      const res = await api.get("/plantilla-posting-applications", { params });
+      return unwrapArray(res.data);
+    } catch (err) {
+      console.error("getAllApplications:", err);
+      return [];
+    }
   },
 
   async reviewApplication(applicationId, { status, remarks }) {
@@ -84,6 +146,29 @@ export const plantillaPostingService = {
 
   documentDownloadUrl(documentId) {
     return `/plantilla-posting-applications/documents/${documentId}/download`;
+  },
+
+  // ── Admin: PSB interviews ─────────────────────────────────────────────────
+
+  async getApplicationInterview(applicationId) {
+    try {
+      const res = await api.get(
+        `/plantilla-applications/${applicationId}/interview`,
+      );
+      return res.data;
+    } catch (err) {
+      if (err?.response?.status === 404) return null;
+      console.error("getApplicationInterview:", err);
+      throw err;
+    }
+  },
+
+  async saveApplicationInterview(applicationId, payload) {
+    const res = await api.put(
+      `/plantilla-applications/${applicationId}/interview`,
+      payload,
+    );
+    return res.data;
   },
 };
 

@@ -1,11 +1,21 @@
 import api from "@/api/api";
 
+function unwrapCollection(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+}
+
 // ── Applicants ────────────────────────────────────────────────────────────────
 
 export async function getApplicants(params = {}) {
   try {
     const res = await api.get("/hiring/applicants", { params });
-    return res.data;
+    const payload = res.data;
+    return {
+      data: unwrapCollection(payload),
+      pagination: payload?.meta ?? payload?.pagination ?? {},
+    };
   } catch (err) {
     console.error("getApplicants:", err);
     return { data: [], pagination: {} };
@@ -42,7 +52,7 @@ export async function deleteApplicant(id) {
 export async function getDocuments(applicantId) {
   try {
     const res = await api.get(`/hiring/applicants/${applicantId}/documents`);
-    return res.data;
+    return unwrapCollection(res.data);
   } catch (err) {
     console.error("getDocuments:", err);
     return [];
@@ -77,7 +87,7 @@ export async function deleteDocument(applicantId, documentId) {
 export async function getInterviews() {
   try {
     const res = await api.get("/hiring/interviews");
-    return res.data;
+    return unwrapCollection(res.data);
   } catch (err) {
     console.error("getInterviews:", err);
     return [];
@@ -97,7 +107,7 @@ export async function updateInterview(applicantId, data) {
 export async function getHiringEvents() {
   try {
     const res = await api.get("/hiring/events");
-    return res.data;
+    return unwrapCollection(res.data);
   } catch (err) {
     console.error("getHiringEvents:", err);
     return [];
@@ -124,7 +134,7 @@ export async function deleteHiringEvent(id) {
 export async function getContracts() {
   try {
     const res = await api.get("/hiring/contracts");
-    return res.data;
+    return unwrapCollection(res.data);
   } catch (err) {
     console.error("getContracts:", err);
     return [];

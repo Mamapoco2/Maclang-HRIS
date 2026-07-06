@@ -8,9 +8,17 @@ import {
   ChevronLeft,
   ChevronRight,
   BriefcaseBusiness,
+  Users,
 } from "lucide-react";
 import { Button, Skeleton } from "./ui";
-import { STATUS_STYLES, STATUS_DOT, PAGE_SIZE_OPTIONS } from "./constants";
+import {
+  STATUS_STYLES,
+  STATUS_DOT,
+  PAGE_SIZE_OPTIONS,
+  APPLICATION_STATUS_STYLES,
+  APPLICATION_STATUS_DOT,
+  INTERVIEW_OVERALL_STYLES,
+} from "./constants";
 
 export function StatusBadge({ status }) {
   return (
@@ -18,6 +26,40 @@ export function StatusBadge({ status }) {
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[status]}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} />
+      {status}
+    </span>
+  );
+}
+
+export function ApplicationStatusBadge({ status }) {
+  const style =
+    APPLICATION_STATUS_STYLES[status] || APPLICATION_STATUS_STYLES.Pending;
+  const dot = APPLICATION_STATUS_DOT[status] || APPLICATION_STATUS_DOT.Pending;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${style}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+      {status}
+    </span>
+  );
+}
+
+export function InterviewStatusBadge({ status }) {
+  if (!status) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-400/20">
+        No Interview
+      </span>
+    );
+  }
+  const key = status.toUpperCase();
+  const style =
+    INTERVIEW_OVERALL_STYLES[key] || INTERVIEW_OVERALL_STYLES.PENDING;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${style}`}
+    >
       {status}
     </span>
   );
@@ -46,6 +88,7 @@ export function RowActions({
   onEdit,
   onDelete,
   onApply,
+  onViewApplications,
 }) {
   return (
     <div className="flex items-center justify-end gap-1">
@@ -54,6 +97,14 @@ export function RowActions({
       </Button>
       {isAdmin ? (
         <>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onViewApplications}
+            aria-label="View Applications"
+          >
+            <Users className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

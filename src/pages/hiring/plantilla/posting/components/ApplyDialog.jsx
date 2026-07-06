@@ -75,9 +75,11 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
   };
 
   const handleClose = () => {
+    if (submitting) return;
     resetLocal();
     onClose();
   };
+
   const employee = user?.employee;
 
   return (
@@ -107,7 +109,7 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
           <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm">
             <ReadOnlyField
               label="Employee ID"
-              value={employee?.employee_id ?? "—"}
+              value={employee?.employee_number ?? "—"}
             />
             <ReadOnlyField
               label="Name"

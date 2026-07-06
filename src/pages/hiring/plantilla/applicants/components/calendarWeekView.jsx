@@ -3,14 +3,11 @@ import React from "react";
 export default function WeekView({ currentDate, getEventsForDay }) {
   const getBackgroundColor = (colorClass) => {
     const colorMap = {
-      "bg-cyan-500": "#06b6d4",
-      "bg-yellow-400": "#facc15",
       "bg-purple-500": "#a855f7",
-      "bg-pink-500": "#ec4899",
+      "bg-cyan-500": "#06b6d4",
       "bg-emerald-500": "#10b981",
-      "bg-orange-500": "#f97316",
     };
-    return colorMap[colorClass] || "#06b6d4";
+    return colorMap[colorClass] || "#a855f7";
   };
 
   const startOfWeek = new Date(currentDate);
@@ -31,15 +28,11 @@ export default function WeekView({ currentDate, getEventsForDay }) {
     return hours * 60 + minutes;
   };
 
-  // Helper to get events for a specific date (not dayObj)
   const getEventsForDate = (date) => {
-    // Safety check - if getEventsForDay is not provided, return empty array
     if (!getEventsForDay || typeof getEventsForDay !== "function") {
       console.warn("getEventsForDay function not provided to WeekView");
       return [];
     }
-
-    // Create a dayObj from the date
     const dayObj = {
       day: date.getDate(),
       month: date.getMonth(),
@@ -51,21 +44,21 @@ export default function WeekView({ currentDate, getEventsForDay }) {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white border-t">
-      <div className="grid grid-cols-8 min-w-[800px]">
-        <div className="bg-gray-50 border-r border-b h-12"></div>
+    <div className="h-full overflow-y-auto border-t bg-white">
+      <div className="grid min-w-[800px] grid-cols-8">
+        <div className="h-12 border-b border-r bg-gray-50"></div>
         {days.map((day, i) => {
           const isToday = new Date().toDateString() === day.toDateString();
           return (
             <div
               key={i}
-              className="bg-gray-50 border-r border-b h-12 flex flex-col items-center justify-center"
+              className="flex h-12 flex-col items-center justify-center border-b border-r bg-gray-50"
             >
-              <span className="text-xs text-gray-500 uppercase">
+              <span className="text-xs uppercase text-gray-500">
                 {day.toLocaleDateString("en-US", { weekday: "short" })}
               </span>
               <span
-                className={`font-bold ${isToday ? "bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center" : ""}`}
+                className={`font-bold ${isToday ? "flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white" : ""}`}
               >
                 {day.getDate()}
               </span>
@@ -75,7 +68,7 @@ export default function WeekView({ currentDate, getEventsForDay }) {
 
         {Array.from({ length: 24 }).map((_, hour) => (
           <React.Fragment key={hour}>
-            <div className="h-16 border-r border-b text-[10px] text-gray-400 text-right pr-2 pt-1 bg-gray-50">
+            <div className="h-16 border-b border-r bg-gray-50 pr-2 pt-1 text-right text-[10px] text-gray-400">
               {hour % 12 === 0 ? 12 : hour % 12} {hour >= 12 ? "PM" : "AM"}
             </div>
             {days.map((day, dayIdx) => {
@@ -83,23 +76,23 @@ export default function WeekView({ currentDate, getEventsForDay }) {
               return (
                 <div
                   key={dayIdx}
-                  className="h-16 border-r border-b relative bg-white hover:bg-gray-50"
+                  className="relative h-16 border-b border-r bg-white hover:bg-gray-50"
                 >
                   {dayEvents.map((event) => {
                     const totalMinutes = parseTimeToOffset(event.startTime);
                     const eventHour = Math.floor(totalMinutes / 60);
                     if (eventHour !== hour) return null;
 
-                    const topOffset = ((totalMinutes % 60) / 60) * 64; // 64px is row height
+                    const topOffset = ((totalMinutes % 60) / 60) * 64;
                     return (
                       <div
                         key={event.id}
-                        className="absolute inset-x-1 p-1 rounded text-white text-[10px] z-10"
+                        className="absolute inset-x-1 z-10 rounded p-1 text-[10px] text-white"
                         style={{
                           top: `${topOffset}px`,
                           minHeight: "30px",
                           backgroundColor: getBackgroundColor(
-                            event.color || "bg-cyan-500",
+                            event.color || "bg-purple-500",
                           ),
                         }}
                       >

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -9,76 +9,79 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { IconLoader2 } from "@tabler/icons-react";
-import { getApplicants, updateDocument } from "@/services/hiringService";
+  IconChevronDown,
+  IconChevronRight,
+  IconFileText,
+  IconDownload,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
+import api from "@/api/api";
+import { plantillaPostingService } from "@/services/plantillaPostingService";
+import { candidateName } from "../psbUtils";
 
-const DOC_STATUS = ["PENDING", "SUBMITTED", "APPROVED", "REJECTED"];
+function formatDocKey(key) {
+  return key.replace(/_/g, " ").toUpperCase();
+}
 
-const STATUS_COLORS = {
-  SUBMITTED: "bg-blue-50 text-blue-700",
-  APPROVED: "bg-green-50 text-green-700",
-  PENDING: "bg-yellow-50 text-yellow-700",
-  REJECTED: "bg-red-50 text-red-700",
-};
+function getMissingRequiredDocs(application) {
+  const required = application.posting?.required_documents ?? {};
+  const requiredKeys = Object.entries(required)
+    .filter(([, isRequired]) => isRequired)
+    .map(([key]) => key);
 
-export default function DocumentsTable() {
-  const [applicants, setApplicants] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const submittedKeys = (application.documents ?? []).map(
+    (d) => d.document_key,
+  );
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  return requiredKeys.filter((key) => !submittedKeys.includes(key));
+}
 
-  const loadData = async () => {
-    setLoading(true);
-    const res = await getApplicants({ per_page: 100 });
-    setApplicants(res.data ?? []);
-    setLoading(false);
+function completenessRank(application) {
+  const documents = application.documents ?? [];
+  if (documents.length === 0) return 0;
+  if (getMissingRequiredDocs(application).length > 0) return 1;
+  return 2;
+}
+
+export default function DocumentsTable({ applications }) {
+  const [expandedIds, setExpandedIds] = useState(new Set());
+
+  const sortedApplications = useMemo(() => {
+    return [...applications].sort(
+      (a, b) => completenessRank(a) - completenessRank(b),
+    );
+  }, [applications]);
+
+  const toggleRow = (id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
-  const handleStatusChange = async (applicantId, docId, status) => {
+  const handleDownload = async (doc) => {
     try {
-      await updateDocument(applicantId, docId, { status });
-      setApplicants((prev) =>
-        prev.map((a) =>
-          a.id === applicantId
-            ? {
-                ...a,
-                documents: a.documents.map((d) =>
-                  d.id === docId ? { ...d, status } : d,
-                ),
-              }
-            : a,
-        ),
+      const res = await api.get(
+        plantillaPostingService.documentDownloadUrl(doc.id),
+        { responseType: "blob" },
       );
-      toast.success("DOCUMENT STATUS UPDATED.");
-    } catch {
-      toast.error("FAILED TO UPDATE DOCUMENT STATUS.");
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.original_filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(
+        err?.response?.status === 403
+          ? "NOT AUTHORIZED TO DOWNLOAD THIS FILE."
+          : "FAILED TO DOWNLOAD FILE.",
+      );
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <IconLoader2 size={24} className="animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  const rows = applicants.flatMap((a) =>
-    (a.documents ?? []).map((doc) => ({
-      ...doc,
-      applicant_name: a.full_name,
-      applicant_id: a.id,
-    })),
-  );
 
   return (
     <Card>
@@ -86,55 +89,150 @@ export default function DocumentsTable() {
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
+              <TableHead className="w-10" />
               <TableHead>CANDIDATE</TableHead>
-              <TableHead>DOCUMENT</TableHead>
-              <TableHead>STATUS</TableHead>
+              <TableHead>ITEM NO.</TableHead>
+              <TableHead>POSITION</TableHead>
+              <TableHead>DOCUMENTS</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {sortedApplications.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={3}
+                  colSpan={5}
                   className="py-14 text-center text-sm text-gray-400"
                 >
-                  NO DOCUMENTS FOUND.
+                  NO APPLICATIONS FOUND.
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((doc) => (
-                <TableRow key={doc.id}>
-                  <TableCell className="font-medium uppercase">
-                    {doc.applicant_name}
-                  </TableCell>
-                  <TableCell className="uppercase">{doc.name}</TableCell>
-                  <TableCell>
-                    <Select
-                      value={(doc.status ?? "").toUpperCase()}
-                      onValueChange={(val) =>
-                        handleStatusChange(doc.applicant_id, doc.id, val)
+              sortedApplications.map((application) => {
+                const documents = application.documents ?? [];
+                const missingDocs = getMissingRequiredDocs(application);
+                const hasNoDocsAtAll = documents.length === 0;
+                const isIncomplete = missingDocs.length > 0;
+                const isExpanded = expandedIds.has(application.id);
+
+                const rowBg = hasNoDocsAtAll
+                  ? "bg-red-50 hover:bg-red-100"
+                  : isIncomplete
+                    ? "bg-amber-50 hover:bg-amber-100"
+                    : "hover:bg-gray-50";
+
+                return (
+                  <React.Fragment key={application.id}>
+                    <TableRow
+                      className={`cursor-pointer ${rowBg}`}
+                      onClick={() =>
+                        documents.length > 0 && toggleRow(application.id)
                       }
                     >
-                      <SelectTrigger className="h-7 w-32 text-xs">
-                        <SelectValue>
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[(doc.status ?? "").toUpperCase()] ?? ""}`}
-                          >
-                            {(doc.status ?? "").toUpperCase()}
-                          </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DOC_STATUS.map((s) => (
-                          <SelectItem key={s} value={s} className="text-xs">
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))
+                      <TableCell>
+                        {documents.length > 0 &&
+                          (isExpanded ? (
+                            <IconChevronDown
+                              size={16}
+                              className="text-gray-400"
+                            />
+                          ) : (
+                            <IconChevronRight
+                              size={16}
+                              className="text-gray-400"
+                            />
+                          ))}
+                      </TableCell>
+                      <TableCell className="font-medium uppercase">
+                        {candidateName(application.employee)}
+                      </TableCell>
+                      <TableCell className="uppercase">
+                        {application.posting?.base_item_number ?? "—"}
+                      </TableCell>
+                      <TableCell className="uppercase">
+                        {application.posting?.title ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {documents.length > 0 ? (
+                            <span className="text-xs text-gray-600">
+                              {documents.length} DOC
+                              {documents.length > 1 ? "S" : ""}
+                            </span>
+                          ) : (
+                            <span className="text-xs italic text-gray-400">
+                              NONE
+                            </span>
+                          )}
+                          {(hasNoDocsAtAll || isIncomplete) && (
+                            <span
+                              className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                                hasNoDocsAtAll
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              <IconAlertTriangle size={11} />
+                              {hasNoDocsAtAll
+                                ? "NO DOCUMENTS"
+                                : `MISSING ${missingDocs.length}`}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+
+                    {isExpanded && documents.length > 0 && (
+                      <TableRow className={rowBg}>
+                        <TableCell />
+                        <TableCell colSpan={4} className="py-2">
+                          <div className="space-y-1">
+                            {documents.map((doc) => (
+                              <button
+                                key={doc.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownload(doc);
+                                }}
+                                className="flex w-full max-w-md items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-white"
+                              >
+                                <IconFileText
+                                  size={13}
+                                  className="shrink-0 text-gray-400"
+                                />
+                                <span className="text-gray-500">
+                                  {formatDocKey(doc.document_key)}:
+                                </span>
+                                <span className="truncate">
+                                  {doc.original_filename}
+                                </span>
+                                <IconDownload
+                                  size={13}
+                                  className="ml-auto shrink-0 text-gray-400"
+                                />
+                              </button>
+                            ))}
+                            {missingDocs.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5 border-t border-amber-200 pt-2">
+                                <span className="text-[10px] font-medium uppercase text-amber-700">
+                                  Missing:
+                                </span>
+                                {missingDocs.map((key) => (
+                                  <span
+                                    key={key}
+                                    className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                                  >
+                                    {formatDocKey(key)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })
             )}
           </TableBody>
         </Table>
