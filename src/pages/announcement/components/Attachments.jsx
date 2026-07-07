@@ -1,4 +1,5 @@
-import { Eye, Download, Paperclip } from "lucide-react";
+import { useState } from "react";
+import { Eye, Download, Paperclip, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,10 +8,43 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FILE_CONFIG } from "../constants";
+import { AnnouncementsApi } from "@/services/announcements";
 
-export function AttachmentCard({ file, onPreview, onDownload, downloadCount }) {
+export function AttachmentCard({
+  file,
+  onPreview,
+  canManage,
+  onDeleted,
+  toast,
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const cfg = FILE_CONFIG[file.type] || FILE_CONFIG.pdf;
   const Icon = cfg.icon;
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      await AnnouncementsApi.downloadAttachment(file.id, file.name);
+    } catch {
+      toast?.("Download failed", "⚠️");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await AnnouncementsApi.deleteAttachment(file.id);
+      onDeleted(file.id);
+    } catch {
+      toast?.("Couldn't remove attachment", "⚠️");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:shadow-sm transition-all group">
       <div
@@ -41,14 +75,31 @@ export function AttachmentCard({ file, onPreview, onDownload, downloadCount }) {
           size="icon"
           className="h-7 w-7 text-slate-500 hover:text-blue-600 hover:bg-blue-100"
           title="Download"
-          onClick={() => onDownload(file)}
+          onClick={handleDownload}
+          disabled={downloading}
         >
-          <Download size={14} />
+          {downloading ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Download size={14} />
+          )}
         </Button>
+        {canManage && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-slate-500 hover:text-red-600 hover:bg-red-100"
+            title="Remove"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            <Trash2 size={14} />
+          </Button>
+        )}
       </div>
-      {downloadCount > 0 && (
+      {file.downloadCount > 0 && (
         <span className="text-xs text-slate-400 tabular-nums flex-shrink-0">
-          {downloadCount}
+          {file.downloadCount}
         </span>
       )}
     </div>
@@ -56,7 +107,7 @@ export function AttachmentCard({ file, onPreview, onDownload, downloadCount }) {
 }
 
 export function PreviewModal({ file, onClose }) {
-  const isImage = file ? ["jpg", "png", "gif", "webp"].includes(file.type) : false;
+  const isImage = file ? ["jpg", "jpeg", "png"].includes(file.type) : false;
   return (
     <Dialog open={!!file} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden">

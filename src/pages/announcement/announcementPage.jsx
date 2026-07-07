@@ -1,97 +1,118 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Megaphone, Search, Plus, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { INITIAL_ANNOUNCEMENTS } from "./constants";
 import { useToast, Toaster } from "./components/Toast";
 import { SkeletonCard } from "./components/SkeletonCard";
 import { AnnouncementCard } from "./components/AnnouncementCard";
 import { CreateModal } from "./components/CreateModal";
 import { FilterPopover } from "./components/FilterPopover";
 import { SortControl } from "./components/SortControl";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { useAuth } from "@/hooks/useAuth";
+import { useDebounce } from "@/hooks/useDebounce";
+import { AnnouncementsApi } from "@/services/announcements";
+import { mapAnnouncement } from "@/lib/announcementMapper";
 
 export default function HRISAnnouncementPage() {
-  const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);
-  const [loading] = useState(false);
+  const { hasPermission, user: currentUser } = useAuth();
+  const canManage = hasPermission("announcements.manage");
+
+  const canCreate =
+    currentUser?.roles?.includes?.("SuperAdmin") ||
+    currentUser?.roles?.includes?.("HR");
+
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 350);
   const [filters, setFilters] = useState({});
   const [sort, setSort] = useState("newest");
   const [showCreate, setShowCreate] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const { toast } = useToast();
 
-  const unreadCount = announcements.filter(
-    (a) => a.unread && !a.archived,
-  ).length;
+  const {
+    items,
+    loading,
+    error,
+    hasMore,
+    loadMore,
+    patchItem,
+    removeItem,
+    prependItem,
+    refetch,
+  } = useAnnouncements({
+    archived: showArchived,
+    search: debouncedQuery,
+    filters,
+    sort,
+  });
 
-  const processed = useMemo(() => {
-    let list = announcements.filter((a) =>
-      showArchived ? a.archived : !a.archived,
-    );
-    const q = query.toLowerCase();
-    if (q)
-      list = list.filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          a.description.toLowerCase().includes(q) ||
-          a.author.dept.toLowerCase().includes(q) ||
-          a.author.name.toLowerCase().includes(q),
+  const unreadCount = useMemo(
+    () => items.filter((a) => a.unread && !a.archived).length,
+    [items],
+  );
+
+  async function handleCreate(formData) {
+    try {
+      const created = await AnnouncementsApi.create(formData);
+      prependItem(mapAnnouncement(created));
+      toast("Announcement published", "📣");
+      setShowCreate(false);
+    } catch (e) {
+      toast(
+        e.response?.data?.message ?? "Failed to publish announcement",
+        "⚠️",
       );
-    if (filters.priorities?.length)
-      list = list.filter((a) => filters.priorities.includes(a.priority));
-    if (filters.departments?.length)
-      list = list.filter((a) => filters.departments.includes(a.author.dept));
-    if (filters.pinned) list = list.filter((a) => a.pinned);
-    if (filters.unread) list = list.filter((a) => a.unread);
-
-    list = [...list].sort((a, b) => {
-      if (sort === "oldest") return a.postedAt - b.postedAt;
-      if (sort === "reactions") {
-        const ra = Object.values(a.reactions || {}).reduce((s, v) => s + v, 0);
-        const rb = Object.values(b.reactions || {}).reduce((s, v) => s + v, 0);
-        return rb - ra;
-      }
-      if (sort === "views") return b.views - a.views;
-      return b.postedAt - a.postedAt;
-    });
-
-    // Pinned always float on top (unless in archive view)
-    if (!showArchived) {
-      const pinned = list.filter((a) => a.pinned);
-      const rest = list.filter((a) => !a.pinned);
-      list = [...pinned, ...rest];
     }
-
-    return list;
-  }, [announcements, query, filters, sort, showArchived]);
-
-  function update(fn) {
-    setAnnouncements((prev) => prev.map(fn));
   }
 
-  function handleCreate(ann) {
-    setAnnouncements((prev) => [ann, ...prev]);
-    toast("Announcement published", "📣");
+  async function handlePin(id) {
+    const optimistic = items.find((a) => a.id === id);
+    patchItem(id, { pinned: !optimistic.pinned });
+    try {
+      await AnnouncementsApi.togglePin(id);
+      toast(optimistic.pinned ? "Unpinned" : "Pinned to top", "📌");
+    } catch {
+      patchItem(id, { pinned: optimistic.pinned });
+      toast("Couldn't update pin status", "⚠️");
+    }
   }
-  function handleUpdateComments(annId, comments) {
-    update((a) => (a.id === annId ? { ...a, comments } : a));
+
+  async function handleArchive(id) {
+    try {
+      await AnnouncementsApi.toggleArchive(id);
+      removeItem(id);
+      toast(showArchived ? "Unarchived" : "Archived", "🗂️");
+    } catch {
+      toast("Couldn't update archive status", "⚠️");
+    }
   }
-  function handlePin(id) {
-    update((a) => (a.id === id ? { ...a, pinned: !a.pinned } : a));
+
+  async function handleUpdateAnn(id, formData) {
+    try {
+      const updated = await AnnouncementsApi.update(id, formData);
+      patchItem(id, mapAnnouncement(updated));
+      toast("Announcement updated", "✏️");
+    } catch (e) {
+      toast(e.response?.data?.message ?? "Failed to update", "⚠️");
+    }
   }
-  function handleArchive(id) {
-    update((a) => (a.id === id ? { ...a, archived: !a.archived } : a));
-  }
-  function handleUpdateAnn(updated) {
-    update((a) => (a.id === updated.id ? updated : a));
+
+  async function handleDelete(id) {
+    try {
+      await AnnouncementsApi.destroy(id);
+      removeItem(id);
+      toast("Announcement deleted", "🗑️");
+    } catch {
+      toast("Couldn't delete announcement", "⚠️");
+    }
   }
 
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col" style={{ background: "#F8FAFC" }}>
-        {/* Header */}
         <div className="bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
           <div className="px-4 sm:px-6 py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -110,10 +131,6 @@ export default function HRISAnnouncementPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 leading-tight">
-                    {announcements.filter((a) => !a.archived).length} active
-                    announcements
-                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -135,17 +152,18 @@ export default function HRISAnnouncementPage() {
                   onClear={() => setFilters({})}
                 />
                 <SortControl value={sort} onChange={setSort} />
-                <Button
-                  onClick={() => setShowCreate(true)}
-                  className="gap-2 flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus size={13} />
-                  <span className="hidden sm:inline">New</span>
-                </Button>
+                {canCreate && (
+                  <Button
+                    onClick={() => setShowCreate(true)}
+                    className="gap-2 flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Plus size={13} />
+                    <span className="hidden sm:inline">New</span>
+                  </Button>
+                )}
               </div>
             </div>
 
-            {/* Archive toggle */}
             <Tabs
               value={showArchived ? "archived" : "active"}
               onValueChange={(v) => setShowArchived(v === "archived")}
@@ -154,75 +172,67 @@ export default function HRISAnnouncementPage() {
               <TabsList className="bg-transparent p-0 h-auto gap-3">
                 <TabsTrigger
                   value="active"
-                  className=" px-0 pb-0.5 text-xs font-semibold rounded-none border-0 border-b-2 border-transparent shadow-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="px-0 pb-0.5 text-xs font-semibold rounded-none border-0 border-b-2 border-transparent shadow-none ring-0 focus-visible:ring-0 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
                 >
                   Active
                 </TabsTrigger>
                 <TabsTrigger
                   value="archived"
-                  className=" px-0 pb-0.5 text-xs font-semibold rounded-none border-0 border-b-2 border-transparent shadow-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="px-0 pb-0.5 text-xs font-semibold rounded-none border-0 border-b-2 border-transparent shadow-none ring-0 focus-visible:ring-0 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
                 >
-                  <Archive size={11} /> Archived (
-                  {announcements.filter((a) => a.archived).length})
+                  <Archive size={11} /> Archived
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </div>
 
-        {/* Feed */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
           <div className="max-w-screen mx-auto space-y-4">
-            {loading ? (
+            {error && (
+              <div className="text-center py-10 text-sm text-red-600">
+                Failed to load announcements.{" "}
+                <button className="underline" onClick={refetch}>
+                  Retry
+                </button>
+              </div>
+            )}
+            {loading && items.length === 0 ? (
               Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-            ) : processed.length === 0 ? (
+            ) : items.length === 0 ? (
               <div className="text-center py-20">
-                <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-5">
-                  {showArchived ? (
-                    <Archive size={36} className="text-slate-300" />
-                  ) : (
-                    <Megaphone size={36} className="text-slate-300" />
-                  )}
-                </div>
                 <h3 className="font-bold text-slate-700 text-lg mb-2">
-                  {query || Object.values(filters).some(Boolean)
-                    ? "No results found"
-                    : showArchived
-                      ? "No archived announcements"
-                      : "No announcements yet"}
+                  {showArchived
+                    ? "No archived announcements"
+                    : "No announcements yet"}
                 </h3>
-                <p className="text-sm text-slate-400 max-w-xs mx-auto">
-                  {query || Object.values(filters).some(Boolean)
-                    ? "Try adjusting your search or filters."
-                    : showArchived
-                      ? "Archived announcements will appear here."
-                      : "Check back soon."}
-                </p>
-                {(query || Object.values(filters).some(Boolean)) && (
-                  <Button
-                    variant="link"
-                    className="mt-4 text-sm"
-                    onClick={() => {
-                      setQuery("");
-                      setFilters({});
-                    }}
-                  >
-                    Clear filters
-                  </Button>
-                )}
               </div>
             ) : (
-              processed.map((ann) => (
+              items.map((ann) => (
                 <AnnouncementCard
                   key={ann.id}
                   ann={ann}
-                  onUpdateComments={handleUpdateComments}
+                  canManage={canManage}
                   onPin={handlePin}
                   onArchive={handleArchive}
                   onUpdateAnn={handleUpdateAnn}
+                  onDelete={handleDelete}
+                  onMarkedRead={(id) => patchItem(id, { unread: false })}
                   toast={toast}
                 />
               ))
+            )}
+            {!loading && hasMore && (
+              <div className="text-center pt-2">
+                <Button variant="outline" onClick={loadMore}>
+                  Load more
+                </Button>
+              </div>
+            )}
+            {loading && items.length > 0 && (
+              <div className="text-center text-xs text-slate-400">
+                Loading more…
+              </div>
             )}
           </div>
         </div>

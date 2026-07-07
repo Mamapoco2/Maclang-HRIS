@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { FilePlus, X, Upload, Megaphone } from "lucide-react";
+// CreateModal.jsx
+import { useEffect, useState } from "react";
+import { FilePlus, X, Upload, Megaphone, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,26 +12,74 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { PRIORITY_CONFIG, FILE_CONFIG, CURRENT_USER } from "../constants";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { PRIORITY_CONFIG, FILE_CONFIG } from "../constants";
+import api from "@/api/api";
+
+const CATEGORIES = ["General", "Job Posting"];
+const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png";
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export function CreateModal({ onClose, onCreate }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("normal");
+  const [category, setCategory] = useState("General");
+  const [plantillaPostingId, setPlantillaPostingId] = useState("");
+  const [postings, setPostings] = useState([]);
+  const [postingsError, setPostingsError] = useState(false);
+  const [postingsLoading, setPostingsLoading] = useState(false);
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (category !== "Job Posting") return;
+
+    let cancelled = false;
+    setPostingsLoading(true);
+    setPostingsError(false);
+
+    api
+      .get("/plantilla-postings", { params: { status: "open" } })
+      .then((r) => {
+        if (cancelled) return;
+        setPostings(r.data.data ?? r.data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPostings([]);
+        setPostingsError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setPostingsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [category]);
 
   function validate() {
     const e = {};
     if (!title.trim()) e.title = "Title is required.";
     if (!description.trim()) e.description = "Description is required.";
+    const oversized = files.find((f) => f.file.size > MAX_FILE_BYTES);
+    if (oversized) e.files = `${oversized.name} exceeds the 10 MB limit.`;
     return e;
   }
 
   function addFiles(raw) {
     const picked = Array.from(raw).map((f) => ({
       id: `nf_${Date.now()}_${Math.random()}`,
+      file: f,
       name: f.name,
       type: f.name.split(".").pop().toLowerCase(),
       size:
@@ -41,39 +90,32 @@ export function CreateModal({ onClose, onCreate }) {
     setFiles((prev) => [...prev, ...picked]);
   }
 
-  function publish() {
+  async function publish() {
     const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
       return;
     }
-    onCreate({
-      id: `a_${Date.now()}`,
-      title: title.trim(),
-      description: description.trim(),
-      priority,
-      author: {
-        id: CURRENT_USER.id,
-        name: CURRENT_USER.name,
-        initials: CURRENT_USER.initials,
-        dept: CURRENT_USER.dept,
-      },
-      postedAt: new Date(),
-      views: 0,
-      downloads: 0,
-      pinned: false,
-      archived: false,
-      unread: false,
-      viewers: [],
-      reactions: { like: 0, love: 0, insightful: 0, celebrate: 0 },
-      attachments: files,
-      comments: [],
-    });
-    onClose();
+    const formData = new FormData();
+    formData.append("title", title.trim());
+    formData.append("description", description.trim());
+    formData.append("priority", priority);
+    formData.append("category", category);
+    if (category === "Job Posting" && plantillaPostingId) {
+      formData.append("plantilla_posting_id", plantillaPostingId);
+    }
+    files.forEach((f) => formData.append("attachments[]", f.file));
+
+    setSubmitting(true);
+    try {
+      await onCreate(formData);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5">
@@ -91,7 +133,6 @@ export function CreateModal({ onClose, onCreate }) {
             </Label>
             <Input
               id="create-title"
-              placeholder="What is this announcement about?"
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
@@ -111,7 +152,6 @@ export function CreateModal({ onClose, onCreate }) {
             <Textarea
               id="create-description"
               rows={5}
-              placeholder="Write the full announcement here…"
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
@@ -121,6 +161,63 @@ export function CreateModal({ onClose, onCreate }) {
             />
             {errors.description && (
               <p className="text-xs text-red-500">{errors.description}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {category === "Job Posting" && (
+              <div className="space-y-1.5">
+                <Label>Linked Posting</Label>
+                <Select
+                  value={plantillaPostingId}
+                  onValueChange={setPlantillaPostingId}
+                  disabled={postingsLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        postingsLoading ? "Loading…" : "Select posting"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {postings.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.title ?? p.position_title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {postingsError && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle size={11} /> Couldn't load postings — you can
+                    still publish without linking one.
+                  </p>
+                )}
+                {!postingsLoading &&
+                  !postingsError &&
+                  postings.length === 0 && (
+                    <p className="text-xs text-slate-400">
+                      No open postings right now.
+                    </p>
+                  )}
+              </div>
             )}
           </div>
 
@@ -167,16 +264,19 @@ export function CreateModal({ onClose, onCreate }) {
                 or drag files here
               </p>
               <p className="text-xs text-slate-400">
-                PDF, DOCX, XLSX, PPTX, JPG, PNG
+                PDF, DOC(X), XLS(X), PPT(X), JPG, PNG — max 10 MB each
               </p>
               <input
                 type="file"
                 className="hidden"
                 multiple
                 onChange={(e) => addFiles(e.target.files)}
-                accept=".pdf,.docx,.xlsx,.pptx,.jpg,.jpeg,.png"
+                accept={ACCEPTED}
               />
             </label>
+            {errors.files && (
+              <p className="text-xs text-red-500">{errors.files}</p>
+            )}
             {files.length > 0 && (
               <div className="mt-3 space-y-2">
                 {files.map((f) => {
@@ -215,11 +315,20 @@ export function CreateModal({ onClose, onCreate }) {
         </div>
 
         <DialogFooter className="gap-3 sm:gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose}>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+            disabled={submitting}
+          >
             Cancel
           </Button>
-          <Button className="flex-1 gap-2" onClick={publish}>
-            <Megaphone size={15} /> Publish
+          <Button
+            className="flex-1 gap-2"
+            onClick={publish}
+            disabled={submitting}
+          >
+            <Megaphone size={15} /> {submitting ? "Publishing…" : "Publish"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -23,5 +23,12 @@ export function formatFullDate(date) {
 }
 
 export function authorColor(id) {
-  return AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length];
+  if (id === null || id === undefined) {
+    return AVATAR_COLORS[0];
+  }
+
+  const normalizedId = String(id);
+  const lastChar = normalizedId.charCodeAt(normalizedId.length - 1);
+
+  return AVATAR_COLORS[lastChar % AVATAR_COLORS.length];
 }

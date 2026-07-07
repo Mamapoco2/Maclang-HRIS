@@ -18,26 +18,38 @@ export function EditModal({ ann, onClose, onSave }) {
   const [description, setDescription] = useState(ann.description);
   const [priority, setPriority] = useState(ann.priority);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
-  function save() {
+  function validate() {
     const e = {};
     if (!title.trim()) e.title = "Title is required.";
     if (!description.trim()) e.description = "Description is required.";
+    return e;
+  }
+
+  async function save() {
+    const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
       return;
     }
-    onSave({
-      ...ann,
-      title: title.trim(),
-      description: description.trim(),
-      priority,
-    });
-    onClose();
+
+    const formData = new FormData();
+    formData.append("title", title.trim());
+    formData.append("description", description.trim());
+    formData.append("priority", priority);
+
+    setSubmitting(true);
+    try {
+      await onSave(formData);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5">
@@ -61,6 +73,7 @@ export function EditModal({ ann, onClose, onSave }) {
                 setErrors((p) => ({ ...p, title: "" }));
               }}
               className={errors.title ? "border-red-400 bg-red-50" : ""}
+              disabled={submitting}
             />
             {errors.title && (
               <p className="text-xs text-red-500">{errors.title}</p>
@@ -80,6 +93,7 @@ export function EditModal({ ann, onClose, onSave }) {
                 setErrors((p) => ({ ...p, description: "" }));
               }}
               className={errors.description ? "border-red-400 bg-red-50" : ""}
+              disabled={submitting}
             />
             {errors.description && (
               <p className="text-xs text-red-500">{errors.description}</p>
@@ -94,6 +108,7 @@ export function EditModal({ ann, onClose, onSave }) {
                   key={key}
                   type="button"
                   variant="outline"
+                  disabled={submitting}
                   onClick={() => setPriority(key)}
                   className={`flex-1 text-xs font-medium ${priority === key ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm` : "text-slate-500"}`}
                 >
@@ -105,11 +120,16 @@ export function EditModal({ ann, onClose, onSave }) {
         </div>
 
         <DialogFooter className="gap-3 sm:gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose}>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+            disabled={submitting}
+          >
             Cancel
           </Button>
-          <Button className="flex-1 gap-2" onClick={save}>
-            <Check size={15} /> Save changes
+          <Button className="flex-1 gap-2" onClick={save} disabled={submitting}>
+            <Check size={15} /> {submitting ? "Saving…" : "Save changes"}
           </Button>
         </DialogFooter>
       </DialogContent>

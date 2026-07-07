@@ -5,7 +5,6 @@ import {
   Bell,
   CheckCheck,
   Paperclip,
-  Download,
   MessageSquare,
   Pin,
   ChevronUp,
@@ -31,45 +30,50 @@ import { CommentSection } from "./CommentSection";
 import { CardMenu } from "./CardMenu";
 import { EditModal } from "./EditModal";
 import { authorColor, formatRelativeTime, formatFullDate } from "../utils";
+import { AnnouncementsApi } from "@/services/announcements";
+import { useAuth } from "@/hooks/useAuth";
 
 export function AnnouncementCard({
   ann,
-  onUpdateComments,
+  canManage,
   onPin,
   onArchive,
   onUpdateAnn,
+  onDelete,
+  onMarkedRead,
   toast,
 }) {
+  const { user: currentUser } = useAuth();
+  const isOwnPost = currentUser?.id === ann.author.id;
+  const isSuperAdmin = !!currentUser?.roles?.includes?.("SuperAdmin");
+
+  const canManageThis = canManage && (isOwnPost || isSuperAdmin);
+
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
-  const [downloadCounts, setDownloadCounts] = useState({});
-  const [totalDownloads, setTotalDownloads] = useState(ann.downloads);
-  const [isRead, setIsRead] = useState(!ann.unread);
+  const [attachments, setAttachments] = useState(ann.attachments);
+  const [isRead, setIsRead] = useState(isOwnPost || !ann.unread);
   const [editOpen, setEditOpen] = useState(false);
-  const [commentCount, setCommentCount] = useState(ann.comments.length);
+  const [commentCount, setCommentCount] = useState(ann.commentCount);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isLong = ann.description.length > 300;
   const displayText =
     isLong && !expanded ? ann.description.slice(0, 280) + "…" : ann.description;
 
+  async function markRead() {
+    if (isRead || isOwnPost) return;
+    setIsRead(true);
+    onMarkedRead(ann.id);
+    try {
+      await AnnouncementsApi.markViewed(ann.id);
+    } catch {}
+  }
+
   function handleExpand() {
     setExpanded((e) => !e);
-    if (!isRead) setIsRead(true);
-  }
-
-  function handleDownload(file) {
-    setDownloadCounts((prev) => ({
-      ...prev,
-      [file.id]: (prev[file.id] || 0) + 1,
-    }));
-    setTotalDownloads((prev) => prev + 1);
-    toast(`Downloading ${file.name}`, "⬇️");
-  }
-
-  function handleUpdateComments(annId, comments) {
-    setCommentCount(comments.length);
-    onUpdateComments(annId, comments);
+    markRead();
   }
 
   return (
@@ -77,7 +81,6 @@ export function AnnouncementCard({
       <Card
         className={`overflow-hidden transition-all hover:shadow-md ${ann.pinned ? "border-blue-200 ring-1 ring-blue-100" : ""}`}
       >
-        {/* Pinned banner */}
         {ann.pinned && (
           <div className="flex items-center gap-2 px-5 py-2 bg-blue-50 border-b border-blue-100">
             <Pin size={11} className="text-blue-500" />
@@ -87,7 +90,6 @@ export function AnnouncementCard({
           </div>
         )}
 
-        {/* Header */}
         <CardHeader className="px-6 pt-5 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -95,6 +97,7 @@ export function AnnouncementCard({
                 <Avatar
                   initials={ann.author.initials}
                   colorClass={authorColor(ann.author.id)}
+                  src={ann.author.avatarUrl}
                 />
                 {!isRead && (
                   <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
@@ -140,25 +143,18 @@ export function AnnouncementCard({
                   size="icon"
                   className="h-8 w-8 text-slate-400 hover:text-slate-600"
                   title="Mark as read"
-                  onClick={() => setIsRead(true)}
+                  onClick={markRead}
                 >
                   <CheckCheck size={15} />
                 </Button>
               )}
               <CardMenu
                 ann={ann}
-                onPin={() => {
-                  onPin(ann.id);
-                  toast(
-                    ann.pinned ? "Unpinned" : "Pinned to top",
-                    ann.pinned ? "📌" : "📌",
-                  );
-                }}
-                onArchive={() => {
-                  onArchive(ann.id);
-                  toast(ann.archived ? "Unarchived" : "Archived", "🗂️");
-                }}
+                canManage={canManageThis}
+                onPin={() => onPin(ann.id)}
+                onArchive={() => onArchive(ann.id)}
                 onEdit={() => setEditOpen(true)}
+                onDelete={() => setConfirmDelete(true)}
                 onCopyLink={() => {
                   navigator.clipboard?.writeText(
                     `${window.location.href}#${ann.id}`,
@@ -170,7 +166,6 @@ export function AnnouncementCard({
           </div>
         </CardHeader>
 
-        {/* Priority accent */}
         {ann.priority !== "normal" && (
           <div
             className={`h-0.5 mx-6 rounded-full mb-4 ${ann.priority === "urgent" ? "bg-red-400" : "bg-amber-400"}`}
@@ -178,7 +173,6 @@ export function AnnouncementCard({
         )}
 
         <CardContent className="px-6 pb-4 space-y-4">
-          {/* Content */}
           <div>
             <h3 className="text-base font-bold text-slate-900 mb-2 leading-snug">
               {ann.title}
@@ -189,7 +183,7 @@ export function AnnouncementCard({
             {isLong && (
               <button
                 onClick={handleExpand}
-                className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
+                className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
               >
                 {expanded ? (
                   <>
@@ -202,46 +196,42 @@ export function AnnouncementCard({
             )}
           </div>
 
-          {/* Attachments */}
-          {ann.attachments.length > 0 && (
+          {attachments.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Paperclip size={11} /> Attachments ({ann.attachments.length})
+                <Paperclip size={11} /> Attachments ({attachments.length})
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
-                {ann.attachments.map((file) => (
+                {attachments.map((file) => (
                   <AttachmentCard
                     key={file.id}
                     file={file}
+                    canManage={canManageThis}
                     onPreview={setPreviewFile}
-                    onDownload={handleDownload}
-                    downloadCount={downloadCounts[file.id] || 0}
+                    onDeleted={(id) =>
+                      setAttachments((prev) => prev.filter((f) => f.id !== id))
+                    }
+                    toast={toast}
                   />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Reactions */}
           <ReactionsBar
             annId={ann.id}
-            initialReactions={ann.reactions || {}}
+            initialReactions={ann.reactions}
+            initialMyReaction={ann.myReaction}
             onReact={(r) => toast(`Reacted with ${r.label}`, r.icon)}
           />
         </CardContent>
 
-        {/* Footer */}
         <CardFooter className="px-6 py-3 border-t border-slate-100 flex items-center gap-4 flex-wrap">
-          <ViewerAvatarStack viewers={ann.viewers || []} total={ann.views} />
-          <span className="text-slate-200">·</span>
-          <span className="flex items-center gap-1.5 text-xs text-slate-500">
-            <Download size={13} />
-            {totalDownloads.toLocaleString()}
-          </span>
+          <ViewerAvatarStack announcementId={ann.id} total={ann.views} />
           <button
             onClick={() => {
               setShowComments((s) => !s);
-              if (!isRead) setIsRead(true);
+              markRead();
             }}
             className={`flex items-center gap-1.5 text-xs transition-colors ml-auto ${showComments ? "text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"}`}
           >
@@ -250,13 +240,11 @@ export function AnnouncementCard({
           </button>
         </CardFooter>
 
-        {/* Comments */}
         {showComments && (
           <div className="px-6 pb-5">
             <CommentSection
               announcementId={ann.id}
-              comments={ann.comments}
-              onUpdate={handleUpdateComments}
+              onCountChange={setCommentCount}
             />
           </div>
         )}
@@ -267,12 +255,52 @@ export function AnnouncementCard({
         <EditModal
           ann={ann}
           onClose={() => setEditOpen(false)}
-          onSave={(updated) => {
-            onUpdateAnn(updated);
-            toast("Announcement updated", "✏️");
+          onSave={(formData) => {
+            onUpdateAnn(ann.id, formData);
+            setEditOpen(false);
+          }}
+        />
+      )}
+      {confirmDelete && (
+        <ConfirmDeleteDialog
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => {
+            onDelete(ann.id);
+            setConfirmDelete(false);
           }}
         />
       )}
     </>
+  );
+}
+
+function ConfirmDeleteDialog({ onCancel, onConfirm }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-xl p-5 w-80"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-sm font-semibold text-slate-800 mb-1">
+          Delete this announcement?
+        </p>
+        <p className="text-xs text-slate-500 mb-4">This cannot be undone.</p>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            className="bg-red-600 hover:bg-red-700"
+            onClick={onConfirm}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
