@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useContext } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Dialog,
   DialogTrigger,
@@ -114,6 +115,8 @@ export default function TrainingPage() {
   const currentUserId = user?.id ?? null;
   const currentEmployeeId = user?.employee_id ?? null;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [trainings, setTrainings] = useState([]);
   const [stats, setStats] = useState({
     activePrograms: 0,
@@ -163,7 +166,7 @@ export default function TrainingPage() {
     const echo = getEcho();
     const notifChannel = echo.channel("notifications");
     const onNotificationCreated = (e) => {
-      if (e.type !== "training" || !e.training) return;
+      if (e.type?.toLowerCase() !== "training" || !e.training) return;
       if (e.posted_by_user_id === currentUserId) return;
       const patched = patchEnrolled(e.training);
       setTrainings((prev) => {
@@ -224,6 +227,31 @@ export default function TrainingPage() {
       trainingChannel.stopListening(".training.deleted", onDeleted);
     };
   }, [currentUserId, patchEnrolled]);
+
+  // ── open a specific training's view modal when arriving via
+  //    /trainings?training=<id> (e.g. from a notification click) ────────────
+  useEffect(() => {
+    if (loading) return;
+    const trainingId = searchParams.get("training");
+    if (!trainingId || trainings.length === 0) return;
+
+    const match = trainings.find((t) => String(t.id) === String(trainingId));
+    if (match) {
+      setSelected(match);
+      setViewModalOpen(true);
+    }
+
+    // clean the query param out of the URL so refreshing/closing
+    // doesn't keep re-opening the modal
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("training");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [loading, trainings, searchParams, setSearchParams]);
 
   const handleJoin = async (training) => {
     try {

@@ -1,5 +1,6 @@
 // src/components/NotificationBell.jsx
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { IconBell } from "@tabler/icons-react";
 import {
@@ -121,6 +122,7 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   // ── unlock AudioContext on any user interaction ────────────────────────────
   useEffect(() => {
@@ -213,6 +215,25 @@ export function NotificationBell() {
     setUnreadCount(0);
   };
 
+  // ── navigate to the relevant page when a notification is clicked ───────────
+  const handleNotificationClick = (n) => {
+    if (!n.read) handleMarkRead(n.id);
+
+    const type = n.type?.toLowerCase();
+
+    if (type === "training") {
+      setOpen(false);
+      const trainingId = n.data?.training_id;
+      if (trainingId) {
+        navigate(`/trainings?training=${trainingId}`);
+      } else {
+        navigate("/trainings");
+      }
+    }
+    // add more `else if (type === "...")` branches here for other
+    // notification types that should also navigate somewhere
+  };
+
   return (
     <div className="relative" ref={ref}>
       {/* ── bell button ── */}
@@ -267,44 +288,47 @@ export function NotificationBell() {
                 <p className="text-sm">No notifications</p>
               </div>
             ) : (
-              notifications.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => !n.read && handleMarkRead(n.id)}
-                  className={`w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-muted/50 transition-colors ${
-                    !n.read ? "bg-blue-50/60 dark:bg-blue-950/20" : ""
-                  }`}
-                >
-                  <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[n.type] ?? "bg-gray-400"}`}
-                  />
+              notifications.map((n) => {
+                const normalizedType = n.type?.toLowerCase();
+                return (
+                  <button
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    className={`w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-muted/50 transition-colors ${
+                      !n.read ? "bg-blue-50/60 dark:bg-blue-950/20" : ""
+                    } ${normalizedType === "training" ? "cursor-pointer" : ""}`}
+                  >
+                    <span
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[normalizedType] ?? "bg-gray-400"}`}
+                    />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p
-                        className={`text-sm truncate ${!n.read ? "font-semibold" : "font-medium"}`}
-                      >
-                        {n.title}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={`text-sm truncate ${!n.read ? "font-semibold" : "font-medium"}`}
+                        >
+                          {n.title}
+                        </p>
+                        {!n.read && (
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                        )}
+                      </div>
+
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {n.message}
                       </p>
-                      {!n.read && (
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+
+                      {normalizedType === "training" && n.data && (
+                        <TrainingDetails data={n.data} />
                       )}
+
+                      <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+                        {n.time}
+                      </p>
                     </div>
-
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {n.message}
-                    </p>
-
-                    {n.type === "training" && n.data && (
-                      <TrainingDetails data={n.data} />
-                    )}
-
-                    <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-                      {n.time}
-                    </p>
-                  </div>
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
