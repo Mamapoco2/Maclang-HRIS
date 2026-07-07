@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, Download, Paperclip, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,6 +108,38 @@ export function AttachmentCard({
 
 export function PreviewModal({ file, onClose }) {
   const isImage = file ? ["jpg", "jpeg", "png"].includes(file.type) : false;
+  const [imgUrl, setImgUrl] = useState(null);
+  const [imgLoading, setImgLoading] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    if (!file || !isImage) return;
+    let cancelled = false;
+    let objectUrl = null;
+    setImgLoading(true);
+    setImgError(false);
+    setImgUrl(null);
+    AnnouncementsApi.previewAttachment(file.id)
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        objectUrl = url;
+        setImgUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setImgError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setImgLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [file?.id, isImage]);
+
   return (
     <Dialog open={!!file} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden">
@@ -122,11 +154,35 @@ export function PreviewModal({ file, onClose }) {
                 </span>
               </DialogTitle>
             </DialogHeader>
-            <div className="flex-1 flex items-center justify-center p-8 text-center">
+            <div className="flex-1 flex items-center justify-center p-8 text-center overflow-auto">
               {isImage ? (
-                <p className="text-slate-500 text-sm">
-                  Image preview would render here.
-                </p>
+                imgLoading ? (
+                  <div className="space-y-3">
+                    <Loader2
+                      size={24}
+                      className="text-slate-400 animate-spin mx-auto"
+                    />
+                    <p className="text-slate-400 text-sm">Loading preview…</p>
+                  </div>
+                ) : imgError || !imgUrl ? (
+                  <div className="space-y-3">
+                    <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto">
+                      <Eye size={24} className="text-slate-400" />
+                    </div>
+                    <p className="text-slate-600 font-medium">
+                      Couldn't load preview
+                    </p>
+                    <p className="text-slate-400 text-sm">
+                      Download the file to view it on your device.
+                    </p>
+                  </div>
+                ) : (
+                  <img
+                    src={imgUrl}
+                    alt={file.name}
+                    className="max-w-full max-h-[60vh] rounded-lg object-contain"
+                  />
+                )
               ) : (
                 <div className="space-y-3">
                   <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto">

@@ -25,6 +25,7 @@ import { Avatar } from "./Avatar";
 import { PriorityBadge } from "./PriorityBadge";
 import { ViewerAvatarStack } from "./ViewerAvatarStack";
 import { AttachmentCard, PreviewModal } from "./Attachments";
+import { LinkedPostingsList } from "./LinkedPostingsList";
 import { ReactionsBar } from "./ReactionsBar";
 import { CommentSection } from "./CommentSection";
 import { CardMenu } from "./CardMenu";
@@ -195,6 +196,16 @@ export function AnnouncementCard({
               </button>
             )}
           </div>
+
+          {(() => {
+            const postingIds =
+              ann.plantillaPostingIds ??
+              ann.plantilla_posting_ids ??
+              ((ann.plantillaPostingId ?? ann.plantilla_posting_id)
+                ? [ann.plantillaPostingId ?? ann.plantilla_posting_id]
+                : []);
+            return <LinkedPostingsList postingIds={postingIds} />;
+          })()}
 
           {attachments.length > 0 && (
             <div>

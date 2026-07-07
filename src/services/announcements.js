@@ -79,4 +79,14 @@ export const AnnouncementsApi = {
     a.remove();
     URL.revokeObjectURL(url);
   },
+
+  async previewAttachment(attachmentId) {
+    const res = await api.get(
+      `/announcement-attachments/${attachmentId}/download`,
+      {
+        responseType: "blob",
+      },
+    );
+    return URL.createObjectURL(res.data);
+  },
 };
