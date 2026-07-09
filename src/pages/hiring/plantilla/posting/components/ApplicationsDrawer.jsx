@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { X, Download, CalendarClock, FileText } from "lucide-react";
-import { toast } from "sonner";
-import api from "@/api/api";
+import { X, CalendarClock } from "lucide-react";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { DrawerPanel, Skeleton } from "./ui";
 import { ApplicationStatusBadge, InterviewStatusBadge } from "./TableParts";
@@ -19,7 +17,7 @@ function employeeName(employee) {
 // Read-only summary of one applicant. No actions here — scheduling and
 // reviewing happen from the main applications table; this drawer is just
 // for looking someone up quickly from the posting.
-function ApplicationCard({ application, onDownload }) {
+function ApplicationCard({ application }) {
   const isDecided =
     application.status === "Completed" || application.status === "Rejected";
   const interviewCompleted =
@@ -62,22 +60,6 @@ function ApplicationCard({ application, onDownload }) {
         </p>
       )}
 
-      {application.documents?.length > 0 && (
-        <div className="mt-3 space-y-1 border-t border-slate-100 pt-3">
-          {application.documents.map((doc) => (
-            <button
-              key={doc.id}
-              onClick={() => onDownload(doc)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-slate-600 hover:bg-slate-50"
-            >
-              <FileText className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-              <span className="truncate">{doc.original_filename}</span>
-              <Download className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400" />
-            </button>
-          ))}
-        </div>
-      )}
-
       {!isDecided && !interviewCompleted && (
         <p className="mt-3 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
           The interview must be completed before this application can be
@@ -108,23 +90,6 @@ export function ApplicationsDrawer({ posting, onClose }) {
   useEffect(() => {
     load();
   }, [load]);
-
-  const handleDownload = async (doc) => {
-    try {
-      const res = await api.get(
-        plantillaPostingService.documentDownloadUrl(doc.id),
-        { responseType: "blob" },
-      );
-      const url = URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = doc.original_filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      toast?.error?.("Failed to download the file.");
-    }
-  };
 
   return (
     <DrawerPanel open={!!posting} onClose={onClose}>
@@ -164,11 +129,7 @@ export function ApplicationsDrawer({ posting, onClose }) {
           </p>
         ) : (
           applications.map((application) => (
-            <ApplicationCard
-              key={application.id}
-              application={application}
-              onDownload={handleDownload}
-            />
+            <ApplicationCard key={application.id} application={application} />
           ))
         )}
       </div>

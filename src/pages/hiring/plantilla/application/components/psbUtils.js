@@ -29,7 +29,6 @@ export const STAGE_STATUS = [
   "FAILED",
   "CANCELLED",
   "NO SHOW",
-  "SKIPPED",
 ];
 
 export const OVERALL_STATUS = ["PENDING", "IN PROGRESS", "COMPLETED"];

@@ -20,7 +20,7 @@ export default function MyApplicationsPage() {
       setApplications(data);
     } catch (err) {
       console.error(err);
-      toast?.error?.("Hindi ma-load ang mga application mo.");
+      toast?.error?.("Failed to load your applications.");
     } finally {
       setLoading(false);
     }
@@ -31,8 +31,8 @@ export default function MyApplicationsPage() {
   }, [load]);
 
   return (
-    <div className="min-h-full w-screen bg-slate-50 font-sans text-slate-900 antialiased">
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-full w-full bg-slate-50 font-sans text-slate-900 antialiased">
+      <div className="mx-auto max-w-full px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
             <ClipboardList style={{ height: 22, width: 22 }} />
@@ -53,7 +53,7 @@ export default function MyApplicationsPage() {
           ) : applications.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
               <p className="text-sm font-medium text-slate-600">
-                Wala ka pang na-a-apply na plantilla position.
+                You haven't applied to any plantilla position yet.
               </p>
             </div>
           ) : (
