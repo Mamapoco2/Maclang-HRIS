@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import ContractGenerationTab from "./components/contractGenerationTab";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +44,6 @@ import {
   IconUser,
   IconPencil,
   IconX,
-  IconFileText,
 } from "@tabler/icons-react";
 import {
   getOnboardingSummary,
@@ -446,333 +443,293 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="onboarding">
-        <TabsList>
-          <TabsTrigger value="onboarding" className="flex items-center gap-2">
-            <IconClipboardList size={15} />
-            ONBOARDING
-          </TabsTrigger>
-          <TabsTrigger value="contracts" className="flex items-center gap-2">
-            <IconFileText size={15} />
-            CONTRACT GENERATION
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ── Onboarding Tab ─────────────────────────────────────────────── */}
-        <TabsContent value="onboarding">
-          <div className="grid gap-4 md:grid-cols-4 mt-4">
-            {[
-              {
-                title: "NEW HIRES",
-                value: summary.new_hires ?? 0,
-                icon: <IconUserPlus size={18} />,
-                desc: "TOTAL ONBOARDING RECORDS",
-              },
-              {
-                title: "IN PROGRESS",
-                value: summary.in_progress ?? 0,
-                icon: <IconClipboardList size={18} />,
-                desc: "ONBOARDING CURRENTLY ONGOING",
-              },
-              {
-                title: "COMPLETED",
-                value: summary.completed ?? 0,
-                icon: <IconCheck size={18} />,
-                desc: "EMPLOYEES FULLY ONBOARDED",
-              },
-              {
-                title: "PENDING TASKS",
-                value: summary.pending_tasks ?? 0,
-                icon: <IconClock size={18} />,
-                desc: "TASKS AWAITING COMPLETION",
-              },
-            ].map((card) => (
-              <Card key={card.title}>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm">{card.title}</CardTitle>
-                  {card.icon}
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{card.value}</div>
-                  <p className="text-xs text-muted-foreground">{card.desc}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between mt-6">
-            <Input
-              placeholder="SEARCH EMPLOYEE..."
-              className="max-w-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Button onClick={() => setShowForm(true)}>ADD NEW HIRE</Button>
-          </div>
-
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>ONBOARDING LIST</CardTitle>
+      <div className="grid gap-4 md:grid-cols-4 mt-4">
+        {[
+          {
+            title: "NEW HIRES",
+            value: summary.new_hires ?? 0,
+            icon: <IconUserPlus size={18} />,
+            desc: "TOTAL ONBOARDING RECORDS",
+          },
+          {
+            title: "IN PROGRESS",
+            value: summary.in_progress ?? 0,
+            icon: <IconClipboardList size={18} />,
+            desc: "ONBOARDING CURRENTLY ONGOING",
+          },
+          {
+            title: "COMPLETED",
+            value: summary.completed ?? 0,
+            icon: <IconCheck size={18} />,
+            desc: "EMPLOYEES FULLY ONBOARDED",
+          },
+          {
+            title: "PENDING TASKS",
+            value: summary.pending_tasks ?? 0,
+            icon: <IconClock size={18} />,
+            desc: "TASKS AWAITING COMPLETION",
+          },
+        ].map((card) => (
+          <Card key={card.title}>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm">{card.title}</CardTitle>
+              {card.icon}
             </CardHeader>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="flex justify-center py-16">
-                  <IconLoader2
-                    size={24}
-                    className="animate-spin text-gray-400"
-                  />
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead>EMPLOYEE</TableHead>
-                      <TableHead>POSITION</TableHead>
-                      <TableHead>DEPARTMENT</TableHead>
-                      <TableHead>START DATE & TIME</TableHead>
-                      <TableHead>SOURCE</TableHead>
-                      <TableHead>PROGRESS</TableHead>
-                      <TableHead>STATUS</TableHead>
-                      <TableHead className="text-right">ACTIONS</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="py-14 text-center text-sm text-gray-400"
-                        >
-                          NO ONBOARDING RECORDS FOUND.
+            <CardContent>
+              <div className="text-2xl font-bold">{card.value}</div>
+              <p className="text-xs text-muted-foreground">{card.desc}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between mt-6">
+        <Input
+          placeholder="SEARCH EMPLOYEE..."
+          className="max-w-sm"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Button onClick={() => setShowForm(true)}>ADD NEW HIRE</Button>
+      </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>ONBOARDING LIST</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <IconLoader2 size={24} className="animate-spin text-gray-400" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead>EMPLOYEE</TableHead>
+                  <TableHead>POSITION</TableHead>
+                  <TableHead>DEPARTMENT</TableHead>
+                  <TableHead>START DATE & TIME</TableHead>
+                  <TableHead>SOURCE</TableHead>
+                  <TableHead>PROGRESS</TableHead>
+                  <TableHead>STATUS</TableHead>
+                  <TableHead className="text-right">ACTIONS</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={8}
+                      className="py-14 text-center text-sm text-gray-400"
+                    >
+                      NO ONBOARDING RECORDS FOUND.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((emp) =>
+                    editingRowId === emp.id ? (
+                      <TableRow key={emp.id} className="bg-blue-50">
+                        <TableCell>
+                          <Input
+                            autoFocus
+                            value={editingRow.name}
+                            onChange={(e) =>
+                              setEditingRow({
+                                ...editingRow,
+                                name: e.target.value.toUpperCase(),
+                              })
+                            }
+                            className="h-7 text-xs"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={editingRow.position}
+                            onChange={(e) =>
+                              setEditingRow({
+                                ...editingRow,
+                                position: e.target.value.toUpperCase(),
+                              })
+                            }
+                            className="h-7 text-xs"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={editingRow.department}
+                            onChange={(e) =>
+                              setEditingRow({
+                                ...editingRow,
+                                department: e.target.value.toUpperCase(),
+                              })
+                            }
+                            className="h-7 text-xs"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="datetime-local"
+                            value={editingRow.start_date}
+                            onChange={(e) =>
+                              setEditingRow({
+                                ...editingRow,
+                                start_date: e.target.value,
+                              })
+                            }
+                            className="h-7 text-xs"
+                          />
+                        </TableCell>
+                        <TableCell />
+                        <TableCell />
+                        <TableCell />
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveEditRow(emp.id)}
+                              disabled={savingRowId === emp.id}
+                              className="h-7 px-2"
+                            >
+                              {savingRowId === emp.id ? (
+                                <IconLoader2
+                                  size={12}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <IconCheck size={12} />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleCancelEditRow}
+                              className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600"
+                            >
+                              <IconX size={12} />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filtered.map((emp) =>
-                        editingRowId === emp.id ? (
-                          <TableRow key={emp.id} className="bg-blue-50">
-                            <TableCell>
-                              <Input
-                                autoFocus
-                                value={editingRow.name}
-                                onChange={(e) =>
-                                  setEditingRow({
-                                    ...editingRow,
-                                    name: e.target.value.toUpperCase(),
-                                  })
-                                }
-                                className="h-7 text-xs"
+                      <TableRow key={emp.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-1.5">
+                            {(emp.name ?? "").toUpperCase()}
+                            {emp.applicant && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 cursor-default">
+                                      <IconUser size={10} />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    className="text-xs"
+                                  >
+                                    FROM APPLICANT:{" "}
+                                    {(
+                                      emp.applicant.full_name ?? ""
+                                    ).toUpperCase()}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {(emp.position ?? "").toUpperCase()}
+                        </TableCell>
+                        <TableCell>
+                          {(emp.department ?? "").toUpperCase()}
+                        </TableCell>
+                        <TableCell className="text-xs text-gray-600">
+                          {emp.status === "Completed" ? (
+                            <div className="text-emerald-600 font-medium flex items-center gap-1">
+                              <IconCheck size={10} />
+                              {formatDateTime(emp.start_date)}
+                            </div>
+                          ) : (
+                            <div>{formatDateTime(emp.start_date)}</div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {emp.applicant ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">
+                              HIRED APPLICANT
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">
+                              MANUAL ENTRY
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full transition-all"
+                                style={{ width: `${emp.progress}%` }}
                               />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={editingRow.position}
-                                onChange={(e) =>
-                                  setEditingRow({
-                                    ...editingRow,
-                                    position: e.target.value.toUpperCase(),
-                                  })
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={editingRow.department}
-                                onChange={(e) =>
-                                  setEditingRow({
-                                    ...editingRow,
-                                    department: e.target.value.toUpperCase(),
-                                  })
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="datetime-local"
-                                value={editingRow.start_date}
-                                onChange={(e) =>
-                                  setEditingRow({
-                                    ...editingRow,
-                                    start_date: e.target.value,
-                                  })
-                                }
-                                className="h-7 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell />
-                            <TableCell />
-                            <TableCell />
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveEditRow(emp.id)}
-                                  disabled={savingRowId === emp.id}
-                                  className="h-7 px-2"
-                                >
-                                  {savingRowId === emp.id ? (
-                                    <IconLoader2
-                                      size={12}
-                                      className="animate-spin"
-                                    />
-                                  ) : (
-                                    <IconCheck size={12} />
-                                  )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={handleCancelEditRow}
-                                  className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600"
-                                >
-                                  <IconX size={12} />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          <TableRow key={emp.id}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-1.5">
-                                {(emp.name ?? "").toUpperCase()}
-                                {emp.applicant && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 cursor-default">
-                                          <IconUser size={10} />
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="top"
-                                        className="text-xs"
-                                      >
-                                        FROM APPLICANT:{" "}
-                                        {(
-                                          emp.applicant.full_name ?? ""
-                                        ).toUpperCase()}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {(emp.position ?? "").toUpperCase()}
-                            </TableCell>
-                            <TableCell>
-                              {(emp.department ?? "").toUpperCase()}
-                            </TableCell>
-                            <TableCell className="text-xs text-gray-600">
-                              {emp.status === "Completed" ? (
-                                <div className="text-emerald-600 font-medium flex items-center gap-1">
-                                  <IconCheck size={10} />
-                                  {formatDateTime(emp.start_date)}
-                                </div>
-                              ) : (
-                                <div>{formatDateTime(emp.start_date)}</div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {emp.applicant ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">
-                                  HIRED APPLICANT
-                                </span>
-                              ) : (
-                                <span className="text-xs text-gray-400 italic">
-                                  MANUAL ENTRY
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-blue-500 rounded-full transition-all"
-                                    style={{ width: `${emp.progress}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-gray-500">
-                                  {emp.progress}%
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  STATUS_VARIANT[emp.status] ?? "outline"
-                                }
-                              >
-                                {(emp.status ?? "").toUpperCase()}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right space-x-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelected(emp);
-                                  setShowTasks(true);
-                                  setEditingTaskId(null);
-                                }}
-                              >
-                                VIEW
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  handleStatusChange(emp, "Completed")
-                                }
-                                disabled={emp.status === "Completed"}
-                              >
-                                COMPLETE
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleStartEditRow(emp)}
-                                className="h-7 w-7 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                              >
-                                <IconPencil size={13} />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDelete(emp)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 w-7 h-7 p-0"
-                              >
-                                <IconTrash size={14} />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ),
-                      )
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ── Contracts Tab ───────────────────────────────────────────────── */}
-        <TabsContent value="contracts">
-          <ContractGenerationTab
-            onContractSaved={(updatedOnboarding) => {
-              if (updatedOnboarding?.id) {
-                setOnboardings((prev) =>
-                  prev.map((o) =>
-                    o.id === updatedOnboarding.id ? updatedOnboarding : o,
-                  ),
-                );
-              } else {
-                loadAll();
-              }
-            }}
-          />
-        </TabsContent>
-      </Tabs>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {emp.progress}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={STATUS_VARIANT[emp.status] ?? "outline"}
+                          >
+                            {(emp.status ?? "").toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelected(emp);
+                              setShowTasks(true);
+                              setEditingTaskId(null);
+                            }}
+                          >
+                            VIEW
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleStatusChange(emp, "Completed")}
+                            disabled={emp.status === "Completed"}
+                          >
+                            COMPLETE
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleStartEditRow(emp)}
+                            className="h-7 w-7 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <IconPencil size={13} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(emp)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 w-7 h-7 p-0"
+                          >
+                            <IconTrash size={14} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ),
+                  )
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── Add New Hire Dialog ─────────────────────────────────────────── */}
       <Dialog open={showForm} onOpenChange={setShowForm}>

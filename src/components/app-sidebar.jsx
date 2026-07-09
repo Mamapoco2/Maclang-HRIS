@@ -66,8 +66,8 @@ const NAV_MAIN = [
             permission: "hiring.view",
             items: [
               {
-                title: "Applicants",
-                url: "/hiring/plantilla/applicants",
+                title: "Plantilla Postings",
+                url: "/hiring/plantilla/positions",
                 permission: "hiring.view",
               },
               {
@@ -76,13 +76,18 @@ const NAV_MAIN = [
                 permission: "hiring.view",
               },
               {
+                title: "Calendar",
+                url: "/hiring/plantilla/calendar",
+                permission: "hiring.view",
+              },
+              {
                 title: "Onboarding",
                 url: "/hiring/plantilla/onboarding",
                 permission: "hiring.view",
               },
               {
-                title: "Plantilla Positions",
-                url: "/hiring/plantilla/positions",
+                title: "My Applications",
+                url: "/hiring/plantilla/my-applications",
                 permission: "hiring.view",
               },
             ],

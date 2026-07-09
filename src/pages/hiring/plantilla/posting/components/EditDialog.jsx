@@ -165,7 +165,7 @@ export function EditDialog({
       <div className="space-y-6 px-6 py-5">
         {mode === "create" && (
           <FormSection title="Source Plantilla Item">
-            <Label required>Vacant Item</Label>
+            <Label required>Position Title</Label>
             <Select
               value={form.base_item_number}
               onChange={applyVacantItem}
@@ -185,7 +185,7 @@ export function EditDialog({
         <FormSection title="Position Details">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <Label required>Position Title</Label>
+              <Label required>Plantilla Item Number</Label>
               <Input
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
@@ -247,28 +247,7 @@ export function EditDialog({
                 placeholder="e.g. 38637"
               />
             </div>
-            <div>
-              <Label>Employment Status</Label>
-              <Input
-                value="Permanent"
-                disabled
-                className="bg-slate-50 text-slate-500"
-              />
-              <p className="mt-1 text-[11px] text-slate-400">
-                Palagi nang Permanent ang plantilla items.
-              </p>
-            </div>
-            <div>
-              <Label required>Vacancies Offered</Label>
-              <Input
-                type="number"
-                min="1"
-                value={form.vacancies}
-                onChange={(e) => set("vacancies", e.target.value)}
-                placeholder="e.g. 2"
-              />
-              <FieldError>{errors.vacancies}</FieldError>
-            </div>
+
             <div>
               <Label required>Status</Label>
               <Select
@@ -336,18 +315,8 @@ export function EditDialog({
           </div>
         </FormSection>
 
-        <FormSection title="Job Description">
-          <Textarea
-            rows={4}
-            value={form.job_description}
-            onChange={(e) => set("job_description", e.target.value)}
-            placeholder="Describe the duties and responsibilities of this position"
-          />
-          <FieldError>{errors.job_description}</FieldError>
-        </FormSection>
-
         <FormSection title="Timeline">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label required>Posting Date</Label>
               <Input
@@ -365,16 +334,6 @@ export function EditDialog({
                 onChange={(e) => set("closing_date", e.target.value)}
               />
               <FieldError>{errors.closing_date}</FieldError>
-            </div>
-            <div>
-              <Label>Expected Appointment Date</Label>
-              <Input
-                type="date"
-                value={form.expected_appointment_date}
-                onChange={(e) =>
-                  set("expected_appointment_date", e.target.value)
-                }
-              />
             </div>
           </div>
         </FormSection>

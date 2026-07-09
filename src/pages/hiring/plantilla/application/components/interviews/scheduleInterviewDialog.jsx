@@ -14,14 +14,10 @@ import { plantillaPostingService } from "@/services/plantillaPostingService";
 
 const STAGE_LABEL = {
   hr_status: "HR Interview",
-  head_status: "Department Head Interview",
-  final_status: "Final Interview (PSB)",
 };
 
 const SCHEDULE_FIELD = {
   hr_status: "hr_scheduled_at",
-  head_status: "head_scheduled_at",
-  final_status: "final_scheduled_at",
 };
 
 function toDatetimeLocal(value) {

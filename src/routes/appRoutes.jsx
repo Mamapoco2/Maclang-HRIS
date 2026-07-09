@@ -18,7 +18,7 @@ import Team from "../pages/team/components/teamPage";
 import Analytics from "../pages/analytics/components/analyticsPage";
 import Trainings from "../pages/trainings/training/trainingPage";
 import SkillAnalysis from "../pages/trainings/skillGapAnalysis/skillGapTest";
-import Applicants from "../pages/hiring/plantilla/applicants//applicantsPage";
+import Calendar from "../pages/hiring/plantilla/calendar/applicantsPage";
 import Applications from "../pages/hiring/plantilla/application/components/applicationPage";
 import OnboardingPage from "../pages/hiring/plantilla/onboarding/onboardingPage";
 import Leave from "../pages/leave/DashboardPage";
@@ -60,6 +60,7 @@ import PlantillaPositionsPage from "../pages/hiring/plantilla/posting/plantillaP
 import NonPlantillaApplicantsPage from "../pages/hiring/non-plantilla/applicants/components/applicantsPage";
 import NonPlantillaApplicationsPage from "../pages/hiring/non-plantilla/application/components/applicationPage";
 import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding/onboardingPage";
+import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplicationsPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -137,10 +138,10 @@ function AppRoutes() {
               }
             />
             <Route
-              path="/hiring/plantilla/applicants"
+              path="/hiring/plantilla/calendar"
               element={
                 <PermissionRoute permission="hiring.view">
-                  <Applicants />
+                  <Calendar />
                 </PermissionRoute>
               }
             />
@@ -424,6 +425,14 @@ function AppRoutes() {
               element={
                 <PermissionRoute permission="hiring.view">
                   <NonPlantillaOnboardingPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/hiring/plantilla/my-applications"
+              element={
+                <PermissionRoute permission="hiring.view">
+                  <MyApplicationsPage />
                 </PermissionRoute>
               }
             />

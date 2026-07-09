@@ -30,6 +30,7 @@ import {
   candidateName,
   APPLICATION_STATUS_OPTIONS,
   APPLICATION_STATUS_BG,
+  formatLabel,
 } from "../psbUtils";
 
 export default function ApplicationsTable({
@@ -53,13 +54,13 @@ export default function ApplicationsTable({
         { status, remarks: application.remarks ?? null },
       );
       onUpdate(application.id, updated);
-      toast.success("APPLICATION UPDATED.");
+      toast.success("Application updated.");
     } catch (err) {
       const message =
         err?.response?.data?.errors?.status?.[0] ||
         err?.response?.data?.message ||
-        "FAILED TO UPDATE APPLICATION.";
-      toast.error(message.toUpperCase());
+        "Failed to update application.";
+      toast.error(message);
     }
   };
 
@@ -71,12 +72,9 @@ export default function ApplicationsTable({
         { status: application.status, remarks },
       );
       onUpdate(application.id, updated);
-      toast.success("REMARKS SAVED.");
+      toast.success("Remarks saved.");
     } catch (err) {
-      toast.error(
-        err?.response?.data?.message?.toUpperCase() ??
-          "FAILED TO SAVE REMARKS.",
-      );
+      toast.error(err?.response?.data?.message ?? "Failed to save remarks.");
     }
   };
 
@@ -85,24 +83,24 @@ export default function ApplicationsTable({
       {showSummary && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <SummaryCard
-            title="TOTAL APPLICATIONS"
+            title="Total Applications"
             value={summary.total}
-            status="ALL PSB APPLICATIONS"
+            status="All PSB applications"
           />
           <SummaryCard
-            title="PENDING"
+            title="Pending"
             value={summary.pending}
-            status="AWAITING INITIAL REVIEW"
+            status="Awaiting initial review"
           />
           <SummaryCard
-            title="UNDER REVIEW"
+            title="Under Review"
             value={summary.underReview}
-            status="CURRENTLY BEING EVALUATED"
+            status="Currently being evaluated"
           />
           <SummaryCard
-            title="APPROVED"
+            title="Approved"
             value={summary.approved}
-            status="SUCCESSFULLY APPROVED"
+            status="Successfully approved"
           />
         </div>
       )}
@@ -112,13 +110,13 @@ export default function ApplicationsTable({
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead>CANDIDATE</TableHead>
-                <TableHead>ITEM NO.</TableHead>
-                <TableHead>POSITION</TableHead>
-                <TableHead>SUBMITTED</TableHead>
-                <TableHead>INTERVIEW</TableHead>
-                <TableHead>STATUS</TableHead>
-                <TableHead>REMARKS</TableHead>
+                <TableHead>Candidate</TableHead>
+                <TableHead>Item No.</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead>Interview</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Remarks</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -128,7 +126,7 @@ export default function ApplicationsTable({
                     colSpan={7}
                     className="py-14 text-center text-sm text-gray-400"
                   >
-                    NO PSB APPLICATIONS FOUND.
+                    No PSB applications found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -138,28 +136,26 @@ export default function ApplicationsTable({
                     "COMPLETED";
                   return (
                     <TableRow key={application.id}>
-                      <TableCell className="font-medium uppercase">
+                      <TableCell className="font-medium">
                         {candidateName(application.employee)}
                       </TableCell>
-                      <TableCell className="uppercase">
+                      <TableCell>
                         {application.posting?.base_item_number ?? "—"}
                       </TableCell>
-                      <TableCell className="uppercase">
-                        {application.posting?.title ?? "—"}
-                      </TableCell>
-                      <TableCell className="uppercase">
+                      <TableCell>{application.posting?.title ?? "—"}</TableCell>
+                      <TableCell>
                         {application.submitted_at?.slice(0, 10) ?? "—"}
                       </TableCell>
-                      <TableCell className="text-xs uppercase text-gray-500">
-                        {application.interview?.overall_status ??
-                          "NO INTERVIEW"}
+                      <TableCell className="text-xs text-gray-500">
+                        {formatLabel(application.interview?.overall_status) ||
+                          "No interview"}
                       </TableCell>
                       <TableCell>
                         {application.status === "Pending" ? (
                           <span
                             className={`inline-block w-fit rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG.Pending}`}
                           >
-                            PENDING
+                            Pending
                           </span>
                         ) : (
                           <Select
@@ -173,7 +169,7 @@ export default function ApplicationsTable({
                                 <span
                                   className={`rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG.Pending}`}
                                 >
-                                  {application.status.toUpperCase()}
+                                  {application.status}
                                 </span>
                               </SelectValue>
                             </SelectTrigger>
@@ -184,7 +180,7 @@ export default function ApplicationsTable({
                                   value={s}
                                   className="text-xs"
                                 >
-                                  {s.toUpperCase()}
+                                  {s}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -192,7 +188,7 @@ export default function ApplicationsTable({
                         )}
                         {application.status !== "Approved" && !canApprove && (
                           <p className="mt-1 text-[10px] text-gray-400">
-                            NEEDS COMPLETED INTERVIEW TO APPROVE
+                            Needs completed interview to approve
                           </p>
                         )}
                       </TableCell>
@@ -205,7 +201,7 @@ export default function ApplicationsTable({
                               className="h-7 gap-1 px-2 text-xs"
                             >
                               <IconNotes size={13} />
-                              {application.remarks ? "VIEW" : "ADD"}
+                              {application.remarks ? "View" : "Add"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-72 p-3" align="start">
@@ -218,14 +214,14 @@ export default function ApplicationsTable({
                                   [application.id]: e.target.value,
                                 }))
                               }
-                              placeholder="REMARKS FOR THE EMPLOYEE"
+                              placeholder="Remarks for the employee"
                             />
                             <Button
                               size="sm"
                               className="mt-2 w-full"
                               onClick={() => handleSaveRemarks(application)}
                             >
-                              SAVE REMARKS
+                              Save remarks
                             </Button>
                           </PopoverContent>
                         </Popover>

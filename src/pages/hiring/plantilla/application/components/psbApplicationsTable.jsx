@@ -33,44 +33,22 @@ import api from "@/api/api";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { getEcho } from "@/lib/echo";
 import { SummaryCard } from "./overview/summaryCard";
+import {
+  candidateName,
+  formatLabel,
+  STAGE_STATUS,
+  OVERALL_STATUS,
+  APPLICATION_STATUS_OPTIONS,
+  STAGE_COLORS,
+  APPLICATION_STATUS_BG,
+} from "../psbUtils";
 
-const STAGE_STATUS = ["PENDING", "SCHEDULED", "PASSED", "FAILED", "SKIPPED"];
-const OVERALL_STATUS = [
-  "PENDING",
-  "SCHEDULED",
-  "IN PROGRESS",
-  "COMPLETED",
-  "FAILED",
-  "CANCELLED",
-];
-const APPLICATION_STATUS = ["Under Review", "Approved", "Rejected"];
-
-const STAGE_COLORS = {
-  PASSED: "text-green-600",
-  COMPLETED: "text-green-600",
-  SCHEDULED: "text-blue-600",
-  PENDING: "text-gray-400",
-  FAILED: "text-red-600",
-  SKIPPED: "text-gray-400",
-  CANCELLED: "text-red-600",
-  "IN PROGRESS": "text-amber-600",
-};
-
-const APPLICATION_STATUS_BG = {
-  Pending: "bg-gray-100 text-gray-600 border-gray-200",
-  "Under Review": "bg-amber-50 text-amber-700 border-amber-200",
-  Approved: "bg-green-50 text-green-700 border-green-200",
-  Rejected: "bg-red-50 text-red-700 border-red-200",
-};
-
-function candidateName(employee) {
-  if (!employee) return "—";
-  return (
-    employee.full_name ||
-    [employee.first_name, employee.last_name].filter(Boolean).join(" ") ||
-    "—"
-  );
-}
+// Statuses that count as "still moving" — used for the summary cards
+// and don't include the two exit states, Completed and Rejected.
+const IN_PROGRESS_STATUSES = APPLICATION_STATUS_OPTIONS.filter(
+  (s) =>
+    s !== "Initial Review/Evaluation" && s !== "Completed" && s !== "Rejected",
+);
 
 export default function PsbApplicationsTable() {
   const [applications, setApplications] = useState([]);
@@ -112,9 +90,13 @@ export default function PsbApplicationsTable() {
 
   const summary = {
     total: applications.length,
-    pending: applications.filter((a) => a.status === "Pending").length,
-    underReview: applications.filter((a) => a.status === "Under Review").length,
-    approved: applications.filter((a) => a.status === "Approved").length,
+    initialReview: applications.filter(
+      (a) => a.status === "Initial Review/Evaluation",
+    ).length,
+    inProgress: applications.filter((a) =>
+      IN_PROGRESS_STATUSES.includes(a.status),
+    ).length,
+    completed: applications.filter((a) => a.status === "Completed").length,
   };
 
   const handleInterviewFieldChange = async (application, field, value) => {
@@ -128,11 +110,10 @@ export default function PsbApplicationsTable() {
           a.id === application.id ? { ...a, interview: updated } : a,
         ),
       );
-      toast.success("INTERVIEW UPDATED.");
+      toast.success("Interview updated.");
     } catch (err) {
       toast.error(
-        err?.response?.data?.message?.toUpperCase() ??
-          "FAILED TO UPDATE INTERVIEW.",
+        err?.response?.data?.message ?? "Failed to update interview.",
       );
     }
   };
@@ -146,13 +127,13 @@ export default function PsbApplicationsTable() {
       setApplications((prev) =>
         prev.map((a) => (a.id === application.id ? updated : a)),
       );
-      toast.success("APPLICATION UPDATED.");
+      toast.success("Application updated.");
     } catch (err) {
       const message =
         err?.response?.data?.errors?.status?.[0] ||
         err?.response?.data?.message ||
-        "FAILED TO UPDATE APPLICATION.";
-      toast.error(message.toUpperCase());
+        "Failed to update application.";
+      toast.error(message);
     }
   };
 
@@ -166,12 +147,9 @@ export default function PsbApplicationsTable() {
       setApplications((prev) =>
         prev.map((a) => (a.id === application.id ? updated : a)),
       );
-      toast.success("REMARKS SAVED.");
+      toast.success("Remarks saved.");
     } catch (err) {
-      toast.error(
-        err?.response?.data?.message?.toUpperCase() ??
-          "FAILED TO SAVE REMARKS.",
-      );
+      toast.error(err?.response?.data?.message ?? "Failed to save remarks.");
     }
   };
 
@@ -188,7 +166,7 @@ export default function PsbApplicationsTable() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error("FAILED TO DOWNLOAD FILE.");
+      toast.error("Failed to download file.");
     }
   };
 
@@ -204,24 +182,24 @@ export default function PsbApplicationsTable() {
     <div className="grid gap-6 p-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <SummaryCard
-          title="TOTAL APPLICATIONS"
+          title="Total Applications"
           value={summary.total}
-          status="ALL PSB APPLICATIONS"
+          status="All PSB applications"
         />
         <SummaryCard
-          title="PENDING"
-          value={summary.pending}
-          status="AWAITING INITIAL REVIEW"
+          title="Initial Review"
+          value={summary.initialReview}
+          status="Awaiting initial review"
         />
         <SummaryCard
-          title="UNDER REVIEW"
-          value={summary.underReview}
-          status="CURRENTLY BEING EVALUATED"
+          title="In Progress"
+          value={summary.inProgress}
+          status="Deliberation or interview stage"
         />
         <SummaryCard
-          title="APPROVED"
-          value={summary.approved}
-          status="SUCCESSFULLY APPROVED"
+          title="Completed"
+          value={summary.completed}
+          status="Successfully completed"
         />
       </div>
 
@@ -230,17 +208,17 @@ export default function PsbApplicationsTable() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead>CANDIDATE</TableHead>
-                <TableHead>ITEM NO.</TableHead>
-                <TableHead>POSITION</TableHead>
-                <TableHead>SUBMITTED</TableHead>
+                <TableHead>Candidate</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead>Plantilla Item No.</TableHead>
+                <TableHead>Submitted</TableHead>
                 <TableHead>HR</TableHead>
-                <TableHead>HEAD</TableHead>
-                <TableHead>FINAL</TableHead>
-                <TableHead>OVERALL</TableHead>
-                <TableHead>STATUS</TableHead>
-                <TableHead>DOCUMENTS</TableHead>
-                <TableHead>REMARKS</TableHead>
+                <TableHead>Head</TableHead>
+                <TableHead>Final</TableHead>
+                <TableHead>Overall</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Documents</TableHead>
+                <TableHead>Remarks</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -250,26 +228,27 @@ export default function PsbApplicationsTable() {
                     colSpan={11}
                     className="py-14 text-center text-sm text-gray-400"
                   >
-                    NO PSB APPLICATIONS FOUND.
+                    No PSB applications found.
                   </TableCell>
                 </TableRow>
               ) : (
                 applications.map((application) => {
                   const interview = application.interview;
-                  const canApprove =
+                  // "Completed" is the pipeline's positive end state, so
+                  // gate it behind a finished interview the same way the
+                  // old "Approve" action was gated.
+                  const canComplete =
                     interview?.overall_status?.toUpperCase() === "COMPLETED";
                   return (
                     <TableRow key={application.id}>
-                      <TableCell className="font-medium uppercase">
+                      <TableCell className="font-medium">
                         {candidateName(application.employee)}
                       </TableCell>
-                      <TableCell className="uppercase">
+                      <TableCell>
                         {application.posting?.base_item_number ?? "—"}
                       </TableCell>
-                      <TableCell className="uppercase">
-                        {application.posting?.title ?? "—"}
-                      </TableCell>
-                      <TableCell className="uppercase">
+                      <TableCell>{application.posting?.title ?? "—"}</TableCell>
+                      <TableCell>
                         {application.submitted_at?.slice(0, 10) ?? "—"}
                       </TableCell>
 
@@ -291,7 +270,7 @@ export default function PsbApplicationsTable() {
                                   <span
                                     className={`text-xs font-medium ${STAGE_COLORS[interview?.[field]?.toUpperCase()] ?? "text-gray-400"}`}
                                   >
-                                    {interview?.[field]?.toUpperCase() || "—"}
+                                    {formatLabel(interview?.[field]) || "—"}
                                   </span>
                                 </SelectValue>
                               </SelectTrigger>
@@ -302,7 +281,7 @@ export default function PsbApplicationsTable() {
                                     value={s}
                                     className="text-xs"
                                   >
-                                    {s}
+                                    {formatLabel(s)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -327,15 +306,14 @@ export default function PsbApplicationsTable() {
                               <span
                                 className={`text-xs font-medium ${STAGE_COLORS[interview?.overall_status?.toUpperCase()] ?? "text-gray-400"}`}
                               >
-                                {interview?.overall_status?.toUpperCase() ||
-                                  "—"}
+                                {formatLabel(interview?.overall_status) || "—"}
                               </span>
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {OVERALL_STATUS.map((s) => (
                               <SelectItem key={s} value={s} className="text-xs">
-                                {s}
+                                {formatLabel(s)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -343,46 +321,41 @@ export default function PsbApplicationsTable() {
                       </TableCell>
 
                       <TableCell>
-                        {application.status === "Pending" ? (
-                          <span
-                            className={`inline-block w-fit rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG.Pending}`}
-                          >
-                            PENDING
-                          </span>
-                        ) : (
-                          <Select
-                            value={application.status}
-                            onValueChange={(val) =>
-                              handleStatusChange(application, val)
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-36 border-0 p-0 text-xs shadow-none focus:ring-0">
-                              <SelectValue>
-                                <span
-                                  className={`rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG.Pending}`}
-                                >
-                                  {application.status.toUpperCase()}
-                                </span>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {APPLICATION_STATUS.map((s) => (
-                                <SelectItem
-                                  key={s}
-                                  value={s}
-                                  className="text-xs"
-                                >
-                                  {s.toUpperCase()}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        {application.status !== "Approved" && !canApprove && (
-                          <p className="mt-1 text-[10px] text-gray-400">
-                            NEEDS COMPLETED INTERVIEW TO APPROVE
-                          </p>
-                        )}
+                        <Select
+                          value={application.status}
+                          onValueChange={(val) =>
+                            handleStatusChange(application, val)
+                          }
+                        >
+                          <SelectTrigger className="h-7 w-40 border-0 p-0 text-xs shadow-none focus:ring-0">
+                            <SelectValue>
+                              <span
+                                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG["Initial Review/Evaluation"]}`}
+                              >
+                                {application.status}
+                              </span>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {APPLICATION_STATUS_OPTIONS.map((s) => (
+                              <SelectItem
+                                key={s}
+                                value={s}
+                                disabled={s === "Completed" && !canComplete}
+                                className="text-xs"
+                              >
+                                {s}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {application.status !== "Completed" &&
+                          application.status !== "Rejected" &&
+                          !canComplete && (
+                            <p className="mt-1 text-[10px] text-gray-400">
+                              Needs completed interview to mark complete
+                            </p>
+                          )}
                       </TableCell>
 
                       <TableCell>
@@ -395,8 +368,8 @@ export default function PsbApplicationsTable() {
                                 className="h-7 gap-1 px-2 text-xs"
                               >
                                 <IconFileText size={13} />
-                                {application.documents.length} DOC
-                                {application.documents.length > 1 ? "S" : ""}
+                                {application.documents.length} Doc
+                                {application.documents.length > 1 ? "s" : ""}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-64 p-1" align="start">
@@ -404,7 +377,7 @@ export default function PsbApplicationsTable() {
                                 <button
                                   key={doc.id}
                                   onClick={() => handleDownload(doc)}
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs uppercase hover:bg-gray-50"
+                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50"
                                 >
                                   <IconFileText
                                     size={13}
@@ -423,7 +396,7 @@ export default function PsbApplicationsTable() {
                           </Popover>
                         ) : (
                           <span className="text-xs italic text-gray-400">
-                            NONE
+                            None
                           </span>
                         )}
                       </TableCell>
@@ -437,7 +410,7 @@ export default function PsbApplicationsTable() {
                               className="h-7 gap-1 px-2 text-xs"
                             >
                               <IconNotes size={13} />
-                              {application.remarks ? "VIEW" : "ADD"}
+                              {application.remarks ? "View" : "Add"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-72 p-3" align="start">
@@ -450,14 +423,14 @@ export default function PsbApplicationsTable() {
                                   [application.id]: e.target.value,
                                 }))
                               }
-                              placeholder="REMARKS FOR THE EMPLOYEE"
+                              placeholder="Remarks for the employee"
                             />
                             <Button
                               size="sm"
                               className="mt-2 w-full"
                               onClick={() => handleSaveRemarks(application)}
                             >
-                              SAVE REMARKS
+                              Save remarks
                             </Button>
                           </PopoverContent>
                         </Popover>

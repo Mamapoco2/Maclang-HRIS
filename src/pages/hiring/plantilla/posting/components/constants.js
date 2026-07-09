@@ -1,6 +1,5 @@
 export const EMP_STATUS = ["Permanent"];
 export const DOC_KEYS = [
-  { key: "resume", label: "Updated Resume" },
   { key: "pds", label: "Personal Data Sheet" },
   { key: "transcript", label: "Transcript of Records" },
   { key: "diploma", label: "Diploma" },
@@ -46,7 +45,6 @@ export const EMPTY_FORM = {
   expected_appointment_date: "",
   status: "Open",
   required_documents: {
-    resume: true,
     pds: true,
     transcript: false,
     diploma: false,
