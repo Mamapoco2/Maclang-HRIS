@@ -14,9 +14,6 @@ function employeeName(employee) {
   );
 }
 
-// Read-only summary of one applicant. No actions here — scheduling and
-// reviewing happen from the main applications table; this drawer is just
-// for looking someone up quickly from the posting.
 function ApplicationCard({ application }) {
   const isDecided =
     application.status === "Completed" || application.status === "Rejected";

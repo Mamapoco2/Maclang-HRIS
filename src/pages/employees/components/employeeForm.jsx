@@ -89,6 +89,24 @@ const positionLabel = (pos) => {
   return slot && title ? `${slot} — ${title}` : slot || title;
 };
 
+const EMPLOYEE_TYPE_PREFIXES = {
+  Plantilla: "RMBGH-",
+  "Contract of Service": "CT-",
+  Consultant: "CS-",
+};
+
+const applyEmployeeNumberPrefix = (currentValue, type) => {
+  const prefix = EMPLOYEE_TYPE_PREFIXES[type] ?? "";
+  let base = currentValue ?? "";
+  for (const p of Object.values(EMPLOYEE_TYPE_PREFIXES)) {
+    if (base.startsWith(p)) {
+      base = base.slice(p.length);
+      break;
+    }
+  }
+  return prefix + base;
+};
+
 // ─── Loader components ────────────────────────────────────────────────────────
 function FormLoader({ label = "Loading employee data..." }) {
   return (
@@ -453,6 +471,12 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     titles.forEach((t) => form.append("title[]", up(t)));
     form.append("gender", up(formData.gender));
     if (avatarFile) form.append("avatar_url", avatarFile);
+
+    // annualSalary is stored as a raw numeric string (e.g. "123185891.00"),
+    // never comma-formatted, so it submits cleanly.
+    if (formData.annualSalary !== "" && formData.annualSalary !== null) {
+      form.append("annual_salary", formData.annualSalary);
+    }
 
     form.append("_sync_parents", "1");
     parents
@@ -931,13 +955,9 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                     </FieldSelect>
 
                     <FieldSelect label="Annual salary" custom>
-                      <input
-                        type="number"
+                      <CurrencyInput
                         value={formData.annualSalary}
-                        onChange={(e) =>
-                          handleChange("annualSalary", e.target.value)
-                        }
-                        className="field-input"
+                        onChange={(v) => handleChange("annualSalary", v)}
                       />
                     </FieldSelect>
 
@@ -961,7 +981,16 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                         <button
                           key={t.value}
                           type="button"
-                          onClick={() => handleChange("employeeType", t.value)}
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employeeType: t.value,
+                              employeeNumber: applyEmployeeNumberPrefix(
+                                prev.employeeNumber,
+                                t.value,
+                              ),
+                            }))
+                          }
                           className={cn(
                             "flex-1 py-2 px-3 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all duration-150",
                             formData.employeeType === t.value
@@ -1047,9 +1076,9 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                           className="sm:col-span-2"
                           custom
                         >
-                          <input
-                            type="text"
+                          <CurrencyInput
                             value={formData.annualSalary}
+                            onChange={() => {}}
                             readOnly
                             className="field-input bg-gray-100 text-gray-500 cursor-default"
                           />
@@ -1400,6 +1429,81 @@ function NativeSelect({ value, onChange, options, placeholder }) {
         </option>
       ))}
     </select>
+  );
+}
+
+// ─── Currency input (live comma formatting, cursor-position safe) ─────────────
+function CurrencyInput({
+  value,
+  onChange,
+  readOnly = false,
+  className = "field-input",
+}) {
+  const inputRef = useRef(null);
+
+  const formatDisplay = (raw) => {
+    if (raw === "" || raw === null || raw === undefined) return "";
+    const parts = String(raw).split(".");
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.length > 1 ? `${intPart}.${parts[1]}` : intPart;
+  };
+
+  const handleChange = (e) => {
+    const input = e.target;
+    const prevValue = input.value;
+    const cursorPos = input.selectionStart;
+
+    // Count digits before cursor in the old (formatted) string
+    const digitsBeforeCursor = prevValue
+      .slice(0, cursorPos)
+      .replace(/[^0-9]/g, "").length;
+
+    // Strip everything except digits and a single decimal point
+    let raw = prevValue.replace(/[^0-9.]/g, "");
+    const firstDot = raw.indexOf(".");
+    if (firstDot !== -1) {
+      raw =
+        raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, "");
+    }
+
+    onChange(raw);
+
+    // Restore cursor position after re-render
+    requestAnimationFrame(() => {
+      if (!inputRef.current) return;
+      const newFormatted = formatDisplay(raw);
+      let count = 0;
+      let pos = newFormatted.length;
+      for (let i = 0; i < newFormatted.length; i++) {
+        if (/[0-9]/.test(newFormatted[i])) count++;
+        if (count === digitsBeforeCursor) {
+          pos = i + 1;
+          break;
+        }
+      }
+      inputRef.current.setSelectionRange(pos, pos);
+    });
+  };
+
+  const handleBlur = () => {
+    if (value === "" || value === null || value === undefined) return;
+    const num = Number(value);
+    if (!isNaN(num)) {
+      onChange(num.toFixed(2));
+    }
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      inputMode="decimal"
+      value={formatDisplay(value)}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      readOnly={readOnly}
+      className={className}
+    />
   );
 }
 
