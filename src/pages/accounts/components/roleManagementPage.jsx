@@ -11,7 +11,7 @@ import {
   updateUserPermissions,
   updateUserRole,
 } from "@/services/accountsService";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/context/authContext";
 import { getEcho } from "@/lib/echo";
 import PermissionsModal from "./permissionModal";
 import { toast } from "sonner";
@@ -66,9 +66,9 @@ export default function RoleManagementPage() {
   useEffect(() => {
     const echo = getEcho();
     if (!echo) return;
-    const channel = echo.channel("permissions-updated");
+    const channel = echo.private("admin.notifications");
     channel.listen(".permissions.updated", () => loadAccounts());
-    return () => echo.leaveChannel("permissions-updated");
+    return () => echo.leaveChannel("admin.notifications");
   }, []);
 
   const loadAccounts = async () => {

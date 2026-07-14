@@ -1,11 +1,30 @@
-const MANAGER_ROLES = ["SuperAdmin", "HR"];
+// src/lib/authHelpers.js
+export function hasPermission(user, permission) {
+  if (!permission) return false;
 
-export function getUserRoleNames(user) {
-  if (!user || !Array.isArray(user.roles)) return [];
-  return user.roles;
+  const userPermissions = Array.isArray(user?.permissions)
+    ? user.permissions
+    : [];
+
+  return userPermissions.includes(permission);
 }
 
-export function hasManagerAccess(user) {
-  const roleNames = getUserRoleNames(user).map((r) => r.toUpperCase());
-  return MANAGER_ROLES.some((r) => roleNames.includes(r.toUpperCase()));
+export function hasAnyPermission(user, permissions) {
+  if (!Array.isArray(permissions) || permissions.length === 0) return false;
+
+  const userPermissions = Array.isArray(user?.permissions)
+    ? user.permissions
+    : [];
+
+  return permissions.some((p) => userPermissions.includes(p));
+}
+
+export function hasAllPermissions(user, permissions) {
+  if (!Array.isArray(permissions) || permissions.length === 0) return false;
+
+  const userPermissions = Array.isArray(user?.permissions)
+    ? user.permissions
+    : [];
+
+  return permissions.every((p) => userPermissions.includes(p));
 }

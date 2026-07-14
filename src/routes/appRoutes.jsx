@@ -1,4 +1,3 @@
-// src/routes/appRoutes.jsx
 import {
   BrowserRouter as Router,
   Routes,
@@ -40,6 +39,7 @@ import Announcement from "../pages/announcement/announcementPage";
 import ProtectedRoute from "./protectedRoutes";
 import PublicRoute from "./publicRoute";
 import PermissionRoute from "./permissionRoute";
+import PlantillaApplicantGate from "./plantillaApplicantGate";
 import Updates from "../components/update";
 import Settings from "../pages/settings/settingsPage";
 import AccountPage from "../pages/account/accountPage";
@@ -128,11 +128,19 @@ function AppRoutes() {
               }
             />
 
-            {/* ── Hiring ── */}
+            {/* ── Hiring — Plantilla ── */}
+            <Route
+              path="/hiring/plantilla/positions"
+              element={
+                <PermissionRoute permission="hiring.plantilla.postings.view">
+                  <PlantillaPositionsPage />
+                </PermissionRoute>
+              }
+            />
             <Route
               path="/hiring/plantilla/applications"
               element={
-                <PermissionRoute permission="hiring.view">
+                <PermissionRoute permission="hiring.plantilla.applications.view">
                   <Applications />
                 </PermissionRoute>
               }
@@ -141,15 +149,53 @@ function AppRoutes() {
               path="/hiring/plantilla/calendar"
               element={
                 <PermissionRoute permission="hiring.view">
-                  <Calendar />
+                  <PlantillaApplicantGate>
+                    <Calendar />
+                  </PlantillaApplicantGate>
                 </PermissionRoute>
               }
             />
             <Route
               path="/hiring/plantilla/onboarding"
               element={
-                <PermissionRoute permission="hiring.view">
+                <PermissionRoute permission="hiring.plantilla.onboarding.view">
                   <OnboardingPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/hiring/plantilla/my-applications"
+              element={
+                <PermissionRoute permission={null}>
+                  <PlantillaApplicantGate>
+                    <MyApplicationsPage />
+                  </PlantillaApplicantGate>
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── Hiring — Non-Plantilla ── */}
+            <Route
+              path="/hiring/non-plantilla/applicants"
+              element={
+                <PermissionRoute permission="hiring.nonplantilla.applicants.view">
+                  <NonPlantillaApplicantsPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/hiring/non-plantilla/applications"
+              element={
+                <PermissionRoute permission="hiring.nonplantilla.applications.view">
+                  <NonPlantillaApplicationsPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/hiring/non-plantilla/onboarding"
+              element={
+                <PermissionRoute permission="hiring.nonplantilla.onboarding.view">
+                  <NonPlantillaOnboardingPage />
                 </PermissionRoute>
               }
             />
@@ -158,7 +204,7 @@ function AppRoutes() {
             <Route
               path="/leaveDashboard"
               element={
-                <PermissionRoute permission="leave.view">
+                <PermissionRoute permission="leave.dashboard.view">
                   <Leave />
                 </PermissionRoute>
               }
@@ -166,7 +212,7 @@ function AppRoutes() {
             <Route
               path="/leaveApproval"
               element={
-                <PermissionRoute permission="leave.view">
+                <PermissionRoute permission="leave.approval.view">
                   <LeaveApproval />
                 </PermissionRoute>
               }
@@ -174,7 +220,7 @@ function AppRoutes() {
             <Route
               path="/leaveBalance"
               element={
-                <PermissionRoute permission="leave.view">
+                <PermissionRoute permission="leave.balance.view">
                   <LeaveBalance />
                 </PermissionRoute>
               }
@@ -182,7 +228,7 @@ function AppRoutes() {
             <Route
               path="/leaveCalendar"
               element={
-                <PermissionRoute permission="leave.view">
+                <PermissionRoute permission="leave.calendar.view">
                   <LeaveCalendar />
                 </PermissionRoute>
               }
@@ -190,7 +236,7 @@ function AppRoutes() {
             <Route
               path="/leaveRequest"
               element={
-                <PermissionRoute permission="leave.view">
+                <PermissionRoute permission="leave.request.view">
                   <LeaveRequest />
                 </PermissionRoute>
               }
@@ -198,7 +244,7 @@ function AppRoutes() {
             <Route
               path="/NewLeaveRequest"
               element={
-                <PermissionRoute permission="leave.view">
+                <PermissionRoute permission="leave.request.manage">
                   <NewLeaveRequest />
                 </PermissionRoute>
               }
@@ -278,7 +324,7 @@ function AppRoutes() {
             <Route
               path="/PerformancePeriod"
               element={
-                <PermissionRoute permission="spms.view">
+                <PermissionRoute permission="spms.manage">
                   <PerformancePeriod />
                 </PermissionRoute>
               }
@@ -394,45 +440,23 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
-            <Route path="/audit-logs" element={<AuditLogsPage />} />
-            <Route path="/renewals" element={<RenewalsPage />} />
+
+            {/* ── Audit Logs ── */}
             <Route
-              path="/hiring/plantilla/positions"
+              path="/audit-logs"
               element={
-                <PermissionRoute permission="hiring.view">
-                  <PlantillaPositionsPage />
+                <PermissionRoute permission="audit_logs.view">
+                  <AuditLogsPage />
                 </PermissionRoute>
               }
             />
+
+            {/* ── Renewals ── */}
             <Route
-              path="/hiring/non-plantilla/applicants"
+              path="/renewals"
               element={
-                <PermissionRoute permission="hiring.view">
-                  <NonPlantillaApplicantsPage />
-                </PermissionRoute>
-              }
-            />
-            <Route
-              path="/hiring/non-plantilla/applications"
-              element={
-                <PermissionRoute permission="hiring.view">
-                  <NonPlantillaApplicationsPage />
-                </PermissionRoute>
-              }
-            />
-            <Route
-              path="/hiring/non-plantilla/onboarding"
-              element={
-                <PermissionRoute permission="hiring.view">
-                  <NonPlantillaOnboardingPage />
-                </PermissionRoute>
-              }
-            />
-            <Route
-              path="/hiring/plantilla/my-applications"
-              element={
-                <PermissionRoute permission="hiring.view">
-                  <MyApplicationsPage />
+                <PermissionRoute permission="renewals.view">
+                  <RenewalsPage />
                 </PermissionRoute>
               }
             />

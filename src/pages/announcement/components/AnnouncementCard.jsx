@@ -44,11 +44,12 @@ export function AnnouncementCard({
   onMarkedRead,
   toast,
 }) {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const isOwnPost = currentUser?.id === ann.author.id;
-  const isSuperAdmin = !!currentUser?.roles?.includes?.("SuperAdmin");
 
-  const canManageThis = canManage && (isOwnPost || isSuperAdmin);
+  const canManageAll = hasPermission("announcements.manage.all");
+
+  const canManageThis = canManage && (isOwnPost || canManageAll);
 
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -197,15 +198,9 @@ export function AnnouncementCard({
             )}
           </div>
 
-          {(() => {
-            const postingIds =
-              ann.plantillaPostingIds ??
-              ann.plantilla_posting_ids ??
-              ((ann.plantillaPostingId ?? ann.plantilla_posting_id)
-                ? [ann.plantillaPostingId ?? ann.plantilla_posting_id]
-                : []);
-            return <LinkedPostingsList postingIds={postingIds} />;
-          })()}
+          <LinkedPostingsList
+            postingIds={(ann.plantillaPostings ?? []).map((p) => p.id)}
+          />
 
           {attachments.length > 0 && (
             <div>

@@ -1,4 +1,3 @@
-//src/routes/publicRoute.jsx
 import { Navigate, Outlet } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "@/context/authContext";
@@ -9,7 +8,8 @@ export default function PublicRoute() {
   const firstAccessibleRoute = useFirstAccessibleRoute();
 
   if (loading) return null;
-  if (isAuthenticated) return <Navigate to="/Announcement" replace />;
+
+  if (isAuthenticated) return <Navigate to={firstAccessibleRoute} replace />;
 
   return <Outlet />;
 }

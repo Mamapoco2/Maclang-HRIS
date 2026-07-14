@@ -8,7 +8,6 @@ export default function ProtectedRoute() {
 
   if (loading) return null;
 
-  // Allow the modal to render on top of the current page
   if (sessionDisplaced) return <Outlet />;
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;

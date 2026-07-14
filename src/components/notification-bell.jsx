@@ -17,6 +17,7 @@ import {
 import notificationService from "@/services/notificationService";
 import getEcho from "@/lib/echo";
 import notificationSound from "@/assets/ringtone.mp3";
+import { useAuth } from "@/hooks/useAuth";
 
 const TYPE_DOT = {
   leave: "bg-orange-400",
@@ -24,6 +25,8 @@ const TYPE_DOT = {
   announcement: "bg-purple-400",
   training: "bg-cyan-400",
 };
+
+const ADMIN_ROLES = ["SuperAdmin", "HR", "Admin"];
 
 // ─── shared audio context unlocked on first user gesture ─────────────────────
 let audioCtx = null;
@@ -123,6 +126,9 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const isAdmin = !!user?.roles?.some?.((r) => ADMIN_ROLES.includes(r));
 
   // ── unlock AudioContext on any user interaction ────────────────────────────
   useEffect(() => {
@@ -158,34 +164,45 @@ export function NotificationBell() {
     const interval = setInterval(fetchNotifications, 30000);
 
     const echo = getEcho();
+    let channelNames = [];
+
     if (echo) {
+      const handleIncoming = (payload) => {
+        const currentUserId = parseInt(localStorage.getItem("user_id") ?? "0");
+        if (
+          payload.posted_by_user_id &&
+          payload.posted_by_user_id === currentUserId
+        )
+          return;
+
+        // ✅ Play sound immediately from the WebSocket event — no fetch latency
+        if (payload.type === "account_pending") {
+          playAccountSound();
+        }
+
+        fetchNotifications();
+      };
+
       echo
-        .channel("notifications")
-        .listen(".notification.created", (payload) => {
-          const currentUserId = parseInt(
-            localStorage.getItem("user_id") ?? "0",
-          );
-          if (
-            payload.posted_by_user_id &&
-            payload.posted_by_user_id === currentUserId
-          )
-            return;
+        .private("notifications")
+        .listen(".notification.created", handleIncoming);
+      channelNames.push("notifications");
 
-          // ✅ Play sound immediately from the WebSocket event — no fetch latency
-          if (payload.type === "account_pending") {
-            playAccountSound();
-          }
-
-          // Fetch in background to update the notification list
-          fetchNotifications();
-        });
+      if (isAdmin) {
+        echo
+          .private("admin.notifications")
+          .listen(".notification.created", handleIncoming);
+        channelNames.push("admin.notifications");
+      }
     }
 
     return () => {
       clearInterval(interval);
-      if (echo) echo.leaveChannel("notifications");
+      if (echo) {
+        channelNames.forEach((name) => echo.leave(name));
+      }
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, isAdmin]);
 
   // ── close on outside click ─────────────────────────────────────────────────
   useEffect(() => {
@@ -229,9 +246,10 @@ export function NotificationBell() {
       } else {
         navigate("/trainings");
       }
+    } else if (type === "announcement") {
+      setOpen(false);
+      navigate("/Announcement");
     }
-    // add more `else if (type === "...")` branches here for other
-    // notification types that should also navigate somewhere
   };
 
   return (
@@ -296,7 +314,7 @@ export function NotificationBell() {
                     onClick={() => handleNotificationClick(n)}
                     className={`w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-muted/50 transition-colors ${
                       !n.read ? "bg-blue-50/60 dark:bg-blue-950/20" : ""
-                    } ${normalizedType === "training" ? "cursor-pointer" : ""}`}
+                    } ${normalizedType === "training" || normalizedType === "announcement" ? "cursor-pointer" : ""}`}
                   >
                     <span
                       className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[normalizedType] ?? "bg-gray-400"}`}

@@ -9,8 +9,6 @@ import {
   ChevronsUpDown,
   Camera,
   X,
-  Plus,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   Save,
@@ -141,14 +139,13 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     stepNumber: "",
     sgLevel: "",
     annualSalary: "",
+    monthlySalary: "",
+    salaryOverride: false,
     cosPositionId: "",
     consultantPositionId: "",
   };
 
   const [formData, setFormData] = useState(initialState);
-  const [parents, setParents] = useState([]);
-  const [allEmployees, setAllEmployees] = useState([]);
-  const [openIndex, setOpenIndex] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [allDivisions, setAllDivisions] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -159,8 +156,10 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const [avatarFile, setAvatarFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedPositionLabel, setSelectedPositionLabel] = useState("");
+  const [salaryInputSource, setSalaryInputSource] = useState(null);
   const fileInputRef = useRef(null);
-  const isInitialMount = useRef(true);
+  const hasHydratedRef = useRef(false);
+  const prevEmployeeTypeRef = useRef(formData.employeeType);
 
   // ── Loading states ──────────────────────────────────────────────────────
   const [initializing, setInitializing] = useState(true);
@@ -179,6 +178,32 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       Array.isArray(formData.department) &&
       formData.department.includes(String(d.id)),
   );
+
+  // ─── Salary helpers ──────────────────────────────────────────────────────
+  const toNumber = (v) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const handleAnnualSalaryChange = (raw) => {
+    setSalaryInputSource("annual");
+    const n = toNumber(raw);
+    setFormData((prev) => ({
+      ...prev,
+      annualSalary: raw,
+      monthlySalary: n !== null ? (n / 12).toFixed(2) : prev.monthlySalary,
+    }));
+  };
+
+  const handleMonthlySalaryChange = (raw) => {
+    setSalaryInputSource("monthly");
+    const n = toNumber(raw);
+    setFormData((prev) => ({
+      ...prev,
+      monthlySalary: raw,
+      annualSalary: n !== null ? (n * 12).toFixed(2) : prev.annualSalary,
+    }));
+  };
 
   // ─── Effects ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -232,7 +257,14 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           step?.annual_salary ??
           position?.salary_grade?.annual_salary ??
           position?.salaryGrade?.annual_salary ??
+          employee.annual_salary ??
           "";
+
+        const monthlySalaryValue =
+          employee.monthly_salary ??
+          (annualSalaryValue !== ""
+            ? (Number(annualSalaryValue) / 12).toFixed(2)
+            : "");
 
         setSelectedPositionLabel(positionLabel(position));
 
@@ -240,6 +272,10 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           (Array.isArray(val) ? val : val ? [val] : []).map((v) =>
             String(v).toUpperCase(),
           );
+
+        const nextEmployeeType = normalizeEmployeeType(
+          employee.employment_type,
+        );
 
         setFormData({
           employeeNumber: employee.employee_number ?? "",
@@ -256,7 +292,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
             ? String(employee.info.gender).toUpperCase()
             : "",
           department: safeDeptIds,
-          employeeType: normalizeEmployeeType(employee.employment_type),
+          employeeType: nextEmployeeType,
           status: employee.employment_status
             ? String(employee.employment_status).toUpperCase()
             : "",
@@ -265,6 +301,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           stepNumber: step?.step != null ? String(step.step) : "",
           sgLevel: sgValue ? String(sgValue) : "",
           annualSalary: annualSalaryValue ?? "",
+          monthlySalary: monthlySalaryValue,
+          salaryOverride: !!employee.salary_override,
           cosPositionId: employee.cos_position_id
             ? String(employee.cos_position_id)
             : "",
@@ -273,11 +311,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
             : "",
         });
 
-        if (employee.parents?.length) {
-          setParents(employee.parents.map((p) => ({ parentId: String(p.id) })));
-        } else {
-          setParents([]);
-        }
+        prevEmployeeTypeRef.current = nextEmployeeType;
 
         if (employee.profile) setPdsValues(employee.profile);
       } catch (err) {
@@ -285,6 +319,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         toast.error("Failed to load employee data.");
       } finally {
         setInitializing(false);
+        hasHydratedRef.current = true;
       }
     };
     fetchAndInit();
@@ -294,10 +329,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     employeeService
       .getDivisions()
       .then((res) => setAllDivisions(res.data ?? res));
-  }, []);
-
-  useEffect(() => {
-    employeeService.getAllEmployees().then((res) => setAllEmployees(res.data));
   }, []);
 
   useEffect(() => {
@@ -313,7 +344,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           stepIncrementId: "",
           stepNumber: "",
           sgLevel: "",
-          annualSalary: "",
         }));
       }
       return;
@@ -342,11 +372,11 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         });
       })
       .catch(() => setSteps([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.plantillaPositionId, positions]);
 
   useEffect(() => {
     if (!formData.stepIncrementId) return;
+    if (formData.salaryOverride) return; // manual pay in effect, don't clobber
     const step = steps.find(
       (s) => String(s.id) === String(formData.stepIncrementId),
     );
@@ -354,31 +384,41 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     setFormData((prev) => ({
       ...prev,
       annualSalary: step.annual_salary ?? "",
+      monthlySalary: step.monthly_salary ?? "",
       stepNumber: String(step.step),
     }));
-  }, [formData.stepIncrementId, steps]);
+  }, [formData.stepIncrementId, steps, formData.salaryOverride]);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (!hasHydratedRef.current) {
+      prevEmployeeTypeRef.current = formData.employeeType;
       return;
     }
-    if (formData.employeeType !== "Plantilla") {
-      setFormData((prev) => ({
-        ...prev,
-        plantillaPositionId: "",
-        stepIncrementId: "",
-        stepNumber: "",
-        sgLevel: "",
-        annualSalary: "",
-      }));
-      setSelectedPositionLabel("");
-      setSteps([]);
-    }
-    if (formData.employeeType !== "Contract of Service")
+
+    const prevType = prevEmployeeTypeRef.current;
+    const newType = formData.employeeType;
+
+    if (prevType === newType) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      plantillaPositionId: "",
+      stepIncrementId: "",
+      stepNumber: "",
+      sgLevel: "",
+      salaryOverride: false,
+    }));
+    setSelectedPositionLabel("");
+    setSteps([]);
+
+    if (newType !== "Contract of Service") {
       setFormData((prev) => ({ ...prev, cosPositionId: "" }));
-    if (formData.employeeType !== "Consultant")
+    }
+    if (newType !== "Consultant") {
       setFormData((prev) => ({ ...prev, consultantPositionId: "" }));
+    }
+
+    prevEmployeeTypeRef.current = newType;
   }, [formData.employeeType]);
 
   // ─── Handlers ────────────────────────────────────────────────────────────
@@ -412,18 +452,9 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       stepIncrementId: "",
       stepNumber: "",
       annualSalary: "",
+      monthlySalary: "",
     }));
   };
-
-  const addParent = () => setParents((prev) => [...prev, { parentId: "" }]);
-  const updateParent = (index, value) => {
-    setParents((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, parentId: value } : p)),
-    );
-    setOpenIndex(null);
-  };
-  const removeParent = (index) =>
-    setParents((prev) => prev.filter((_, i) => i !== index));
 
   // ─── Submit ──────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
@@ -472,16 +503,23 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     form.append("gender", up(formData.gender));
     if (avatarFile) form.append("avatar_url", avatarFile);
 
-    // annualSalary is stored as a raw numeric string (e.g. "123185891.00"),
-    // never comma-formatted, so it submits cleanly.
+    // Monthly/Annual are stored as raw numeric strings (e.g. "123185891.00"),
+    // never comma-formatted, so they submit cleanly.
+    if (formData.monthlySalary !== "" && formData.monthlySalary !== null) {
+      form.append("monthly_salary", formData.monthlySalary);
+    }
     if (formData.annualSalary !== "" && formData.annualSalary !== null) {
       form.append("annual_salary", formData.annualSalary);
     }
-
-    form.append("_sync_parents", "1");
-    parents
-      .filter((p) => p.parentId)
-      .forEach((p) => form.append("parent_ids[]", p.parentId));
+    form.append(
+      "salary_override",
+      formData.employeeType === "Plantilla" && formData.salaryOverride
+        ? "1"
+        : "0",
+    );
+    if (salaryInputSource) {
+      form.append("salary_input_source", salaryInputSource);
+    }
 
     const PDS_TABLE_KEYS = [
       "children",
@@ -540,10 +578,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   };
 
   // ─── Derived ─────────────────────────────────────────────────────────────
-  const parentCandidates = allEmployees.filter(
-    (emp) => emp.id !== employee?.id,
-  );
-
   const selectedPosition =
     Array.isArray(positions) && positions.length > 0
       ? positions.find(
@@ -954,13 +988,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                       />
                     </FieldSelect>
 
-                    <FieldSelect label="Annual salary" custom>
-                      <CurrencyInput
-                        value={formData.annualSalary}
-                        onChange={(v) => handleChange("annualSalary", v)}
-                      />
-                    </FieldSelect>
-
                     <FieldSelect label="Status">
                       <NativeSelect
                         value={formData.status}
@@ -1002,6 +1029,76 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Compensation block — applies to all employment types */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3 mb-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                        Compensation
+                      </p>
+                      {formData.employeeType === "Plantilla" && (
+                        <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={formData.salaryOverride}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                salaryOverride: e.target.checked,
+                              }))
+                            }
+                            className="w-3.5 h-3.5 rounded border-gray-300"
+                          />
+                          Override computed salary
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <FieldSelect label="Gross salary" custom>
+                        <CurrencyInput
+                          value={formData.monthlySalary}
+                          onChange={handleMonthlySalaryChange}
+                          readOnly={
+                            formData.employeeType === "Plantilla" &&
+                            !formData.salaryOverride
+                          }
+                          className={cn(
+                            "field-input",
+                            formData.employeeType === "Plantilla" &&
+                              !formData.salaryOverride &&
+                              "bg-gray-100 text-gray-500 cursor-default",
+                          )}
+                        />
+                      </FieldSelect>
+
+                      <FieldSelect label="Annual salary" custom>
+                        <CurrencyInput
+                          value={formData.annualSalary}
+                          onChange={handleAnnualSalaryChange}
+                          readOnly={
+                            formData.employeeType === "Plantilla" &&
+                            !formData.salaryOverride
+                          }
+                          className={cn(
+                            "field-input",
+                            formData.employeeType === "Plantilla" &&
+                              !formData.salaryOverride &&
+                              "bg-gray-100 text-gray-500 cursor-default",
+                          )}
+                        />
+                      </FieldSelect>
+                    </div>
+
+                    {formData.employeeType === "Plantilla" &&
+                      !formData.salaryOverride && (
+                        <p className="text-[10px] text-gray-400 normal-case">
+                          Auto-computed from the assigned position's step
+                          increment. Check "Override computed salary" to enter a
+                          custom amount.
+                        </p>
+                      )}
                   </div>
 
                   {/* Plantilla block */}
@@ -1070,19 +1167,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                             }))}
                           />
                         </FieldSelect>
-
-                        <FieldSelect
-                          label="Annual salary"
-                          className="sm:col-span-2"
-                          custom
-                        >
-                          <CurrencyInput
-                            value={formData.annualSalary}
-                            onChange={() => {}}
-                            readOnly
-                            className="field-input bg-gray-100 text-gray-500 cursor-default"
-                          />
-                        </FieldSelect>
                       </div>
                     </div>
                   )}
@@ -1136,95 +1220,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                       </FieldSelect>
                     </div>
                   )}
-                </FormSection>
-
-                {/* ── Parent Assignment ──────────────────────────────────────── */}
-                <FormSection label="Parent assignment">
-                  <div className="space-y-2 mb-3">
-                    {parents.map((parent, index) => {
-                      const selectedEmployee = parentCandidates.find(
-                        (emp) => String(emp.id) === parent.parentId,
-                      );
-                      return (
-                        <div key={index} className="flex gap-2 items-center">
-                          <Popover
-                            open={openIndex === index}
-                            onOpenChange={(open) =>
-                              setOpenIndex(open ? index : null)
-                            }
-                          >
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className={cn(
-                                  "flex-1 field-input flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors",
-                                  !selectedEmployee && "text-gray-400",
-                                )}
-                              >
-                                <span className="truncate uppercase text-sm">
-                                  {selectedEmployee
-                                    ? selectedEmployee.full_name
-                                    : "Select employee"}
-                                </span>
-                                <ChevronsUpDown className="w-3.5 h-3.5 opacity-50 flex-shrink-0 ml-2" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-72 p-0">
-                              <Command>
-                                <CommandInput placeholder="Search employee..." />
-                                <CommandEmpty>No employee found.</CommandEmpty>
-                                <CommandGroup className="max-h-56 overflow-y-auto">
-                                  {parentCandidates
-                                    .filter(
-                                      (emp) =>
-                                        !parents
-                                          .map((p) => p.parentId)
-                                          .includes(String(emp.id)) ||
-                                        String(emp.id) === parent.parentId,
-                                    )
-                                    .map((emp) => (
-                                      <CommandItem
-                                        key={emp.id}
-                                        value={emp.full_name}
-                                        className="uppercase"
-                                        onSelect={() =>
-                                          updateParent(index, String(emp.id))
-                                        }
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 w-4 h-4 flex-shrink-0",
-                                            parent.parentId === String(emp.id)
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        {emp.full_name}
-                                      </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <button
-                            type="button"
-                            onClick={() => removeParent(index)}
-                            className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all duration-150 flex-shrink-0"
-                            aria-label="Remove parent"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addParent}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 border border-dashed border-gray-200 hover:border-gray-400 rounded-lg px-3 py-2 transition-all duration-150"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add parent
-                  </button>
                 </FormSection>
               </>
             )}

@@ -43,8 +43,6 @@ import {
   APPLICATION_STATUS_BG,
 } from "../psbUtils";
 
-// Statuses that count as "still moving" — used for the summary cards
-// and don't include the two exit states, Completed and Rejected.
 const IN_PROGRESS_STATUSES = APPLICATION_STATUS_OPTIONS.filter(
   (s) =>
     s !== "Initial Review/Evaluation" && s !== "Completed" && s !== "Rejected",
@@ -234,9 +232,6 @@ export default function PsbApplicationsTable() {
               ) : (
                 applications.map((application) => {
                   const interview = application.interview;
-                  // "Completed" is the pipeline's positive end state, so
-                  // gate it behind a finished interview the same way the
-                  // old "Approve" action was gated.
                   const canComplete =
                     interview?.overall_status?.toUpperCase() === "COMPLETED";
                   return (

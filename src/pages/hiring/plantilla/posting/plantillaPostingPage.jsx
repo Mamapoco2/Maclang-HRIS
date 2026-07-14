@@ -30,7 +30,8 @@ import { toast } from "sonner";
 import api from "@/api/api";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { AuthContext } from "@/context/authContext";
-import { hasManagerAccess } from "@/lib/authHelpers";
+import { hasPermission } from "@/lib/authHelpers";
+import { PERMISSIONS } from "@/constants/permissions";
 
 import { Button, Input, Select, Modal } from "./components/ui";
 import { StatCard, StatsSkeleton } from "./components/StatCard";
@@ -65,9 +66,11 @@ function sanitizeCsvCell(value) {
 }
 
 export default function PlantillaPostingPage() {
-  const { user } = useContext(AuthContext) || {};
+  const { user, hasRole } = useContext(AuthContext) || {};
 
-  const isAdmin = hasManagerAccess(user);
+  const isAdmin = hasPermission(user, PERMISSIONS.PLANTILLA_POSTINGS_MANAGE);
+  const canViewSummary =
+    hasRole("SuperAdmin") || hasRole("Admin") || hasRole("HR");
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +134,7 @@ export default function PlantillaPostingPage() {
         if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED")
           return;
         console.error(err);
-        toast?.error?.("Hindi ma-load ang mga plantilla postings.");
+        toast?.error?.("Failed to load plantilla postings.");
       } finally {
         setLoading(false);
       }
@@ -147,17 +150,26 @@ export default function PlantillaPostingPage() {
 
   useEffect(() => {
     api
-      .get("/departments")
+      .get("/departments/options")
       .then((res) => setDepartments(res.data?.data ?? res.data ?? []))
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        toast?.error?.("Failed to load office options.");
+      });
     api
-      .get("/divisions")
+      .get("/divisions/options")
       .then((res) => setDivisions(res.data?.data ?? res.data ?? []))
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        toast?.error?.("Failed to load division options.");
+      });
     api
-      .get("/salary-grades")
+      .get("/salary-grades/options")
       .then((res) => setSalaryGrades(res.data?.data ?? res.data ?? []))
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        toast?.error?.("Failed to load salary grade options.");
+      });
 
     if (isAdmin) {
       plantillaPostingService
@@ -221,12 +233,12 @@ export default function PlantillaPostingPage() {
     setDeleting(true);
     try {
       await plantillaPostingService.deletePosting(deleteItem.id);
-      toast?.success?.("Naalis na ang posting.");
+      toast?.success?.("Posting removed.");
       setDeleteItem(null);
       loadPostings();
     } catch (err) {
       toast?.error?.(
-        err?.response?.data?.message ?? "Hindi na-delete ang posting.",
+        err?.response?.data?.message ?? "Failed to delete posting.",
       );
     } finally {
       setDeleting(false);
@@ -317,42 +329,46 @@ export default function PlantillaPostingPage() {
             )}
           </div>
         </div>
-        <div className="mt-6 min-w-0">
-          {loading ? (
-            <StatsSkeleton />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                icon={Briefcase}
-                label="Total Vacancies"
-                value={stats.totalVacancies}
-                sub="Across all postings"
-                tone="indigo"
-              />
-              <StatCard
-                icon={CheckCircle2}
-                label="Open Positions"
-                value={stats.open}
-                sub="Currently accepting applicants"
-                tone="emerald"
-              />
-              <StatCard
-                icon={Clock}
-                label="Closing Soon"
-                value={stats.closingSoon}
-                sub="Closing within the week"
-                tone="amber"
-              />
-              <StatCard
-                icon={Users}
-                label="Total Applicants"
-                value={stats.totalApplicants}
-                sub="Submitted applications"
-                tone="sky"
-              />
-            </div>
-          )}
-        </div>
+
+        {canViewSummary && (
+          <div className="mt-6 min-w-0">
+            {loading ? (
+              <StatsSkeleton />
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard
+                  icon={Briefcase}
+                  label="Total Vacancies"
+                  value={stats.totalVacancies}
+                  sub="Across all postings"
+                  tone="indigo"
+                />
+                <StatCard
+                  icon={CheckCircle2}
+                  label="Open Positions"
+                  value={stats.open}
+                  sub="Currently accepting applicants"
+                  tone="emerald"
+                />
+                <StatCard
+                  icon={Clock}
+                  label="Closing Soon"
+                  value={stats.closingSoon}
+                  sub="Closing within the week"
+                  tone="amber"
+                />
+                <StatCard
+                  icon={Users}
+                  label="Total Applicants"
+                  value={stats.totalApplicants}
+                  sub="Submitted applications"
+                  tone="sky"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-6 min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative min-w-0 flex-1">
@@ -709,13 +725,15 @@ export default function PlantillaPostingPage() {
               await plantillaPostingService.createPosting(data);
             else await plantillaPostingService.updatePosting(data.id, data);
             toast?.success?.(
-              mode === "create" ? "Naipost na." : "Na-update na.",
+              mode === "create"
+                ? "Posted successfully."
+                : "Updated successfully.",
             );
             setEditItem(undefined);
             loadPostings();
           } catch (err) {
             toast?.error?.(
-              err?.response?.data?.message ?? "May error sa pag-save.",
+              err?.response?.data?.message ?? "An error occurred while saving.",
             );
             throw err;
           }

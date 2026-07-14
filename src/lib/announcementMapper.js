@@ -51,7 +51,10 @@ export function mapAnnouncement(a) {
     description: a.description,
     priority: a.priority,
     category: a.category,
-    plantillaPostingId: a.plantilla_posting_id,
+    plantillaPostings: (a.plantilla_postings ?? []).map((p) => ({
+      id: p.id,
+      title: p.title,
+    })),
     author: {
       id: a.creator?.id,
       name: a.creator?.name ?? "Unknown",

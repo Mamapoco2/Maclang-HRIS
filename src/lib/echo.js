@@ -1,3 +1,4 @@
+//src/lib/echo.js
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 import { getToken } from "@/lib/tokenStorage";
