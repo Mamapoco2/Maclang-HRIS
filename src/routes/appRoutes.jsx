@@ -9,7 +9,7 @@ import { useContext } from "react";
 import { AuthContext } from "@/context/authContext";
 import { useFirstAccessibleRoute } from "../hooks/useFirstAccessibleRoute";
 
-import MainLayout from "../layout/layout";
+import RoleBasedLayout from "../layout/roleBasedLayout";
 import Dashboard from "../pages/dashboard/dashboard";
 import Employee from "../pages/employees/components/employeePage";
 import Login from "../pages/login/components/loginPage";
@@ -88,7 +88,7 @@ function AppRoutes() {
           <Route
             element={
               <ProfileGate>
-                <MainLayout />
+                <RoleBasedLayout />
               </ProfileGate>
             }
           >

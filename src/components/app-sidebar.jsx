@@ -323,10 +323,6 @@ const NAV_MAIN = [
     permission: "accounts.manage",
     items: [
       {
-        title: "Role Management",
-        permission: "accounts.manage",
-      },
-      {
         title: "Accounts Management",
         url: "/accounts",
         permission: "accounts.view",
