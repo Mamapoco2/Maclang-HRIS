@@ -1,11 +1,46 @@
 // src/layout/userLayout.jsx
+import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { UserSidebar } from "@/components/user-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { IdleWarningDialog } from "@/components/IdleWarningDialog";
+import { WhatsNewModal } from "@/components/update";
+import { fetchReleases } from "@/services/releaseService";
+
+const WHATS_NEW_KEY = "whats_new_last_seen_id";
 
 export default function UserLayout() {
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [latestId, setLatestId] = useState(null);
+
+  useEffect(() => {
+    async function checkForUpdates() {
+      try {
+        const res = await fetchReleases({ page: 1, perPage: 1 });
+        const latest = res.data?.[0];
+        if (!latest) return;
+
+        const seenId = localStorage.getItem(WHATS_NEW_KEY);
+        setLatestId(latest.id);
+
+        if (String(seenId) !== String(latest.id)) {
+          setShowWhatsNew(true);
+        }
+      } catch (err) {
+        console.error("Failed to check for new releases:", err);
+      }
+    }
+    checkForUpdates();
+  }, []);
+
+  const handleClose = () => {
+    if (latestId != null) {
+      localStorage.setItem(WHATS_NEW_KEY, String(latestId));
+    }
+    setShowWhatsNew(false);
+  };
+
   return (
     <SidebarProvider
       style={{
@@ -21,6 +56,7 @@ export default function UserLayout() {
         </div>
       </SidebarInset>
       <IdleWarningDialog />
+      <WhatsNewModal open={showWhatsNew} onClose={handleClose} />
     </SidebarProvider>
   );
 }

@@ -8,21 +8,38 @@ import { IdleWarningDialog } from "@/components/IdleWarningDialog";
 import OrientationModal from "@/components/Orientation-modal";
 import { WhatsNewModal } from "@/components/update";
 import ChatModal from "../pages/aiChatbot/aiChatBot";
+import { fetchReleases } from "@/services/releaseService";
 
-const WHATS_NEW_KEY = "whats_new_seen_4.3.0";
+const WHATS_NEW_KEY = "whats_new_last_seen_id";
 
 export default function MainLayout() {
   const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [latestId, setLatestId] = useState(null);
 
   useEffect(() => {
-    const hasSeen = localStorage.getItem(WHATS_NEW_KEY);
-    if (!hasSeen) {
-      setShowWhatsNew(true);
+    async function checkForUpdates() {
+      try {
+        const res = await fetchReleases({ page: 1, perPage: 1 });
+        const latest = res.data?.[0];
+        if (!latest) return;
+
+        const seenId = localStorage.getItem(WHATS_NEW_KEY);
+        setLatestId(latest.id);
+
+        if (String(seenId) !== String(latest.id)) {
+          setShowWhatsNew(true);
+        }
+      } catch (err) {
+        console.error("Failed to check for new releases:", err);
+      }
     }
+    checkForUpdates();
   }, []);
 
   const handleClose = () => {
-    localStorage.setItem(WHATS_NEW_KEY, "true");
+    if (latestId != null) {
+      localStorage.setItem(WHATS_NEW_KEY, String(latestId));
+    }
     setShowWhatsNew(false);
   };
 
