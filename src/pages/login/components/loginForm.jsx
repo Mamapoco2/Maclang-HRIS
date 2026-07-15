@@ -11,6 +11,7 @@ import { useContext, useState, useRef, useEffect } from "react";
 import { IconLoader2 } from "@tabler/icons-react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { useFirstAccessibleRoute } from "@/hooks/useFirstAccessibleRoute";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000;
@@ -18,6 +19,7 @@ const LOCKOUT_MS = 60_000;
 export default function LoginForm() {
   const { login, isAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
+  const firstAccessibleRoute = useFirstAccessibleRoute();
   const [serverError, setServerError] = useState("");
   const [lockoutUntil, setLockoutUntil] = useState(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -35,15 +37,11 @@ export default function LoginForm() {
     ? Math.ceil((lockoutUntil - Date.now()) / 1000)
     : 0;
 
-  // Only navigate once AuthContext's `user` state is actually populated.
-  // This avoids a race condition where navigate() fires before
-  // isAuthenticated flips to true, which could bounce us back to /login
-  // via ProtectedRoute.
   useEffect(() => {
     if (loginSucceeded && isAuthenticated) {
-      navigate("/Announcement", { replace: true });
+      navigate(firstAccessibleRoute, { replace: true });
     }
-  }, [loginSucceeded, isAuthenticated, navigate]);
+  }, [loginSucceeded, isAuthenticated, navigate, firstAccessibleRoute]);
 
   const onSubmit = async (data) => {
     if (isLockedOut) return;

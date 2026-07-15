@@ -1,5 +1,13 @@
-import { useState } from "react";
-import { Pencil, Check } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Pencil,
+  Check,
+  Briefcase,
+  AlertCircle,
+  Search,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,19 +19,76 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { PRIORITY_CONFIG } from "../constants";
+import { plantillaPostingService } from "@/services/plantillaPostingService";
+
+const CATEGORIES = ["General", "Job Posting"];
+
+function getInitialPostingIds(ann) {
+  return (ann.plantillaPostings ?? []).map((p) => String(p.id));
+}
 
 export function EditModal({ ann, onClose, onSave }) {
   const [title, setTitle] = useState(ann.title);
   const [description, setDescription] = useState(ann.description);
   const [priority, setPriority] = useState(ann.priority);
+  const [category, setCategory] = useState(ann.category ?? "General");
+  const [plantillaPostingIds, setPlantillaPostingIds] = useState(
+    getInitialPostingIds(ann),
+  );
+  const [postings, setPostings] = useState([]);
+  const [postingsError, setPostingsError] = useState(false);
+  const [postingsLoading, setPostingsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (category !== "Job Posting") return;
+
+    let cancelled = false;
+    setPostingsLoading(true);
+    setPostingsError(false);
+
+    plantillaPostingService
+      .getPostings({ status: "open" })
+      .then((res) => {
+        if (cancelled) return;
+        setPostings(res.data ?? []);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPostings([]);
+        setPostingsError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setPostingsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [category]);
 
   function validate() {
     const e = {};
     if (!title.trim()) e.title = "Title is required.";
     if (!description.trim()) e.description = "Description is required.";
+    if (category === "Job Posting" && plantillaPostingIds.length === 0) {
+      e.postings = "Select at least one posting to link.";
+    }
     return e;
   }
 
@@ -38,6 +103,12 @@ export function EditModal({ ann, onClose, onSave }) {
     formData.append("title", title.trim());
     formData.append("description", description.trim());
     formData.append("priority", priority);
+    formData.append("category", category);
+    if (category === "Job Posting") {
+      plantillaPostingIds.forEach((id) => {
+        formData.append("plantilla_posting_ids[]", id);
+      });
+    }
 
     setSubmitting(true);
     try {
@@ -50,7 +121,7 @@ export function EditModal({ ann, onClose, onSave }) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -100,6 +171,91 @@ export function EditModal({ ann, onClose, onSave }) {
             )}
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select
+                value={category}
+                onValueChange={setCategory}
+                disabled={submitting}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {category === "Job Posting" && (
+              <div className="space-y-1.5">
+                <Label>Linked Postings</Label>
+                <PostingMultiSelect
+                  postings={postings}
+                  selectedIds={plantillaPostingIds}
+                  onChange={(updater) => {
+                    setPlantillaPostingIds(updater);
+                    setErrors((p) => ({ ...p, postings: "" }));
+                  }}
+                  loading={postingsLoading}
+                  disabled={submitting}
+                />
+                {postingsError && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle size={11} /> Couldn't load postings.
+                  </p>
+                )}
+                {errors.postings && (
+                  <p className="text-xs text-red-500">{errors.postings}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {category === "Job Posting" && plantillaPostingIds.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {plantillaPostingIds.map((id) => {
+                const fromFetched = postings.find(
+                  (x) => String(x.id) === String(id),
+                );
+                const fromAnn = (ann.plantillaPostings ?? []).find(
+                  (x) => String(x.id) === String(id),
+                );
+                const label =
+                  fromFetched?.title ??
+                  fromFetched?.position_title ??
+                  fromAnn?.title ??
+                  id;
+                return (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700"
+                  >
+                    <Briefcase size={11} />
+                    {label}
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() =>
+                        setPlantillaPostingIds((prev) =>
+                          prev.filter((x) => x !== id),
+                        )
+                      }
+                      className="h-4 w-4 rounded-full hover:bg-blue-200 flex items-center justify-center"
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label>Priority</Label>
             <div className="flex gap-2">
@@ -134,5 +290,95 @@ export function EditModal({ ann, onClose, onSave }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PostingMultiSelect({
+  postings,
+  selectedIds,
+  onChange,
+  loading,
+  disabled,
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return postings;
+    return postings.filter((p) =>
+      (p.title ?? p.position_title ?? "").toLowerCase().includes(q),
+    );
+  }, [postings, search]);
+
+  function toggle(id) {
+    const key = String(id);
+    onChange((prev) =>
+      prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key],
+    );
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-between font-normal"
+          disabled={loading || disabled}
+        >
+          <span className="truncate text-left">
+            {loading
+              ? "Loading…"
+              : selectedIds.length === 0
+                ? "Select postings"
+                : `${selectedIds.length} posting${selectedIds.length === 1 ? "" : "s"} selected`}
+          </span>
+          <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 p-0">
+        <div className="p-2 border-b border-slate-100 relative">
+          <Search
+            size={13}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <Input
+            className="pl-8 h-8 text-sm"
+            placeholder="Search postings…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="max-h-60 overflow-y-auto p-2 space-y-0.5">
+          {filtered.length === 0 ? (
+            <p className="text-xs text-slate-400 px-2 py-3 text-center">
+              No postings match.
+            </p>
+          ) : (
+            filtered.map((p) => {
+              const id = String(p.id);
+              const checked = selectedIds.includes(id);
+              return (
+                <label
+                  key={id}
+                  className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggle(id)}
+                  />
+                  <span className="text-sm text-slate-700 truncate flex-1">
+                    {p.title ?? p.position_title}
+                  </span>
+                  {checked && (
+                    <Check size={13} className="text-blue-600 flex-shrink-0" />
+                  )}
+                </label>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -12,9 +12,6 @@ import { toast } from "sonner";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { candidateName } from "../psbUtils";
 
-// Mirrors ScheduleInterviewDialog's contract: `target` is
-// { application, field } or null, `onClose` closes without saving,
-// `onSaved(updatedInterview)` is called once the reason is stored.
 export default function CancelInterviewDialog({ target, onClose, onSaved }) {
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);

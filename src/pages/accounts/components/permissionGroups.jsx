@@ -1,13 +1,23 @@
 export const PERMISSION_GROUPS = [
+  // ─── Dashboard ───────────────────────────────────────────
   {
     group: "Dashboard",
     permissions: [{ key: "dashboard.view", label: "View Dashboard" }],
   },
+  // ─── Recruitment, Selection & Placement ───────────────────────────────────────────
   {
     group: "Recruitment, Selection & Placement",
     permissions: [
       { key: "hiring.view", label: "View Hiring" },
       { key: "hiring.manage", label: "Manage Hiring" },
+      {
+        key: "hiring.plantilla.postings.view",
+        label: "View Plantilla Postings",
+      },
+      {
+        key: "hiring.plantilla.postings.manage",
+        label: "Manage Plantilla Postings",
+      },
       {
         key: "hiring.plantilla.applicants.view",
         label: "View Plantilla Applicants",
@@ -85,6 +95,7 @@ export const PERMISSION_GROUPS = [
       },
     ],
   },
+  // ─── Learning & Development ───────────────────────────────────────────
   {
     group: "Learning & Development",
     permissions: [
@@ -99,6 +110,7 @@ export const PERMISSION_GROUPS = [
       { key: "trainings.coaching", label: "Coaching & Mentoring" },
     ],
   },
+  // ─── SPMS ───────────────────────────────────────────
   {
     group: "SPMS",
     permissions: [
@@ -106,12 +118,15 @@ export const PERMISSION_GROUPS = [
       { key: "spms.manage", label: "Manage SPMS" },
     ],
   },
+  // ─── Compensation & Benefits ───────────────────────────────────────────
   {
     group: "Compensation & Benefits",
     permissions: [
       { key: "compensation.view", label: "View Compensation & Benefits" },
+      { key: "compensation.manage", label: "Manage Compensation & Benefits" },
     ],
   },
+  // ─── System Management ───────────────────────────────────────────
   {
     group: "System Management",
     permissions: [
@@ -124,21 +139,29 @@ export const PERMISSION_GROUPS = [
       { key: "positions.view", label: "View Positions (COS / Consultant)" },
     ],
   },
+  // ─── Rewards & Recognition ───────────────────────────────────────────
   {
     group: "Rewards & Recognition",
     permissions: [{ key: "rewards.view", label: "View Rewards & Recognition" }],
   },
+  // ─── Analytics ───────────────────────────────────────────
   {
     group: "Analytics",
     permissions: [{ key: "analytics.view", label: "View Analytics" }],
   },
+  // ─── Announcements ───────────────────────────────────────────
   {
     group: "Announcements",
     permissions: [
       { key: "announcements.view", label: "View Announcements" },
-      { key: "announcements.manage", label: "Manage Announcements" },
+      { key: "announcements.manage", label: "Manage Announcements (Own)" },
+      {
+        key: "announcements.manage.all",
+        label: "Manage Any Announcement (Override Ownership)",
+      },
     ],
   },
+  // ─── Manpower Mapping ───────────────────────────────────────────
   {
     group: "Manpower Mapping",
     permissions: [
@@ -146,33 +169,48 @@ export const PERMISSION_GROUPS = [
       { key: "manpower.manage", label: "Manage Manpower Mapping" },
     ],
   },
+  // ─── Task Monitoring ───────────────────────────────────────────
   {
     group: "Task Monitoring",
     permissions: [
       { key: "task_monitoring.view", label: "View Task Monitoring" },
     ],
   },
+  // ─── Bug Reports ───────────────────────────────────────────
   // {
   //   group: "Bug Reports",
   //   permissions: [{ key: "bug-reports.view", label: "View Bug Reports" }],
   // },
+  // ─── Users ───────────────────────────────────────────
   {
     group: "Users",
     permissions: [
       { key: "users.view", label: "View Users" },
-      { key: "users.manage", label: "Manage Users" },
+      { key: "users.manage", label: "Manage Users (Activate/View Pending)" },
+      {
+        key: "users.manage.roles",
+        label: "Assign Roles & Permissions to Users",
+      },
     ],
   },
+  // ─── Notifications ───────────────────────────────────────────
   {
     group: "Notifications",
     permissions: [{ key: "notifications.view", label: "View Notifications" }],
+  },
+  // ─── Audit Logs ───────────────────────────────────────────
+  {
+    group: "Audit Logs",
+    permissions: [{ key: "audit_logs.view", label: "View Audit Logs" }],
   },
 ];
 
 export const ASSIGNABLE_ROLES = [
   { value: "admin", label: "Admin" },
+  { value: "chairman", label: "Chairman" },
   { value: "director", label: "Director" },
   { value: "hr", label: "HR" },
+  { value: "oic", label: "Officer In Charge" },
   { value: "head", label: "Head" },
   { value: "supervisor", label: "Supervisor" },
   { value: "staff", label: "Staff" },

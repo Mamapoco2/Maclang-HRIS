@@ -50,8 +50,8 @@ export default function TeamTable() {
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await employeeService.getAllEmployees();
-      setMembers(Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
+      const res = await employeeService.getTeam();
+      setMembers(Array.isArray(res) ? res : []);
     } catch {
       toast.error("Failed to load team members.");
     } finally {

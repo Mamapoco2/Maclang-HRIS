@@ -33,6 +33,31 @@ import {
   formatLabel,
 } from "../psbUtils";
 
+const IN_PROGRESS_STATUSES = [
+  "Initial Review/Evaluation",
+  "For Initial Deliberation",
+  "Scheduled for Interview",
+  "For HRMPSB Compliance",
+  "For HRMPSB Deliberation",
+];
+
+function interviewBadgeClass(status) {
+  const s = status?.toUpperCase() ?? "";
+  if (!s) return "border-gray-200 bg-gray-50 text-gray-400";
+  if (s.includes("COMPLETE"))
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (s.includes("REJECT") || s.includes("FAIL"))
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  if (
+    s.includes("PROGRESS") ||
+    s.includes("SCHEDULE") ||
+    s.includes("ONGOING")
+  ) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-gray-200 bg-gray-50 text-gray-500";
+}
+
 export default function ApplicationsTable({
   applications,
   onUpdate,
@@ -43,8 +68,10 @@ export default function ApplicationsTable({
   const summary = {
     total: applications.length,
     pending: applications.filter((a) => a.status === "Pending").length,
-    underReview: applications.filter((a) => a.status === "Under Review").length,
-    approved: applications.filter((a) => a.status === "Approved").length,
+    inProgress: applications.filter((a) =>
+      IN_PROGRESS_STATUSES.includes(a.status),
+    ).length,
+    completed: applications.filter((a) => a.status === "Completed").length,
   };
 
   const handleStatusChange = async (application, status) => {
@@ -93,14 +120,14 @@ export default function ApplicationsTable({
             status="Awaiting initial review"
           />
           <SummaryCard
-            title="Under Review"
-            value={summary.underReview}
-            status="Currently being evaluated"
+            title="In Progress"
+            value={summary.inProgress}
+            status="Somewhere in the review pipeline"
           />
           <SummaryCard
-            title="Approved"
-            value={summary.approved}
-            status="Successfully approved"
+            title="Completed"
+            value={summary.completed}
+            status="Successfully completed"
           />
         </div>
       )}
@@ -131,7 +158,7 @@ export default function ApplicationsTable({
                 </TableRow>
               ) : (
                 applications.map((application) => {
-                  const canApprove =
+                  const canComplete =
                     application.interview?.overall_status?.toUpperCase() ===
                     "COMPLETED";
                   return (
@@ -146,49 +173,50 @@ export default function ApplicationsTable({
                       <TableCell>
                         {application.submitted_at?.slice(0, 10) ?? "—"}
                       </TableCell>
-                      <TableCell className="text-xs text-gray-500">
-                        {formatLabel(application.interview?.overall_status) ||
-                          "No interview"}
-                      </TableCell>
                       <TableCell>
-                        {application.status === "Pending" ? (
-                          <span
-                            className={`inline-block w-fit rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG.Pending}`}
-                          >
-                            Pending
-                          </span>
-                        ) : (
-                          <Select
-                            value={application.status}
-                            onValueChange={(val) =>
-                              handleStatusChange(application, val)
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-36 border-0 p-0 text-xs shadow-none focus:ring-0">
-                              <SelectValue>
-                                <span
-                                  className={`rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG.Pending}`}
-                                >
-                                  {application.status}
-                                </span>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {APPLICATION_STATUS_OPTIONS.map((s) => (
-                                <SelectItem
-                                  key={s}
-                                  value={s}
-                                  className="text-xs"
-                                >
-                                  {s}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        {application.status !== "Approved" && !canApprove && (
+                        <span
+                          className={`inline-block w-fit whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${interviewBadgeClass(application.interview?.overall_status)}`}
+                        >
+                          {formatLabel(application.interview?.overall_status) ||
+                            "No interview"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="min-w-[13rem]">
+                        {/* Always editable now — previously this rendered a
+                            static, non-interactive badge while status was
+                            "Pending", which meant a reviewer had no way to
+                            change the status at all until it left that
+                            state through some other path. */}
+                        <Select
+                          value={application.status}
+                          onValueChange={(val) =>
+                            handleStatusChange(application, val)
+                          }
+                        >
+                          <SelectTrigger className="h-7 w-fit min-w-[11rem] max-w-full border-0 p-0 text-xs shadow-none focus:ring-0">
+                            <SelectValue>
+                              <span
+                                className={`inline-block whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG.Pending}`}
+                              >
+                                {application.status}
+                              </span>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {APPLICATION_STATUS_OPTIONS.map((s) => (
+                              <SelectItem
+                                key={s}
+                                value={s}
+                                className="text-xs whitespace-nowrap"
+                              >
+                                {s}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {application.status !== "Completed" && !canComplete && (
                           <p className="mt-1 text-[10px] text-gray-400">
-                            Needs completed interview to approve
+                            Needs completed interview to mark as Completed
                           </p>
                         )}
                       </TableCell>

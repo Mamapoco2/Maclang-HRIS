@@ -66,6 +66,18 @@ export const plantillaPostingService = {
     }
   },
 
+  async uploadApplicationDocument(applicationId, key, file) {
+    const formData = new FormData();
+    formData.append(`documents[${key}]`, file);
+
+    const res = await api.post(
+      `/plantilla-posting-applications/${applicationId}/documents`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return res.data;
+  },
+
   // ── Admin: postings CRUD ─────────────────────────────────────────────────
 
   async getPostings(params = {}, config = {}) {
@@ -146,6 +158,16 @@ export const plantillaPostingService = {
 
   documentDownloadUrl(documentId) {
     return `/plantilla-posting-applications/documents/${documentId}/download`;
+  },
+
+  // ── Admin: document review comments ──────────────────────────────────────
+
+  documentCommentsUrl(documentId) {
+    return `/plantilla-posting-applications/documents/${documentId}/comments`;
+  },
+
+  documentCommentUrl(commentId) {
+    return `/plantilla-posting-applications/comments/${commentId}`;
   },
 
   // ── Admin: PSB interviews ─────────────────────────────────────────────────

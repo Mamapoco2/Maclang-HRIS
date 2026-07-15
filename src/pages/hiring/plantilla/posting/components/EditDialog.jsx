@@ -37,6 +37,7 @@ export function EditDialog({
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [availableSteps, setAvailableSteps] = useState([]);
 
   const sourceId = state ? (mode === "edit" ? state.data.id : "create") : null;
 
@@ -52,7 +53,9 @@ export function EditDialog({
         display_division_id: d.divisionId ?? "",
         section: d.section,
         salary_grade_id: d.salaryGradeId ?? "",
-        monthly_salary: String(d.monthlySalary),
+        step_increment_id: d.stepIncrementId ?? "",
+        monthly_salary: String(d.monthlySalary ?? ""),
+        annual_salary: String(d.annualSalary ?? ""),
         employment_status: d.employmentStatus,
         vacancies: String(d.vacancies),
         immediate_supervisor:
@@ -69,8 +72,14 @@ export function EditDialog({
         status: d.status,
         required_documents: { ...d.requiredDocuments },
       });
+      // If editing, try to source steps from the matching vacant item (if still vacant)
+      const vi = vacantItems.find(
+        (v) => v.base_item_number === d.baseItemNumber,
+      );
+      setAvailableSteps(vi?.step_increments ?? []);
     } else {
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM, status: "Open" });
+      setAvailableSteps([]);
     }
     setErrors({});
   }, [sourceId, open]);
@@ -88,16 +97,34 @@ export function EditDialog({
     const vi = vacantItems.find((v) => v.base_item_number === baseItemNumber);
     if (!vi) {
       set("base_item_number", baseItemNumber);
+      setAvailableSteps([]);
       return;
     }
+    setAvailableSteps(vi.step_increments ?? []);
     setForm((f) => ({
       ...f,
       base_item_number: vi.base_item_number,
       title: vi.title || f.title,
-      salary_grade_id: vi.salary_grade_id ?? f.salary_grade_id,
-      display_department_id:
-        vi.display_department_id ?? f.display_department_id,
-      vacancies: f.vacancies || String(vi.vacant_count),
+      display_department_id: vi.display_department_id ?? "",
+      display_division_id: vi.display_division_id ?? "",
+      salary_grade_id: vi.salary_grade_id ?? "",
+      step_increment_id: vi.step_increment_id ?? "",
+      monthly_salary:
+        vi.monthly_salary != null ? String(vi.monthly_salary) : "",
+      annual_salary: vi.annual_salary != null ? String(vi.annual_salary) : "",
+      immediate_supervisor: vi.immediate_supervisor ?? f.immediate_supervisor,
+      status: f.status || "Open",
+      vacancies: f.vacancies || String(vi.vacant_count ?? ""),
+    }));
+  };
+
+  const applyStep = (stepId) => {
+    const step = availableSteps.find((s) => String(s.id) === String(stepId));
+    setForm((f) => ({
+      ...f,
+      step_increment_id: stepId,
+      monthly_salary: step ? String(step.monthly_salary) : f.monthly_salary,
+      annual_salary: step ? String(step.annual_salary) : f.annual_salary,
     }));
   };
 
@@ -131,7 +158,9 @@ export function EditDialog({
       display_department_id: form.display_department_id || null,
       display_division_id: form.display_division_id || null,
       salary_grade_id: form.salary_grade_id || null,
+      step_increment_id: form.step_increment_id || null,
       monthly_salary: form.monthly_salary || null,
+      annual_salary: form.annual_salary || null,
       vacancies: Number(form.vacancies),
       expected_appointment_date: form.expected_appointment_date || null,
     };
@@ -171,7 +200,7 @@ export function EditDialog({
               onChange={applyVacantItem}
               options={vacantItems.map((v) => ({
                 value: v.base_item_number,
-                label: `${v.base_item_number} — ${v.title} (${v.vacant_count} vacant)`,
+                label: v.title,
               }))}
               placeholder="Select a vacant plantilla item"
             />
@@ -186,15 +215,11 @@ export function EditDialog({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label required>Plantilla Item Number</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => set("title", e.target.value)}
-                placeholder="e.g. Administrative Officer IV"
-              />
+              <Input value={form.base_item_number} disabled />
               <FieldError>{errors.title}</FieldError>
             </div>
             <div>
-              <Label>Office</Label>
+              <Label>Department</Label>
               <Select
                 value={String(form.display_department_id || "")}
                 onChange={(v) => set("display_department_id", v)}
@@ -202,7 +227,7 @@ export function EditDialog({
                   value: String(d.id),
                   label: d.name,
                 }))}
-                placeholder="Select office"
+                placeholder="Auto-filled from plantilla item"
               />
             </div>
             <div>
@@ -214,7 +239,7 @@ export function EditDialog({
                   value: String(d.id),
                   label: d.name,
                 }))}
-                placeholder="Select division"
+                placeholder="Auto-filled from plantilla item"
               />
             </div>
             <div>
@@ -234,7 +259,19 @@ export function EditDialog({
                   value: String(sg.id),
                   label: `SG-${sg.salary_grade}`,
                 }))}
-                placeholder="Select salary grade"
+                placeholder="Auto-filled from plantilla item"
+              />
+            </div>
+            <div>
+              <Label>Step</Label>
+              <Select
+                value={String(form.step_increment_id || "")}
+                onChange={applyStep}
+                options={availableSteps.map((s) => ({
+                  value: String(s.id),
+                  label: `Step ${s.step}`,
+                }))}
+                placeholder="Auto-filled from plantilla item"
               />
             </div>
             <div>
@@ -243,8 +280,19 @@ export function EditDialog({
                 type="number"
                 min="0"
                 value={form.monthly_salary}
-                onChange={(e) => set("monthly_salary", e.target.value)}
-                placeholder="e.g. 38637"
+                disabled
+              />
+              <p className="mt-1 text-[11px] text-slate-400">
+                Computed from Salary Grade + Step.
+              </p>
+            </div>
+            <div>
+              <Label>Annual Salary</Label>
+              <Input
+                type="number"
+                min="0"
+                value={form.annual_salary}
+                disabled
               />
             </div>
 
@@ -264,6 +312,7 @@ export function EditDialog({
               <Input
                 value={form.immediate_supervisor || ""}
                 onChange={(e) => set("immediate_supervisor", e.target.value)}
+                placeholder="Auto-filled from department/division head"
               />
             </div>
           </div>

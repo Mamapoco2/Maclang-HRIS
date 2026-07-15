@@ -55,25 +55,22 @@ const NAV_MAIN = [
   {
     title: "Recruitment, Selection, Placement",
     icon: IconBriefcase,
-    permission: "hiring.view",
     items: [
       {
         title: "Hiring",
-        permission: "hiring.view",
         items: [
           {
             title: "Plantilla (PSB)",
-            permission: "hiring.view",
             items: [
               {
                 title: "Plantilla Postings",
                 url: "/hiring/plantilla/positions",
-                permission: "hiring.view",
+                permission: "hiring.plantilla.postings.view",
               },
               {
                 title: "Applications",
                 url: "/hiring/plantilla/applications",
-                permission: "hiring.view",
+                permission: "hiring.plantilla.applications.view",
               },
               {
                 title: "Calendar",
@@ -83,7 +80,7 @@ const NAV_MAIN = [
               {
                 title: "Onboarding",
                 url: "/hiring/plantilla/onboarding",
-                permission: "hiring.view",
+                permission: "hiring.plantilla.onboarding.view",
               },
               {
                 title: "My Applications",
@@ -94,22 +91,21 @@ const NAV_MAIN = [
           },
           {
             title: "Non-Plantilla",
-            permission: "hiring.view",
             items: [
               {
                 title: "Applicants",
                 url: "/hiring/non-plantilla/applicants",
-                permission: "hiring.view",
+                permission: "hiring.nonplantilla.applicants.view",
               },
               {
                 title: "Applications",
                 url: "/hiring/non-plantilla/applications",
-                permission: "hiring.view",
+                permission: "hiring.nonplantilla.applications.view",
               },
               {
                 title: "Onboarding",
                 url: "/hiring/non-plantilla/onboarding",
-                permission: "hiring.view",
+                permission: "hiring.nonplantilla.onboarding.view",
               },
             ],
           },
@@ -117,33 +113,36 @@ const NAV_MAIN = [
       },
       {
         title: "Leave",
-        permission: "leave.view",
         items: [
           {
             title: "Dashboard",
             url: "/leaveDashboard",
-            permission: "leave.view",
+            permission: "leave.dashboard.view",
           },
           {
             title: "Approval",
             url: "/leaveApproval",
-            permission: "leave.view",
+            permission: "leave.approval.view",
           },
-          { title: "Balance", url: "/leaveBalance", permission: "leave.view" },
+          {
+            title: "Balance",
+            url: "/leaveBalance",
+            permission: "leave.balance.view",
+          },
           {
             title: "Calendar",
             url: "/leaveCalendar",
-            permission: "leave.view",
+            permission: "leave.calendar.view",
           },
           {
             title: "Leave Request",
             url: "/leaveRequest",
-            permission: "leave.view",
+            permission: "leave.request.view",
           },
           {
             title: "New Leave Request",
             url: "/newLeaveRequest",
-            permission: "leave.view",
+            permission: "leave.request.manage",
           },
         ],
       },
@@ -157,7 +156,7 @@ const NAV_MAIN = [
         title: "Renewal Management",
         url: "/renewals",
         icon: IconUsers,
-        permission: "employees.view",
+        permission: "renewals.view",
       },
       {
         title: "Team",
@@ -174,11 +173,9 @@ const NAV_MAIN = [
   {
     title: "Learning & Development",
     icon: IconSchool,
-    permission: "trainings.view",
     items: [
       {
         title: "Training",
-        permission: "trainings.view",
         items: [
           {
             title: "Trainings",
@@ -206,11 +203,9 @@ const NAV_MAIN = [
   {
     title: "SPMS",
     icon: IconTarget,
-    permission: "spms.view",
     items: [
       {
         title: "Plantilla",
-        permission: "spms.view",
         items: [
           { title: "MFO", permission: "spms.view" },
           { title: "KPI", permission: "spms.view" },
@@ -222,7 +217,6 @@ const NAV_MAIN = [
       { title: "OPCR", url: "/OPCR", permission: "spms.view" },
       {
         title: "Non-Plantilla",
-        permission: "spms.view",
         items: [
           {
             title: "Appraisal Form",
@@ -233,12 +227,11 @@ const NAV_MAIN = [
       },
       {
         title: "SPMS Management",
-        permission: "spms.view",
         items: [
           {
             title: "Performance Period",
             url: "/PerformancePeriod",
-            permission: "spms.view",
+            permission: "spms.manage",
           },
         ],
       },
@@ -247,19 +240,15 @@ const NAV_MAIN = [
   {
     title: "Compensation & Benefits",
     icon: IconWallet,
-    permission: "compensation.view",
     items: [
       {
         title: "Compensation",
-        permission: "compensation.view",
         items: [
           {
             title: "Regular",
-            permission: "compensation.view",
             items: [
               {
                 title: "Salary",
-                permission: "compensation.view",
                 items: [
                   {
                     title: "Attendance & Report Generation",
@@ -276,11 +265,9 @@ const NAV_MAIN = [
       },
       {
         title: "Special",
-        permission: "compensation.view",
         items: [
           {
             title: "Salary",
-            permission: "compensation.view",
             items: [
               {
                 title: "Attendance & Report Generation",
@@ -292,7 +279,6 @@ const NAV_MAIN = [
           },
           {
             title: "Hazard",
-            permission: "compensation.view",
             items: [
               {
                 title: "Attendance & Report Generation",
@@ -305,7 +291,6 @@ const NAV_MAIN = [
           { title: "Night Diff", permission: "compensation.view" },
           {
             title: "Salary Diff",
-            permission: "compensation.view",
             items: [
               {
                 title: "Same as Spec & Rec Sal",
@@ -320,7 +305,6 @@ const NAV_MAIN = [
   {
     title: "System Management",
     icon: IconSettings2,
-    permission: "accounts.manage",
     items: [
       {
         title: "Accounts Management",
@@ -334,7 +318,6 @@ const NAV_MAIN = [
       },
       {
         title: "Positions",
-        permission: "positions.view",
         items: [
           {
             title: "Plantilla",
@@ -343,7 +326,6 @@ const NAV_MAIN = [
           },
           {
             title: "Non-Plantilla",
-            permission: "positions.view",
             items: [
               { title: "COS", url: "/COSList", permission: "positions.view" },
               {
@@ -360,11 +342,9 @@ const NAV_MAIN = [
   {
     title: "Rewards & Recognition",
     icon: IconAward,
-    permission: "rewards.view",
     items: [
       {
         title: "Top Performer",
-        permission: "rewards.view",
         items: [
           {
             title: "Hospital",
@@ -415,7 +395,7 @@ const NAV_MAIN = [
     title: "Audit Logs",
     url: "/audit-logs",
     icon: IconFileText,
-    permission: "team.view",
+    permission: "audit_logs.view",
   },
 ];
 
@@ -430,21 +410,25 @@ function canSee(item, userPermissions, isSuperUser) {
 
 function filterNav(navItems, userPermissions, isSuperUser) {
   return navItems.reduce((acc, item) => {
+    const isContainer = Array.isArray(item.items);
+
+    if (isContainer) {
+      const visibleChildren = filterNav(
+        item.items,
+        userPermissions,
+        isSuperUser,
+      );
+      if (visibleChildren.length > 0) {
+        acc.push({ ...item, items: visibleChildren });
+      }
+      return acc;
+    }
+
     if (!canSee(item, userPermissions, isSuperUser)) {
       return acc;
     }
 
-    if (!item.items) {
-      acc.push(item);
-      return acc;
-    }
-
-    const visibleChildren = filterNav(item.items, userPermissions, isSuperUser);
-
-    if (visibleChildren.length > 0) {
-      acc.push({ ...item, items: visibleChildren });
-    }
-
+    acc.push(item);
     return acc;
   }, []);
 }

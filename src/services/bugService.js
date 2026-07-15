@@ -1,9 +1,5 @@
 import api from "@/api/api";
 
-/**
- * @param {object} params   - Query params: page, per_page, type, status, etc.
- * @param {object} config   - Axios request config (e.g. { signal } for abort)
- */
 export async function getReports(params = {}, config = {}) {
   const res = await api.get("/reports", { params, ...config });
   return res.data;

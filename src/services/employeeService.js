@@ -21,23 +21,16 @@ export const employeeService = {
     return res.data;
   },
 
-  /**
-   * Get assignable plantilla positions.
-   * Always returns a plain array with is_assignable / is_current_employee flags.
-   */
   async getAssignablePositions(employeeId = null) {
     const params = { per_page: 999 };
     if (employeeId) params.employee_id = employeeId;
 
     const res = await api.get("/plantilla-positions", { params });
 
-    // PlantillaPositionController returns { data: [...], pagination: {...} }
     const list = res.data?.data ?? res.data ?? [];
 
-    // Ensure it's actually an array (guards against unexpected shapes)
     const arr = Array.isArray(list) ? list : [];
 
-    // Derive flags if not already set by the backend
     return arr.map((pos) => {
       const computedStatus = (
         pos.computed_status ??
@@ -49,8 +42,6 @@ export const employeeService = {
 
       return {
         ...pos,
-        // position_slot_name is the display label (e.g. "22" or "23-1")
-        // keep item_number as an alias so EmployeeForm label-building still works
         item_number: pos.item_number ?? pos.position_slot_name ?? "",
         is_assignable: pos.is_assignable ?? isVacant,
         is_current_employee:
@@ -61,6 +52,11 @@ export const employeeService = {
             )),
       };
     });
+  },
+
+  async getTeam(config = {}) {
+    const res = await api.get("/team", config);
+    return res.data;
   },
 
   async getStepsByPosition(positionId) {

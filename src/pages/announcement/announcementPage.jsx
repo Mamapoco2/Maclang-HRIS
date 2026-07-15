@@ -17,12 +17,9 @@ import { AnnouncementsApi } from "@/services/announcements";
 import { mapAnnouncement } from "@/lib/announcementMapper";
 
 export default function HRISAnnouncementPage() {
-  const { hasPermission, user: currentUser } = useAuth();
-  const canManage = hasPermission("announcements.manage");
+  const { hasPermission } = useAuth();
 
-  const canCreate =
-    currentUser?.roles?.includes?.("SuperAdmin") ||
-    currentUser?.roles?.includes?.("HR");
+  const canManage = hasPermission("announcements.manage");
 
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 350);
@@ -152,7 +149,7 @@ export default function HRISAnnouncementPage() {
                   onClear={() => setFilters({})}
                 />
                 <SortControl value={sort} onChange={setSort} />
-                {canCreate && (
+                {canManage && (
                   <Button
                     onClick={() => setShowCreate(true)}
                     className="gap-2 flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white"

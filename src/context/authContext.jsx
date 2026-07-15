@@ -4,6 +4,7 @@ import api from "@/api/api";
 import authService from "@/services/authService";
 import { getUser, clearAuth, setUser, getToken } from "@/lib/tokenStorage";
 import { getEcho, resetEcho } from "@/lib/echo";
+import { hasPermission as checkPermission } from "@/lib/authHelpers";
 
 export const AuthContext = createContext(null);
 
@@ -71,12 +72,10 @@ export const AuthProvider = ({ children }) => {
     const channel = echo.private(`user.${user.id}`);
 
     channel.listen(".permissions.updated", (e) => {
-      // console.log("[Echo] permissions.updated →", e);
       refreshUserRef.current();
     });
 
     channel.listen(".logged.in.elsewhere", () => {
-      // console.log("[Echo] logged.in.elsewhere → displacing session");
       resetEcho();
       clearAuth();
       setUserState(null);
@@ -96,7 +95,6 @@ export const AuthProvider = ({ children }) => {
         setUser(res.user);
         setUserState(res.user);
 
-        // Token is now in storage — reinit Echo with fresh auth header
         getEcho({ forceNew: true });
 
         if (res.user?.has_completed_orientation === false) {
@@ -168,8 +166,8 @@ export const AuthProvider = ({ children }) => {
   const dismissDisplaced = useCallback(() => setSessionDisplaced(false), []);
 
   const hasPermission = useCallback(
-    (permission) => user?.permissions?.includes(permission) ?? false,
-    [user?.permissions],
+    (permission) => checkPermission(user, permission),
+    [user],
   );
 
   const hasRole = useCallback(

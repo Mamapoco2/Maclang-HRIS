@@ -49,7 +49,6 @@ export async function updateUserPermissions(userId, permissions) {
   return res.data;
 }
 
-// ✅ New
 export async function updateUserRole(userId, role) {
   const res = await api.put(`/users/${userId}/role`, { role });
   return res.data;

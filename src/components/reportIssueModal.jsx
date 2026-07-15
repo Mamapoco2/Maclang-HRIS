@@ -23,7 +23,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { createReport } from "@/services/bugService";
-import authService from "@/services/authService"; // ← adjust path to match your project
+import authService from "@/services/authService";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

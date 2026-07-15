@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnnouncementsApi } from "@/services/announcements";
 import { mapAnnouncement } from "@/lib/announcementMapper";
+import { getEcho } from "@/lib/echo";
 
 export function useAnnouncements({ archived, search, filters, sort }) {
   const [items, setItems] = useState([]);
@@ -10,6 +11,11 @@ export function useAnnouncements({ archived, search, filters, sort }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const requestId = useRef(0);
+
+  const archivedRef = useRef(archived);
+  useEffect(() => {
+    archivedRef.current = archived;
+  }, [archived]);
 
   const params = {
     archived: archived ? 1 : 0,
@@ -46,6 +52,67 @@ export function useAnnouncements({ archived, search, filters, sort }) {
   useEffect(() => {
     fetchPage(1, true);
   }, [archived, search, JSON.stringify(filters), sort]);
+
+  // ─── Realtime (Reverb/Echo) ───────────────────────────────────────
+  useEffect(() => {
+    const echo = getEcho();
+    if (!echo) return;
+
+    const channel = echo.private("announcements");
+
+    channel.listen(".announcement.created", (payload) => {
+      const mapped = mapAnnouncement(payload);
+      if (mapped.archived !== archivedRef.current) return;
+      setItems((prev) => {
+        if (prev.some((a) => a.id === mapped.id)) return prev;
+        return [mapped, ...prev];
+      });
+    });
+
+    channel.listen(".announcement.updated", (payload) => {
+      const mapped = mapAnnouncement(payload);
+      setItems((prev) => {
+        const exists = prev.some((a) => a.id === mapped.id);
+
+        if (exists && mapped.archived !== archivedRef.current) {
+          return prev.filter((a) => a.id !== mapped.id);
+        }
+
+        if (!exists && mapped.archived === archivedRef.current) {
+          return [mapped, ...prev];
+        }
+
+        if (!exists) return prev;
+
+        return prev.map((a) =>
+          a.id === mapped.id
+            ? {
+                ...a,
+                title: mapped.title,
+                description: mapped.description,
+                priority: mapped.priority,
+                category: mapped.category,
+                pinned: mapped.pinned,
+                archived: mapped.archived,
+                attachments: mapped.attachments,
+                plantillaPostings: mapped.plantillaPostings,
+              }
+            : a,
+        );
+      });
+    });
+
+    channel.listen(".announcement.deleted", ({ id }) => {
+      setItems((prev) => prev.filter((a) => a.id !== id));
+    });
+
+    return () => {
+      channel.stopListening(".announcement.created");
+      channel.stopListening(".announcement.updated");
+      channel.stopListening(".announcement.deleted");
+      echo.leave("announcements");
+    };
+  }, []);
 
   function loadMore() {
     if (page < lastPage && !loading) fetchPage(page + 1, false);

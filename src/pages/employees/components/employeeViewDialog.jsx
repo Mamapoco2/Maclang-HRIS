@@ -91,6 +91,11 @@ function buildDisplayName(employee) {
   return { full, withAffixes, titleStr, prefix, nameParts, suffix };
 }
 
+const formatCurrency = (value) =>
+  value !== null && value !== undefined && value !== ""
+    ? `₱${Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+    : null;
+
 export default function EmployeeViewDialog({ open, onClose, employee }) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -102,38 +107,80 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
   const assignment =
     employee.primaryAssignment ?? employee.primary_assignment ?? {};
 
-  // Resolve plantilla position — the form uses plantilla_position, not plantilla_item
-  const plantillaPosition =
+  // Legacy nested position path (kept as a fallback for older cached
+  // responses that predate the normalized `position_info` field).
+  const legacyPositionInfo =
     assignment.plantilla_position ??
     assignment.plantillaPosition ??
     assignment.plantilla_item ??
     assignment.plantillaItem ??
     {};
 
-  // Position title: nested under item.title or directly as position_title
-  const positionTitle =
-    plantillaPosition?.item?.title ??
-    plantillaPosition?.position_title ??
-    plantillaPosition?.title ??
-    null;
-
-  // Salary grade: nested under salary_grade object
-  const salaryGradeObj =
-    plantillaPosition?.salary_grade ?? plantillaPosition?.salaryGrade ?? {};
-
-  const salaryGradeLevel = salaryGradeObj?.salary_grade ?? null;
-  const monthlySalary = salaryGradeObj?.monthly_salary ?? null;
-
-  // Step increment
-  const stepIncrement =
-    assignment.step_increment ?? assignment.stepIncrement ?? {};
-
-  // Determine employee type (normalized)
+  // Determine employee type (normalized) — computed before position
+  // resolution since the label/title logic below depends on it.
   const employmentType = (employee.employment_type ?? "").toLowerCase().trim();
   const isPlantilla = employmentType === "plantilla" || employmentType === "";
   const isCos =
     employmentType === "contract of service" || employmentType === "cos";
   const isConsultant = employmentType === "consultant";
+
+  // Normalized position info from the backend — a single, unambiguous
+  // { type, title } shape for ALL employment types (Plantilla, COS,
+  // Consultant), so we never have to guess which nested key holds the
+  // right title. Falls back to the legacy nested shape for safety.
+  const positionInfo = employee.position_info ?? null;
+  const resolvedPositionType =
+    positionInfo?.type ??
+    (isPlantilla
+      ? "plantilla"
+      : isCos
+        ? "cos"
+        : isConsultant
+          ? "consultant"
+          : "plantilla");
+
+  const positionTitle =
+    positionInfo?.title ??
+    // Legacy fallback: plantilla nests title under item.title / position_title,
+    // COS/Consultant nest it directly under title.
+    legacyPositionInfo?.item?.title ??
+    legacyPositionInfo?.position_title ??
+    legacyPositionInfo?.title ??
+    null;
+
+  const isPlantillaPosition = resolvedPositionType === "plantilla";
+  const positionRowLabel = isPlantillaPosition
+    ? "Plantilla Position"
+    : "Position";
+
+  // Salary grade: nested under salary_grade object (Plantilla only)
+  const salaryGradeObj =
+    legacyPositionInfo?.salary_grade ?? legacyPositionInfo?.salaryGrade ?? {};
+
+  // Step increment
+  const stepIncrement =
+    assignment.step_increment ?? assignment.stepIncrement ?? {};
+
+  // salary_history is the backend's source of truth for current gross/annual
+  // pay across ALL employment types (Plantilla, COS, Consultant) — falls
+  // back to the top-level employee.monthly_salary (new field), then the
+  // legacy per-type fields for older records without a history row yet.
+  const salaryHistory =
+    employee.salary_history ?? employee.salaryHistory ?? null;
+
+  const salaryGradeLevel =
+    salaryHistory?.salary_grade ?? salaryGradeObj?.salary_grade ?? null;
+
+  const grossSalary =
+    salaryHistory?.gross_salary ??
+    employee.monthly_salary ??
+    salaryGradeObj?.monthly_salary ??
+    null;
+
+  const annualSalary =
+    salaryHistory?.annual_salary ?? employee.annual_salary ?? null;
+
+  const stepLabel = salaryHistory?.step ?? stepIncrement?.step ?? null;
 
   const deptNames = getDeptNames(employee);
   const avatarSrc = getAvatarUrl(employee.avatar_url);
@@ -259,12 +306,12 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
               />
               <InfoRow
                 icon={Briefcase}
-                label="Position Title"
+                label={positionRowLabel}
                 value={positionTitle}
               />
 
               {/* Show Salary Grade and Step only for Plantilla employees */}
-              {isPlantilla && (
+              {isPlantillaPosition && (
                 <>
                   <InfoRow
                     icon={TrendingUp}
@@ -274,22 +321,30 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
                   <InfoRow
                     icon={TrendingUp}
                     label="Step"
-                    value={
-                      stepIncrement.step ? `Step ${stepIncrement.step}` : null
-                    }
+                    value={stepLabel ? `Step ${stepLabel}` : null}
                   />
                 </>
               )}
 
-              {/* Show Monthly Salary for all types */}
+              {/* Annual Salary — top-level field, applies to all employment
+                  types. Backed by salary_history (source of truth once an
+                  employee has a recorded snapshot); falls back to the raw
+                  employee.annual_salary for older records. */}
               <InfoRow
                 icon={DollarSign}
-                label="Monthly Salary"
-                value={
-                  monthlySalary
-                    ? `₱${Number(monthlySalary).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
-                    : null
-                }
+                label="Annual Salary"
+                value={formatCurrency(annualSalary)}
+              />
+
+              {/* Monthly (gross) salary — for Plantilla this comes from the
+                  step increment via salary_history; for COS/Consultant it's
+                  the manually-entered/derived value, resolved via
+                  salary_history first, then the top-level monthly_salary
+                  field, then legacy salary-grade data as a last resort. */}
+              <InfoRow
+                icon={DollarSign}
+                label="Gross Salary"
+                value={formatCurrency(grossSalary)}
               />
             </div>
           </div>

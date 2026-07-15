@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { IconLoader2 } from "@tabler/icons-react";
 import { SummaryCard } from "../application/components/overview/summaryCard";
 import PsbApplicantsCalendar from "./components/psbApplicantsCalendar";
+import { AuthContext } from "@/context/AuthContext";
 
 export default function ApplicantsPage() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { hasRole } = useContext(AuthContext);
+  const canViewSummary =
+    hasRole("SuperAdmin") || hasRole("Admin") || hasRole("HR");
 
   useEffect(() => {
     loadAll();
@@ -36,28 +41,30 @@ export default function ApplicantsPage() {
 
   return (
     <div className="grid gap-6 p-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <SummaryCard
-          title="Total Applications"
-          value={summary.total}
-          status="All PSB Applications"
-        />
-        <SummaryCard
-          title="Pendings"
-          value={summary.pending}
-          status="Awaiting Initial Review"
-        />
-        <SummaryCard
-          title="Under Review"
-          value={summary.underReview}
-          status="Currently Being Evaluated"
-        />
-        <SummaryCard
-          title="Approved"
-          value={summary.approved}
-          status="Successfully Approved"
-        />
-      </div>
+      {canViewSummary && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <SummaryCard
+            title="Total Applications"
+            value={summary.total}
+            status="All PSB Applications"
+          />
+          <SummaryCard
+            title="Pendings"
+            value={summary.pending}
+            status="Awaiting Initial Review"
+          />
+          <SummaryCard
+            title="Under Review"
+            value={summary.underReview}
+            status="Currently Being Evaluated"
+          />
+          <SummaryCard
+            title="Approved"
+            value={summary.approved}
+            status="Successfully Approved"
+          />
+        </div>
+      )}
 
       <PsbApplicantsCalendar applications={applications} onRefresh={loadAll} />
     </div>

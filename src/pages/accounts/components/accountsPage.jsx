@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserCheck, ShieldCheck } from "lucide-react";
-import AccountApprovalPage from "./AccountApprovalPage";
-import RoleManagementPage from "./RoleManagementPage";
+import AccountApprovalPage from "./accountApprovalPage";
+import RoleManagementPage from "./roleManagementPage";
 
 const TABS = [
   { id: "approval", label: "Account Approval", icon: UserCheck },

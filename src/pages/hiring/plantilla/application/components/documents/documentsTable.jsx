@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef, useState } from "react";
+import React, { useContext, useMemo, useEffect, useRef, useState } from "react";
 import {
   IconChevronDown,
   IconFileText,
@@ -10,10 +10,14 @@ import {
   IconLoader2,
   IconFolderOpen,
   IconEye,
+  IconCheck,
+  IconTrash,
+  IconMessageCircle2,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import api from "@/api/api";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
+import { AuthContext } from "@/context/authContext";
 import { candidateName } from "../psbUtils";
 
 function formatDocKey(key) {
@@ -116,6 +120,19 @@ function getCompletionInfo(application) {
   else if (missing.length > 0) status = "partial";
 
   return { totalRequired, fulfilled, missing, documents, status };
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return "";
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
 }
 
 // ── one candidate's row ──────────────────────────────────────────────────
@@ -237,14 +254,174 @@ function CandidateRow({ application, isExpanded, onToggle, onOpenDoc }) {
   );
 }
 
-// Google Classroom-style attachment viewer, unchanged from the original —
-// this part was already clear and didn't need reworking.
+function CommentsPanel({ documentId, canManage }) {
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newComment, setNewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api
+      .get(plantillaPostingService.documentCommentsUrl(documentId))
+      .then((res) => {
+        if (!cancelled) setComments(res.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Hindi ma-load ang mga komento.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [documentId]);
+
+  const submitComment = async () => {
+    const text = newComment.trim();
+    if (!text) return;
+    setSubmitting(true);
+    try {
+      const res = await api.post(
+        plantillaPostingService.documentCommentsUrl(documentId),
+        { comment: text },
+      );
+      setComments((prev) => [...prev, res.data]);
+      setNewComment("");
+    } catch (err) {
+      toast.error(err?.response?.data?.message ?? "Hindi na-save ang komento.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleResolved = async (comment) => {
+    setBusyId(comment.id);
+    try {
+      const res = await api.patch(
+        plantillaPostingService.documentCommentUrl(comment.id),
+        { resolved: !comment.resolved_at },
+      );
+      setComments((prev) =>
+        prev.map((c) => (c.id === comment.id ? res.data : c)),
+      );
+    } catch (err) {
+      toast.error("Hindi na-update ang status.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const deleteComment = async (comment) => {
+    setBusyId(comment.id);
+    try {
+      await api.delete(plantillaPostingService.documentCommentUrl(comment.id));
+      setComments((prev) => prev.filter((c) => c.id !== comment.id));
+    } catch (err) {
+      toast.error("Hindi na-delete ang komento.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="flex h-full w-full flex-col border-gray-200 bg-white sm:w-72 sm:shrink-0 sm:border-l">
+      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+        <IconMessageCircle2 size={16} className="text-gray-400" />
+        <h4 className="text-sm font-semibold text-gray-800">Review comments</h4>
+        {comments.length > 0 && (
+          <span className="text-xs text-gray-400">({comments.length})</span>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        {loading ? (
+          <div className="flex justify-center py-6">
+            <IconLoader2 size={18} className="animate-spin text-gray-300" />
+          </div>
+        ) : comments.length === 0 ? (
+          <p className="py-4 text-center text-xs text-gray-400">
+            Wala pang komento sa file na ito.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {comments.map((c) => (
+              <li
+                key={c.id}
+                className={`rounded-lg border p-2.5 ${
+                  c.resolved_at
+                    ? "border-emerald-100 bg-emerald-50/50"
+                    : "border-gray-200 bg-gray-50/60"
+                }`}
+              >
+                <p className="whitespace-pre-wrap text-xs text-gray-800">
+                  {c.comment}
+                </p>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <p className="text-[10px] text-gray-400">
+                    {c.created_by_name ?? "Reviewer"} · {timeAgo(c.created_at)}
+                    {c.resolved_at ? " · Resolved" : ""}
+                  </p>
+                  {canManage && (
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        onClick={() => toggleResolved(c)}
+                        disabled={busyId === c.id}
+                        title={c.resolved_at ? "Reopen" : "Mark resolved"}
+                        className="rounded p-1 text-emerald-600 hover:bg-emerald-100 disabled:opacity-40"
+                      >
+                        <IconCheck size={13} />
+                      </button>
+                      <button
+                        onClick={() => deleteComment(c)}
+                        disabled={busyId === c.id}
+                        title="Delete"
+                        className="rounded p-1 text-rose-600 hover:bg-rose-100 disabled:opacity-40"
+                      >
+                        <IconTrash size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {canManage && (
+        <div className="border-t border-gray-100 p-3">
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Ano ang mali sa file na ito?"
+            rows={3}
+            maxLength={2000}
+            className="w-full resize-none rounded-md border border-gray-200 p-2 text-xs text-gray-800 outline-none focus:border-indigo-400"
+          />
+          <button
+            onClick={submitComment}
+            disabled={submitting || !newComment.trim()}
+            className="mt-2 w-full rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {submitting ? "Saving…" : "Add comment"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DocumentViewerModal({
   doc,
   blobUrl,
   blob,
   mimeType,
   loading,
+  canManageComments,
   onClose,
 }) {
   const [docxHtml, setDocxHtml] = useState(null);
@@ -312,7 +489,7 @@ function DocumentViewerModal({
         role="dialog"
         aria-modal="true"
         aria-label={doc.original_filename}
-        className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex h-full max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
       >
         <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3">
           <Icon size={20} className={`shrink-0 ${iconClassName}`} />
@@ -341,35 +518,58 @@ function DocumentViewerModal({
           </button>
         </div>
 
-        <div className="flex flex-1 items-center justify-center overflow-auto bg-gray-100">
-          {loading ? (
-            <div className="flex flex-col items-center gap-2 text-gray-400">
-              <IconLoader2 size={28} className="animate-spin" />
-              <span className="text-xs">Loading preview…</span>
-            </div>
-          ) : isPdf ? (
-            <iframe
-              src={blobUrl}
-              title={doc.original_filename}
-              className="h-full w-full border-0"
-            />
-          ) : isImage ? (
-            <img
-              src={blobUrl}
-              alt={doc.original_filename}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : isDocx ? (
-            docxLoading ? (
+        <div className="flex flex-1 flex-col overflow-hidden sm:flex-row">
+          <div className="flex flex-1 items-center justify-center overflow-auto bg-gray-100">
+            {loading ? (
               <div className="flex flex-col items-center gap-2 text-gray-400">
                 <IconLoader2 size={28} className="animate-spin" />
-                <span className="text-xs">Converting document…</span>
+                <span className="text-xs">Loading preview…</span>
               </div>
-            ) : docxError ? (
+            ) : isPdf ? (
+              <iframe
+                src={blobUrl}
+                title={doc.original_filename}
+                className="h-full w-full border-0"
+              />
+            ) : isImage ? (
+              <img
+                src={blobUrl}
+                alt={doc.original_filename}
+                className="max-h-full max-w-full object-contain"
+              />
+            ) : isDocx ? (
+              docxLoading ? (
+                <div className="flex flex-col items-center gap-2 text-gray-400">
+                  <IconLoader2 size={28} className="animate-spin" />
+                  <span className="text-xs">Converting document…</span>
+                </div>
+              ) : docxError ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center text-gray-500">
+                  <IconFileText size={40} className="text-gray-300" />
+                  <p className="text-sm">
+                    Couldn't render a preview for this file.
+                  </p>
+                  <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-1.5 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+                  >
+                    <IconDownload size={14} />
+                    Download to view
+                  </button>
+                </div>
+              ) : (
+                <div className="h-full w-full overflow-auto bg-gray-100 p-6">
+                  <div
+                    className="mx-auto max-w-3xl rounded bg-white p-10 shadow prose prose-sm"
+                    dangerouslySetInnerHTML={{ __html: docxHtml }}
+                  />
+                </div>
+              )
+            ) : (
               <div className="flex flex-col items-center gap-3 py-16 text-center text-gray-500">
                 <IconFileText size={40} className="text-gray-300" />
                 <p className="text-sm">
-                  Couldn't render a preview for this file.
+                  No preview available for this file type.
                 </p>
                 <button
                   onClick={handleDownload}
@@ -379,29 +579,10 @@ function DocumentViewerModal({
                   Download to view
                 </button>
               </div>
-            ) : (
-              <div className="h-full w-full overflow-auto bg-gray-100 p-6">
-                <div
-                  className="mx-auto max-w-3xl rounded bg-white p-10 shadow prose prose-sm"
-                  dangerouslySetInnerHTML={{ __html: docxHtml }}
-                />
-              </div>
-            )
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-16 text-center text-gray-500">
-              <IconFileText size={40} className="text-gray-300" />
-              <p className="text-sm">
-                No preview available for this file type.
-              </p>
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1.5 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
-              >
-                <IconDownload size={14} />
-                Download to view
-              </button>
-            </div>
-          )}
+            )}
+          </div>
+
+          <CommentsPanel documentId={doc.id} canManage={canManageComments} />
         </div>
       </div>
     </div>
@@ -409,6 +590,14 @@ function DocumentViewerModal({
 }
 
 export default function DocumentsTable({ applications }) {
+  const { hasRole } = useContext(AuthContext) || {};
+  // UI-level gating only — the real security boundary is enforced server
+  // side via the `hiring.plantilla.applications.manage` permission on the
+  // comment write endpoints. This just decides whether to show the
+  // "add comment" box at all.
+  const canManageComments =
+    hasRole("SuperAdmin") || hasRole("Admin") || hasRole("HR");
+
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [viewerDoc, setViewerDoc] = useState(null);
   const [viewerBlob, setViewerBlob] = useState(null);
@@ -529,6 +718,7 @@ export default function DocumentsTable({ applications }) {
           blobUrl={viewerBlobUrl}
           mimeType={viewerMimeType}
           loading={viewerLoading}
+          canManageComments={canManageComments}
           onClose={closeViewer}
         />
       )}

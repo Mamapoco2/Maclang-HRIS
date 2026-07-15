@@ -6,7 +6,7 @@ import {
 } from "@/services/accountsService";
 import { IconLoader2, IconCheck, IconSearch } from "@tabler/icons-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import getEcho from "@/lib/echo";
+import { getEcho } from "@/lib/echo";
 
 export default function AccountApprovalPage() {
   const [users, setUsers] = useState([]);

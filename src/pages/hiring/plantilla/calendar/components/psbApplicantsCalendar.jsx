@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useContext, useState, useMemo } from "react";
 import Header from "./calendarHeader";
 import CalendarGrid from "./calendarGrid";
 import WeekView from "./calendarWeekView";
@@ -8,6 +8,7 @@ import RescheduleInterviewDialog from "./rescheduleInterviewDialog";
 import { Card } from "@/components/ui/card";
 import { useCalendar } from "@/hooks/useCalendar";
 import { calendarService } from "@/services/calendarService";
+import { AuthContext } from "@/context/AuthContext";
 
 const STAGE_LABELS = {
   hr: "HR Interview",
@@ -66,6 +67,13 @@ function buildEvents(applications) {
 
 export default function PsbApplicantsCalendar({ applications, onRefresh }) {
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
+
+  const { hasRole } = useContext(AuthContext);
+  // Reschedule action is HR/Admin-only — Staff/employee side of the
+  // calendar should only be able to view scheduled interviews, hindi
+  // maka-reschedule ng kanilang sariling PSB interview date.
+  const canReschedule =
+    hasRole("SuperAdmin") || hasRole("Admin") || hasRole("HR");
 
   const apiEvents = useMemo(() => buildEvents(applications), [applications]);
 
@@ -141,7 +149,7 @@ export default function PsbApplicantsCalendar({ applications, onRefresh }) {
           currentDate={currentDate}
           calendarDays={calendarDays}
           getEventsForDay={getEventsForDay}
-          onReschedule={handleReschedule}
+          onReschedule={canReschedule ? handleReschedule : undefined}
         />
       )}
 
@@ -160,11 +168,13 @@ export default function PsbApplicantsCalendar({ applications, onRefresh }) {
         />
       )}
 
-      <RescheduleInterviewDialog
-        target={rescheduleTarget}
-        onClose={() => setRescheduleTarget(null)}
-        onSaved={handleRescheduled}
-      />
+      {canReschedule && (
+        <RescheduleInterviewDialog
+          target={rescheduleTarget}
+          onClose={() => setRescheduleTarget(null)}
+          onSaved={handleRescheduled}
+        />
+      )}
     </Card>
   );
 }
