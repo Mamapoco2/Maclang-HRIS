@@ -1,4 +1,3 @@
-// src/constants/permissions.js
 export const PERMISSIONS = Object.freeze({
   // ── Dashboard ──────────────────────────────────────────
   DASHBOARD_VIEW: "dashboard.view",
@@ -10,17 +9,11 @@ export const PERMISSIONS = Object.freeze({
   PLANTILLA_POSTINGS_VIEW: "hiring.plantilla.postings.view",
   PLANTILLA_POSTINGS_MANAGE: "hiring.plantilla.postings.manage",
 
-  PLANTILLA_APPLICANTS_VIEW: "hiring.plantilla.applicants.view",
-  PLANTILLA_APPLICANTS_MANAGE: "hiring.plantilla.applicants.manage",
-
   PLANTILLA_APPLICATIONS_VIEW: "hiring.plantilla.applications.view",
   PLANTILLA_APPLICATIONS_MANAGE: "hiring.plantilla.applications.manage",
 
   PLANTILLA_ONBOARDING_VIEW: "hiring.plantilla.onboarding.view",
   PLANTILLA_ONBOARDING_MANAGE: "hiring.plantilla.onboarding.manage",
-
-  PLANTILLA_POSITIONS_VIEW: "hiring.plantilla.positions.view",
-  PLANTILLA_POSITIONS_MANAGE: "hiring.plantilla.positions.manage",
 
   NONPLANTILLA_APPLICANTS_VIEW: "hiring.nonplantilla.applicants.view",
   NONPLANTILLA_APPLICANTS_MANAGE: "hiring.nonplantilla.applicants.manage",
@@ -101,20 +94,30 @@ export const PERMISSIONS = Object.freeze({
 
   // ── Audit Logs ──────────────────────────────────────────
   AUDIT_LOGS_VIEW: "audit_logs.view",
+
+  // ── Bug Reports ──────────────────────────────────────────
+  BUG_REPORTS_VIEW: "bug-reports.view",
 });
 
-/**
- * Runtime guard (dev-only) to catch typos/dupes early.
- * Safe no-op in production builds.
- */
 if (import.meta.env?.DEV) {
   const values = Object.values(PERMISSIONS);
   const duplicates = values.filter((v, i) => values.indexOf(v) !== i);
   if (duplicates.length > 0) {
-    // eslint-disable-next-line no-console
     console.error(
       "[permissions.js] Duplicate permission values found:",
       duplicates,
     );
   }
 }
+
+export const ASSIGNABLE_ROLES = Object.freeze([
+  { value: "none", label: "No role" },
+  { value: "Admin", label: "Admin" },
+  { value: "Chairman", label: "Chairman" },
+  { value: "Director", label: "Director" },
+  { value: "HR", label: "HR" },
+  { value: "Officer In Charge", label: "Officer In Charge" },
+  { value: "Head", label: "Head" },
+  { value: "Supervisor", label: "Supervisor" },
+  { value: "Staff", label: "Staff" },
+]);

@@ -19,14 +19,6 @@ export const PERMISSION_GROUPS = [
         label: "Manage Plantilla Postings",
       },
       {
-        key: "hiring.plantilla.applicants.view",
-        label: "View Plantilla Applicants",
-      },
-      {
-        key: "hiring.plantilla.applicants.manage",
-        label: "Manage Plantilla Applicants",
-      },
-      {
         key: "hiring.plantilla.applications.view",
         label: "View Plantilla Applications",
       },
@@ -41,14 +33,6 @@ export const PERMISSION_GROUPS = [
       {
         key: "hiring.plantilla.onboarding.manage",
         label: "Manage Plantilla Onboarding",
-      },
-      {
-        key: "hiring.plantilla.positions.view",
-        label: "View Plantilla Positions",
-      },
-      {
-        key: "hiring.plantilla.positions.manage",
-        label: "Manage Plantilla Positions",
       },
       {
         key: "hiring.nonplantilla.applicants.view",

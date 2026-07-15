@@ -85,7 +85,7 @@ export default function PermissionsModal({
                     id={`group-${group}`}
                     checked={allChecked}
                     ref={(el) => {
-                      if (el) el.indeterminate - someChecked;
+                      if (el) el.indeterminate = someChecked;
                     }}
                     onCheckedChange={() => toggleGroup(permissions)}
                     className="border-gray-300"

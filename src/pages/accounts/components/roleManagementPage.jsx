@@ -14,27 +14,20 @@ import {
 import { AuthContext } from "@/context/authContext";
 import { getEcho } from "@/lib/echo";
 import PermissionsModal from "./permissionModal";
+import { ASSIGNABLE_ROLES } from "@/constants/permissions";
 import { toast } from "sonner";
 import { IconSearch } from "@tabler/icons-react";
 
 const ROLE_BADGE_STYLES = {
   admin: "bg-orange-50 text-orange-700 border-orange-200",
+  chairman: "bg-rose-50 text-rose-700 border-rose-200",
   director: "bg-purple-50 text-purple-700 border-purple-200",
   hr: "bg-blue-50 text-blue-700 border-blue-200",
   head: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "officer in charge": "bg-cyan-50 text-cyan-700 border-cyan-200",
   supervisor: "bg-amber-50 text-amber-700 border-amber-200",
   staff: "bg-gray-100 text-gray-600 border-gray-200",
 };
-
-const ASSIGNABLE_ROLES = [
-  { value: "none", label: "No role" },
-  { value: "admin", label: "Admin" },
-  { value: "director", label: "Director" },
-  { value: "hr", label: "HR" },
-  { value: "head", label: "Head" },
-  { value: "supervisor", label: "Supervisor" },
-  { value: "staff", label: "Staff" },
-];
 
 function getRoleBadgeClass(role) {
   return (
@@ -44,10 +37,12 @@ function getRoleBadgeClass(role) {
 }
 
 function getCurrentRole(user) {
-  return (
-    user.roles?.find((r) => r.toLowerCase() !== "superadmin")?.toLowerCase() ??
-    "none"
+  const role = user.roles?.find((r) => r.toLowerCase() !== "superadmin");
+  if (!role) return "none";
+  const match = ASSIGNABLE_ROLES.find(
+    (r) => r.value.toLowerCase() === role.toLowerCase(),
   );
+  return match?.value ?? role;
 }
 
 export default function RoleManagementPage() {
