@@ -54,6 +54,11 @@ export const employeeService = {
     });
   },
 
+  async getTeam(config = {}) {
+    const res = await api.get("/team", config);
+    return res.data;
+  },
+
   async getStepsByPosition(positionId) {
     const res = await api.get(`/plantilla-positions/${positionId}/steps`);
     return res.data;

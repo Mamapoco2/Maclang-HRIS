@@ -31,9 +31,12 @@ export const EMPTY_FORM = {
   display_division_id: "",
   section: "",
   salary_grade_id: "",
+  step_increment_id: "",
   monthly_salary: "",
+  annual_salary: "",
   employment_status: "Permanent",
   vacancies: "",
+  immediate_supervisor: "",
   qualification_education: "",
   qualification_experience: "",
   qualification_training: "",
@@ -53,9 +56,7 @@ export const EMPTY_FORM = {
     others: false,
   },
 };
-
 // ── PSB Applications / Interviews ──────────────────────────────────────────
-
 export const APPLICATION_STATUSES = [
   "Pending",
   "Under Review",
