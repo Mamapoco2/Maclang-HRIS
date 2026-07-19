@@ -1,5 +1,5 @@
 //src/pages/plantillaitems/plantillaitemModal.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import {
   Dialog,
@@ -687,6 +687,8 @@ export function PositionModal({
   const [saving, setSaving] = useState(false);
   const [deptSearch, setDeptSearch] = useState("");
 
+  const initialSgRef = useRef(null);
+
   const isFilled = (position?.status ?? "").toUpperCase() === "FILLED";
 
   useEffect(() => {
@@ -709,14 +711,28 @@ export function PositionModal({
   useEffect(() => {
     if (open && position) {
       setDeptSearch("");
+      const initialSg = String(position.salary_grade_id ?? "");
+      initialSgRef.current = initialSg;
+
       form.reset({
         position_title: position.position_title ?? "",
-        salary_grade_id: String(position.salary_grade_id ?? ""),
+        salary_grade_id: initialSg,
         step_increment_id: String(position.step_increment_id ?? ""),
         date_of_assumption: position.date_of_assumption ?? "",
         role: position.role ?? "",
         display_target: buildDisplayTarget(position),
       });
+
+      if (initialSg) {
+        setLoadingSteps(true);
+        plantillaItemService
+          .getStepsBySalaryGrade(initialSg)
+          .then((res) => setSteps(res.data ?? res))
+          .catch(console.error)
+          .finally(() => setLoadingSteps(false));
+      } else {
+        setSteps([]);
+      }
     }
   }, [open, position]);
 
@@ -725,12 +741,17 @@ export function PositionModal({
   const isStaffRole = watchedRole === "STAFF";
 
   useEffect(() => {
+    if (watchedSgId === initialSgRef.current) return;
+    initialSgRef.current = watchedSgId;
+
     if (!watchedSgId) {
       setSteps([]);
+      form.setValue("step_increment_id", "");
       return;
     }
-    setLoadingSteps(true);
+
     form.setValue("step_increment_id", "");
+    setLoadingSteps(true);
     plantillaItemService
       .getStepsBySalaryGrade(watchedSgId)
       .then((res) => setSteps(res.data ?? res))

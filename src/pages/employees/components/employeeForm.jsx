@@ -87,6 +87,43 @@ const positionLabel = (pos) => {
   return slot && title ? `${slot} — ${title}` : slot || title;
 };
 
+const deriveOrgPlacementFromPosition = (pos) => {
+  if (!pos) return { division: null, department: null };
+  const div = pos.display_division ?? pos.displayDivision ?? null;
+  const dept = pos.display_department ?? pos.displayDepartment ?? null;
+  return {
+    division: div?.id ? String(div.id) : null,
+    department: dept?.id ? [String(dept.id)] : null,
+  };
+};
+
+const deriveApprovedStepAndCompensation = (source) => {
+  const empty = {
+    stepId: "",
+    stepNumber: "",
+    stepLabel: "",
+    monthlySalary: "",
+    annualSalary: "",
+  };
+  if (!source) return empty;
+
+  const step =
+    source.step != null
+      ? source
+      : (source.step_increment ?? source.stepIncrement ?? null);
+
+  if (!step) return empty;
+
+  return {
+    stepId: step.id != null ? String(step.id) : "",
+    stepNumber: step.step != null ? String(step.step) : "",
+    stepLabel: step.step != null ? `Step ${step.step}` : "",
+    monthlySalary:
+      step.monthly_salary != null ? String(step.monthly_salary) : "",
+    annualSalary: step.annual_salary != null ? String(step.annual_salary) : "",
+  };
+};
+
 const EMPLOYEE_TYPE_PREFIXES = {
   Plantilla: "RMBGH-",
   "Contract of Service": "CT-",
@@ -156,10 +193,14 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const [avatarFile, setAvatarFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedPositionLabel, setSelectedPositionLabel] = useState("");
+  const [selectedStepLabel, setSelectedStepLabel] = useState("");
   const [salaryInputSource, setSalaryInputSource] = useState(null);
   const fileInputRef = useRef(null);
   const hasHydratedRef = useRef(false);
   const prevEmployeeTypeRef = useRef(formData.employeeType);
+  const [pendingProvision, setPendingProvision] = useState(null);
+  const provisionAppliedRef = useRef(false);
+  const loadedEmployeeIdRef = useRef(undefined);
 
   // ── Loading states ──────────────────────────────────────────────────────
   const [initializing, setInitializing] = useState(true);
@@ -218,19 +259,47 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   }, []);
 
   useEffect(() => {
+    const currentEmployeeId = employee?.id ?? null;
+    if (
+      loadedEmployeeIdRef.current === currentEmployeeId &&
+      hasHydratedRef.current
+    ) {
+      return;
+    }
+    loadedEmployeeIdRef.current = currentEmployeeId;
+
+    let ignore = false;
+
     const fetchAndInit = async () => {
       setInitializing(true);
+
       try {
-        const [dept, positionList] = await Promise.all([
+        const [dept, positionList, pendingProvisionRes] = await Promise.all([
           employeeService.getDepartments(),
           employeeService.getAssignablePositions(employee?.id ?? null),
+          employee?.id
+            ? employeeService
+                .getPendingPlantillaProvision(employee.id)
+                .catch(() => ({ pending: false }))
+            : Promise.resolve({ pending: false }),
         ]);
+
+        if (ignore) return;
+
         const deptList = dept.data ?? dept;
         const validDeptIds = deptList.map((d) => String(d.id));
         setDepartments(deptList);
         setPositions(Array.isArray(positionList) ? positionList : []);
 
-        if (!employee) return;
+        const pendingProvisionData = pendingProvisionRes?.pending
+          ? pendingProvisionRes
+          : null;
+        setPendingProvision(pendingProvisionData);
+
+        if (!employee) {
+          provisionAppliedRef.current = false;
+          return;
+        }
 
         const rawDeptIds = Array.isArray(employee.department_ids)
           ? employee.department_ids.map(String)
@@ -247,26 +316,14 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           assignment?.plantilla_position ??
           assignment?.plantillaPosition ??
           null;
-        const step =
+        const assignmentStep =
           assignment?.step_increment ?? assignment?.stepIncrement ?? null;
         const sgValue =
           position?.salary_grade?.salary_grade ??
           position?.salaryGrade?.salary_grade ??
           "";
-        const annualSalaryValue =
-          step?.annual_salary ??
-          position?.salary_grade?.annual_salary ??
-          position?.salaryGrade?.annual_salary ??
-          employee.annual_salary ??
-          "";
 
-        const monthlySalaryValue =
-          employee.monthly_salary ??
-          (annualSalaryValue !== ""
-            ? (Number(annualSalaryValue) / 12).toFixed(2)
-            : "");
-
-        setSelectedPositionLabel(positionLabel(position));
+        const approvedStep = deriveApprovedStepAndCompensation(assignmentStep);
 
         const toUpperArray = (val) =>
           (Array.isArray(val) ? val : val ? [val] : []).map((v) =>
@@ -277,7 +334,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           employee.employment_type,
         );
 
-        setFormData({
+        let finalFormData = {
           employeeNumber: employee.employee_number ?? "",
           rolePosition: toUpperArray(employee.role_position),
           designation: toUpperArray(employee.position_designation),
@@ -297,11 +354,17 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
             ? String(employee.employment_status).toUpperCase()
             : "",
           plantillaPositionId: position?.id ? String(position.id) : "",
-          stepIncrementId: step?.id ? String(step.id) : "",
-          stepNumber: step?.step != null ? String(step.step) : "",
+          stepIncrementId: approvedStep.stepId,
+          stepNumber: approvedStep.stepNumber,
           sgLevel: sgValue ? String(sgValue) : "",
-          annualSalary: annualSalaryValue ?? "",
-          monthlySalary: monthlySalaryValue,
+          annualSalary:
+            employee.annual_salary != null
+              ? String(employee.annual_salary)
+              : "",
+          monthlySalary:
+            employee.monthly_salary != null
+              ? String(employee.monthly_salary)
+              : "",
           salaryOverride: !!employee.salary_override,
           cosPositionId: employee.cos_position_id
             ? String(employee.cos_position_id)
@@ -309,21 +372,72 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           consultantPositionId: employee.consultant_position_id
             ? String(employee.consultant_position_id)
             : "",
-        });
+        };
 
-        prevEmployeeTypeRef.current = nextEmployeeType;
+        let finalPositionLabel = positionLabel(position);
+        let finalStepLabel = approvedStep.stepLabel;
+
+        if (pendingProvisionData?.plantilla_position) {
+          const pos = pendingProvisionData.plantilla_position;
+          const orgPlacement = deriveOrgPlacementFromPosition(pos);
+
+          finalFormData = {
+            ...finalFormData,
+            employeeType: "Plantilla",
+            plantillaPositionId: String(pos.id),
+            stepIncrementId: "",
+            stepNumber: "",
+            sgLevel: pos.salary_grade
+              ? String(pos.salary_grade)
+              : finalFormData.sgLevel,
+            ...(orgPlacement.division
+              ? { division: orgPlacement.division }
+              : {}),
+            ...(orgPlacement.department
+              ? { department: orgPlacement.department }
+              : {}),
+          };
+          finalPositionLabel = positionLabel({
+            position_slot_name: pos.position_slot_name,
+            position_title: pos.position_title,
+          });
+          finalStepLabel = "";
+          provisionAppliedRef.current = true;
+        } else {
+          provisionAppliedRef.current = false;
+        }
+
+        setFormData(finalFormData);
+        setSelectedPositionLabel(finalPositionLabel);
+        setSelectedStepLabel(finalStepLabel);
+        prevEmployeeTypeRef.current = finalFormData.employeeType;
 
         if (employee.profile) setPdsValues(employee.profile);
+
+        if (pendingProvisionData?.plantilla_position) {
+          toast.info(
+            `Auto-filled from completed application: ${pendingProvisionData.posting_title}. Review and save to provision.`,
+          );
+        }
       } catch (err) {
-        console.error(err);
-        toast.error("Failed to load employee data.");
+        if (!ignore) {
+          console.error(err);
+          toast.error("Failed to load employee data.");
+        }
       } finally {
-        setInitializing(false);
-        hasHydratedRef.current = true;
+        if (!ignore) {
+          setInitializing(false);
+          hasHydratedRef.current = true;
+        }
       }
     };
+
     fetchAndInit();
-  }, [employee]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [employee?.id]);
 
   useEffect(() => {
     employeeService
@@ -339,6 +453,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     ) {
       if (!formData.plantillaPositionId) {
         setSteps([]);
+        setSelectedStepLabel("");
         setFormData((prev) => ({
           ...prev,
           stepIncrementId: "",
@@ -356,31 +471,125 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         selectedPos.salary_grade?.salary_grade ??
         selectedPos.salaryGrade?.salary_grade ??
         "";
-      setFormData((prev) => ({ ...prev, sgLevel: sg ? String(sg) : "" }));
+      const orgPlacement = deriveOrgPlacementFromPosition(selectedPos);
+
+      const gradeAnnual =
+        selectedPos.salary_grade?.annual_salary ??
+        selectedPos.salaryGrade?.annual_salary ??
+        "";
+      const gradeMonthly =
+        selectedPos.salary_grade?.monthly_salary ??
+        selectedPos.salaryGrade?.monthly_salary ??
+        (gradeAnnual !== "" ? (Number(gradeAnnual) / 12).toFixed(2) : "");
+
+      setFormData((prev) => ({
+        ...prev,
+        sgLevel: sg ? String(sg) : "",
+        ...(orgPlacement.division ? { division: orgPlacement.division } : {}),
+        ...(orgPlacement.department
+          ? { department: orgPlacement.department }
+          : {}),
+        ...(!prev.salaryOverride && !prev.stepIncrementId
+          ? {
+              annualSalary:
+                gradeAnnual !== "" ? String(gradeAnnual) : prev.annualSalary,
+              monthlySalary:
+                gradeMonthly !== "" ? String(gradeMonthly) : prev.monthlySalary,
+            }
+          : {}),
+      }));
     }
+
+    let ignore = false;
+    const stepIncrementIdAtRequestTime = formData.stepIncrementId;
+    const salaryOverrideAtRequestTime = formData.salaryOverride;
+
     employeeService
       .getStepsByPosition(formData.plantillaPositionId)
       .then((res) => {
+        if (ignore) return;
         const loaded = res ?? [];
         setSteps(loaded);
-        setFormData((prev) => {
-          if (!prev.stepIncrementId || prev.stepNumber) return prev;
-          const match = loaded.find(
-            (s) => String(s.id) === String(prev.stepIncrementId),
+
+        if (stepIncrementIdAtRequestTime) {
+          const existing = loaded.find(
+            (s) => String(s.id) === String(stepIncrementIdAtRequestTime),
           );
-          return match ? { ...prev, stepNumber: String(match.step) } : prev;
-        });
+          if (existing) {
+            setSelectedStepLabel(`Step ${existing.step}`);
+            if (!salaryOverrideAtRequestTime) {
+              setFormData((prev) => ({
+                ...prev,
+                stepNumber: String(existing.step),
+                annualSalary: existing.annual_salary ?? prev.annualSalary,
+                monthlySalary: existing.monthly_salary ?? prev.monthlySalary,
+              }));
+            }
+          }
+          return;
+        }
+
+        if (loaded.length === 0) {
+          setSelectedStepLabel("");
+          return;
+        }
+
+        const selectedPosForStep = Array.isArray(positions)
+          ? positions.find(
+              (p) => String(p.id) === String(formData.plantillaPositionId),
+            )
+          : null;
+        const designatedStepId =
+          selectedPosForStep?.step_increment_id ??
+          selectedPosForStep?.stepIncrementId ??
+          null;
+
+        const resolvedStep =
+          (designatedStepId &&
+            loaded.find((s) => String(s.id) === String(designatedStepId))) ||
+          [...loaded].sort((a, b) => (a.step ?? 0) - (b.step ?? 0))[0];
+
+        if (!resolvedStep) {
+          setSelectedStepLabel("");
+          return;
+        }
+
+        setSelectedStepLabel(`Step ${resolvedStep.step}`);
+        setFormData((prev) => ({
+          ...prev,
+          stepIncrementId: String(resolvedStep.id),
+          stepNumber: String(resolvedStep.step),
+          ...(prev.salaryOverride
+            ? {}
+            : {
+                annualSalary: resolvedStep.annual_salary ?? prev.annualSalary,
+                monthlySalary:
+                  resolvedStep.monthly_salary ?? prev.monthlySalary,
+              }),
+        }));
       })
-      .catch(() => setSteps([]));
+      .catch(() => {
+        if (!ignore) setSteps([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, [formData.plantillaPositionId, positions]);
 
   useEffect(() => {
-    if (!formData.stepIncrementId) return;
-    if (formData.salaryOverride) return; // manual pay in effect, don't clobber
+    if (!formData.stepIncrementId) {
+      setSelectedStepLabel("");
+      return;
+    }
     const step = steps.find(
       (s) => String(s.id) === String(formData.stepIncrementId),
     );
     if (!step) return;
+
+    setSelectedStepLabel(`Step ${step.step}`);
+
+    if (formData.salaryOverride) return;
     setFormData((prev) => ({
       ...prev,
       annualSalary: step.annual_salary ?? "",
@@ -444,15 +653,36 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       : null;
     const sg =
       pos?.salary_grade?.salary_grade ?? pos?.salaryGrade?.salary_grade ?? "";
+    const orgPlacement = deriveOrgPlacementFromPosition(pos);
+    const gradeAnnual =
+      pos?.salary_grade?.annual_salary ?? pos?.salaryGrade?.annual_salary ?? "";
+    const gradeMonthly =
+      pos?.salary_grade?.monthly_salary ??
+      pos?.salaryGrade?.monthly_salary ??
+      (gradeAnnual !== "" ? (Number(gradeAnnual) / 12).toFixed(2) : "");
+
     setSelectedPositionLabel(positionLabel(pos));
+    setSelectedStepLabel("");
     setFormData((prev) => ({
       ...prev,
       plantillaPositionId: id,
       sgLevel: sg ? String(sg) : "",
       stepIncrementId: "",
       stepNumber: "",
-      annualSalary: "",
-      monthlySalary: "",
+      annualSalary: prev.salaryOverride
+        ? prev.annualSalary
+        : gradeAnnual !== ""
+          ? String(gradeAnnual)
+          : "",
+      monthlySalary: prev.salaryOverride
+        ? prev.monthlySalary
+        : gradeMonthly !== ""
+          ? String(gradeMonthly)
+          : "",
+      ...(orgPlacement.division ? { division: orgPlacement.division } : {}),
+      ...(orgPlacement.department
+        ? { department: orgPlacement.department }
+        : {}),
     }));
   };
 
@@ -503,8 +733,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
     form.append("gender", up(formData.gender));
     if (avatarFile) form.append("avatar_url", avatarFile);
 
-    // Monthly/Annual are stored as raw numeric strings (e.g. "123185891.00"),
-    // never comma-formatted, so they submit cleanly.
     if (formData.monthlySalary !== "" && formData.monthlySalary !== null) {
       form.append("monthly_salary", formData.monthlySalary);
     }
@@ -997,7 +1225,14 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                       />
                     </FieldSelect>
                   </div>
-
+                  {pendingProvision?.pending && (
+                    <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 normal-case">
+                      This employee has a <strong>Completed</strong> application
+                      for <strong>{pendingProvision.posting_title}</strong>. The
+                      Employee Type and Position have been automatically filled
+                      in — please review and save to proceed with provisioning.
+                    </div>
+                  )}
                   {/* Employee type pills */}
                   <div className="space-y-1 mb-4">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
@@ -1147,25 +1382,12 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
                         </FieldSelect>
 
                         <FieldSelect label="Step increment" custom>
-                          <SingleCombobox
-                            value={formData.stepIncrementId}
-                            onChange={(v) => handleChange("stepIncrementId", v)}
-                            placeholder={
-                              !formData.plantillaPositionId
+                          <div className="field-input flex items-center bg-gray-100 text-gray-500 cursor-default">
+                            {selectedStepLabel ||
+                              (!formData.plantillaPositionId
                                 ? "Select a position first"
-                                : steps.length === 0
-                                  ? "No steps available"
-                                  : "Select step"
-                            }
-                            disabled={
-                              !formData.plantillaPositionId ||
-                              steps.length === 0
-                            }
-                            options={steps.map((s) => ({
-                              value: String(s.id),
-                              label: `Step ${s.step}`,
-                            }))}
-                          />
+                                : "—")}
+                          </div>
                         </FieldSelect>
                       </div>
                     </div>
