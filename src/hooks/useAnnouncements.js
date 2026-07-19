@@ -1,8 +1,18 @@
-// src/hooks/useAnnouncements.js
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnnouncementsApi } from "@/services/announcements";
 import { mapAnnouncement } from "@/lib/announcementMapper";
 import { getEcho } from "@/lib/echo";
+
+function dedupeById(list) {
+  const seen = new Set();
+  const result = [];
+  for (const item of list) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    result.push(item);
+  }
+  return result;
+}
 
 export function useAnnouncements({ archived, search, filters, sort }) {
   const [items, setItems] = useState([]);
@@ -37,7 +47,7 @@ export function useAnnouncements({ archived, search, filters, sort }) {
         const data = await AnnouncementsApi.list({ ...params, page: pageNum });
         if (myRequest !== requestId.current) return;
         const mapped = data.data.map(mapAnnouncement);
-        setItems((prev) => (replace ? mapped : [...prev, ...mapped]));
+        setItems((prev) => dedupeById(replace ? mapped : [...prev, ...mapped]));
         setLastPage(data.last_page);
         setPage(pageNum);
       } catch (e) {
@@ -63,10 +73,7 @@ export function useAnnouncements({ archived, search, filters, sort }) {
     channel.listen(".announcement.created", (payload) => {
       const mapped = mapAnnouncement(payload);
       if (mapped.archived !== archivedRef.current) return;
-      setItems((prev) => {
-        if (prev.some((a) => a.id === mapped.id)) return prev;
-        return [mapped, ...prev];
-      });
+      setItems((prev) => dedupeById([mapped, ...prev]));
     });
 
     channel.listen(".announcement.updated", (payload) => {
@@ -127,7 +134,7 @@ export function useAnnouncements({ archived, search, filters, sort }) {
   }
 
   function prependItem(item) {
-    setItems((prev) => [item, ...prev]);
+    setItems((prev) => dedupeById([item, ...prev]));
   }
 
   return {
