@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import EmployeeForm from "./EmployeeForm";
+import EmployeeForm from "./forms/EmployeeForm";
 
 export default function EmployeeFormDialog({
   open,

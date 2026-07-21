@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import { employeeService } from "@/services/employeeService";
 import EmployeeTable from "./employeeTable";
-import EmployeeForm from "./employeeForm";
+import EmployeeForm from "./forms/EmployeeForm";
 import EmployeeDeleteDialog from "./employeeDeleteDialog";
 import EmployeeViewDialog from "./employeeViewDialog";
 

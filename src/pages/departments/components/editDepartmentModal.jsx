@@ -186,6 +186,21 @@ export default function EditDepartmentModal({
       .finally(() => setLoadingAssigned(false));
   }, [open, department?.id]);
 
+  useEffect(() => {
+    if (!open || loadingEmployees || employees.length === 0) return;
+    if (!form.employee_head_id) return;
+
+    const stillExists = employees.some(
+      (e) => String(e.id) === form.employee_head_id,
+    );
+    if (!stillExists) {
+      setForm((prev) => ({ ...prev, employee_head_id: "" }));
+      toast.error(
+        "The previously assigned head employee no longer exists in the system. Please reselect.",
+      );
+    }
+  }, [open, loadingEmployees, employees, form.employee_head_id]);
+
   const set = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: null }));
