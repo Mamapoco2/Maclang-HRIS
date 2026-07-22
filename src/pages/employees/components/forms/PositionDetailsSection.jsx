@@ -2,11 +2,6 @@ import { FieldSelect } from "../shared/FormField";
 import { SingleCombobox } from "../shared/Combobox";
 import { positionLabel } from "../../utils/employeeFormatters";
 
-/**
- * Renders exactly one of the three position-details blocks depending on
- * `formData.employeeType` — Plantilla (position slot + read-only SG/step),
- * Contract of Service, or Consultant.
- */
 export function PositionDetailsSection({
   formData,
   handleChange,
@@ -37,12 +32,14 @@ export function PositionDetailsSection({
                         (pos) =>
                           pos.is_assignable ||
                           pos.is_current_employee ||
-                          String(pos.id) === String(formData.plantillaPositionId),
+                          String(pos.id) ===
+                            String(formData.plantillaPositionId),
                       )
                       .map((pos) => ({
                         value: String(pos.id),
                         label: positionLabel(pos),
-                        disabled: !pos.is_assignable && !pos.is_current_employee,
+                        disabled:
+                          !pos.is_assignable && !pos.is_current_employee,
                       }))
                   : []
               }

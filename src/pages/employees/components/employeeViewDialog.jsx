@@ -61,7 +61,6 @@ const STATUS_CONFIG = {
   },
 };
 
-// ── Build: "DR. JUAN SANTOS DELA CRUZ JR., MD, RN" ────────────────────────
 function buildDisplayName(employee) {
   const up = (v) => (v ? String(v).trim().toUpperCase() : "");
 
@@ -91,10 +90,16 @@ function buildDisplayName(employee) {
   return { full, withAffixes, titleStr, prefix, nameParts, suffix };
 }
 
-const formatCurrency = (value) =>
-  value !== null && value !== undefined && value !== ""
-    ? `₱${Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+const formatCurrency = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const cleaned =
+    typeof value === "string" ? value.replace(/[^0-9.-]/g, "") : value;
+  if (cleaned === "") return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n)
+    ? `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
     : null;
+};
 
 export default function EmployeeViewDialog({ open, onClose, employee }) {
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -103,12 +108,9 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
 
   const info = employee.info || {};
 
-  // Resolve assignment — support both camelCase and snake_case from API
   const assignment =
     employee.primaryAssignment ?? employee.primary_assignment ?? {};
 
-  // Legacy nested position path (kept as a fallback for older cached
-  // responses that predate the normalized `position_info` field).
   const legacyPositionInfo =
     assignment.plantilla_position ??
     assignment.plantillaPosition ??
@@ -116,18 +118,12 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
     assignment.plantillaItem ??
     {};
 
-  // Determine employee type (normalized) — computed before position
-  // resolution since the label/title logic below depends on it.
   const employmentType = (employee.employment_type ?? "").toLowerCase().trim();
   const isPlantilla = employmentType === "plantilla" || employmentType === "";
   const isCos =
     employmentType === "contract of service" || employmentType === "cos";
   const isConsultant = employmentType === "consultant";
 
-  // Normalized position info from the backend — a single, unambiguous
-  // { type, title } shape for ALL employment types (Plantilla, COS,
-  // Consultant), so we never have to guess which nested key holds the
-  // right title. Falls back to the legacy nested shape for safety.
   const positionInfo = employee.position_info ?? null;
   const resolvedPositionType =
     positionInfo?.type ??
@@ -141,8 +137,6 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
 
   const positionTitle =
     positionInfo?.title ??
-    // Legacy fallback: plantilla nests title under item.title / position_title,
-    // COS/Consultant nest it directly under title.
     legacyPositionInfo?.item?.title ??
     legacyPositionInfo?.position_title ??
     legacyPositionInfo?.title ??
@@ -153,18 +147,12 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
     ? "Plantilla Position"
     : "Position";
 
-  // Salary grade: nested under salary_grade object (Plantilla only)
   const salaryGradeObj =
     legacyPositionInfo?.salary_grade ?? legacyPositionInfo?.salaryGrade ?? {};
 
-  // Step increment
   const stepIncrement =
     assignment.step_increment ?? assignment.stepIncrement ?? {};
 
-  // salary_history is the backend's source of truth for current gross/annual
-  // pay across ALL employment types (Plantilla, COS, Consultant) — falls
-  // back to the top-level employee.monthly_salary (new field), then the
-  // legacy per-type fields for older records without a history row yet.
   const salaryHistory =
     employee.salary_history ?? employee.salaryHistory ?? null;
 
@@ -310,7 +298,6 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
                 value={positionTitle}
               />
 
-              {/* Show Salary Grade and Step only for Plantilla employees */}
               {isPlantillaPosition && (
                 <>
                   <InfoRow
@@ -326,21 +313,12 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
                 </>
               )}
 
-              {/* Annual Salary — top-level field, applies to all employment
-                  types. Backed by salary_history (source of truth once an
-                  employee has a recorded snapshot); falls back to the raw
-                  employee.annual_salary for older records. */}
               <InfoRow
                 icon={DollarSign}
                 label="Annual Salary"
                 value={formatCurrency(annualSalary)}
               />
 
-              {/* Monthly (gross) salary — for Plantilla this comes from the
-                  step increment via salary_history; for COS/Consultant it's
-                  the manually-entered/derived value, resolved via
-                  salary_history first, then the top-level monthly_salary
-                  field, then legacy salary-grade data as a last resort. */}
               <InfoRow
                 icon={DollarSign}
                 label="Gross Salary"
@@ -351,7 +329,6 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
         </DialogContent>
       </Dialog>
 
-      {/* Avatar full-size preview */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-sm p-2 border-none">
           <DialogTitle className="sr-only">Employee Avatar Preview</DialogTitle>

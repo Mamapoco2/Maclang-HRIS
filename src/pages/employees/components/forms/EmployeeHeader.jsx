@@ -1,11 +1,6 @@
 import { Camera, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Top strip of the form: avatar (click/drag-drop to upload), display name +
- * role/department, active position label, and the employee number + status
- * badge on the right.
- */
 export function EmployeeHeader({
   employee,
   formData,

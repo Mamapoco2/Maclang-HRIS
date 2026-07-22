@@ -2,11 +2,6 @@ import { cn } from "@/lib/utils";
 import { FieldSelect } from "../shared/FormField";
 import { CurrencyInput } from "../shared/CurrencyInput";
 
-/**
- * "Compensation" block — applies to all employment types. For Plantilla,
- * the fields are read-only (auto-computed from the assigned position's
- * step increment) unless "Override computed salary" is checked.
- */
 export function CompensationSection({
   formData,
   setFormData,

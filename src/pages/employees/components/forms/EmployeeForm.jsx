@@ -15,6 +15,7 @@ import {
   getDisplayName,
   getInitials,
   getRoleDisplay,
+  employeeNumberHasDigits,
 } from "../../utils/employeeFormatters";
 import { TABS } from "../../utils/employeeConstants";
 
@@ -59,8 +60,11 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       prevEmployeeTypeRef,
     });
 
-  const { salaryInputSource, handleAnnualSalaryChange, handleMonthlySalaryChange } =
-    useEmployeeCompensation(setFormData);
+  const {
+    salaryInputSource,
+    handleAnnualSalaryChange,
+    handleMonthlySalaryChange,
+  } = useEmployeeCompensation(setFormData);
 
   const {
     avatarPreview,
@@ -76,6 +80,12 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
+
+    if (!employeeNumberHasDigits(formData.employeeNumber)) {
+      toast.error("Please enter an Employee No. before saving.");
+      return;
+    }
+
     setSubmitting(true);
 
     const form = buildEmployeeFormData({
@@ -109,7 +119,11 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       onClose();
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message ?? "Save failed");
+      console.error("Validation errors:", err.response?.data?.errors);
+      const firstError = err.response?.data?.errors
+        ? Object.values(err.response.data.errors)[0]?.[0]
+        : null;
+      toast.error(firstError ?? err.response?.data?.message ?? "Save failed");
     } finally {
       setSubmitting(false);
     }
@@ -133,7 +147,9 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
 
   const selectedCosPosition =
     Array.isArray(cosPositions) && cosPositions.length > 0
-      ? cosPositions.find((p) => String(p.id) === String(formData.cosPositionId))
+      ? cosPositions.find(
+          (p) => String(p.id) === String(formData.cosPositionId),
+        )
       : null;
 
   const selectedConsultantPosition =
@@ -268,7 +284,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         </button>
       </div>
 
-      {/* ── Submitting overlay ──────────────────────────────────────────── */}
       {submitting && (
         <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
           <div className="flex flex-col items-center gap-2 text-gray-500">
@@ -280,7 +295,6 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         </div>
       )}
 
-      {/* ── Inline styles ────────────────────────────────────────────────── */}
       <style>{`
         .field-input {
           display: flex;

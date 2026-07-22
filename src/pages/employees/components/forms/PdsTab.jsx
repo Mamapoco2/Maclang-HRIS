@@ -28,11 +28,6 @@ const PDS_STEP_COMPONENTS = {
   references: StepReferencesAndId,
 };
 
-/**
- * Personal Data Sheet step wizard. `pdsStepIdx` is local UI navigation
- * state — it was never read outside this tab in the original component,
- * so keeping it here doesn't change any observable behavior.
- */
 export function PdsTab({ values, setField }) {
   const [pdsStepIdx, setPdsStepIdx] = useState(0);
   const pdsStep = STEPS[pdsStepIdx];
@@ -90,7 +85,9 @@ export function PdsTab({ values, setField }) {
         </button>
         <button
           type="button"
-          onClick={() => setPdsStepIdx((i) => Math.min(STEPS.length - 1, i + 1))}
+          onClick={() =>
+            setPdsStepIdx((i) => Math.min(STEPS.length - 1, i + 1))
+          }
           disabled={pdsStepIdx === STEPS.length - 1}
           className="flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-30 disabled:cursor-default transition-all duration-150"
         >

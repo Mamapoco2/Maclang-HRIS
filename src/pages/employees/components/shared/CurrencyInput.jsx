@@ -1,11 +1,5 @@
 import { useRef } from "react";
 
-/**
- * Text input that displays comma-formatted currency while storing/emitting
- * a plain numeric string. Cursor position is preserved across re-formatting
- * by counting digits-before-cursor in the old value and re-locating that
- * same digit position in the newly formatted string.
- */
 export function CurrencyInput({
   value,
   onChange,
@@ -26,12 +20,10 @@ export function CurrencyInput({
     const prevValue = input.value;
     const cursorPos = input.selectionStart;
 
-    // Count digits before cursor in the old (formatted) string
     const digitsBeforeCursor = prevValue
       .slice(0, cursorPos)
       .replace(/[^0-9]/g, "").length;
 
-    // Strip everything except digits and a single decimal point
     let raw = prevValue.replace(/[^0-9.]/g, "");
     const firstDot = raw.indexOf(".");
     if (firstDot !== -1) {
@@ -41,7 +33,6 @@ export function CurrencyInput({
 
     onChange(raw);
 
-    // Restore cursor position after re-render
     requestAnimationFrame(() => {
       if (!inputRef.current) return;
       const newFormatted = formatDisplay(raw);

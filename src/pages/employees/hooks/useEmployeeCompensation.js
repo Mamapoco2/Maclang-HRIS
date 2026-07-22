@@ -5,12 +5,6 @@ const toNumber = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
-/**
- * Keeps monthlySalary/annualSalary in sync as the user edits either field
- * (annual = monthly * 12), and tracks which field was last hand-edited so
- * the backend knows which one to treat as authoritative
- * (`salary_input_source`).
- */
 export function useEmployeeCompensation(setFormData) {
   const [salaryInputSource, setSalaryInputSource] = useState(null);
 

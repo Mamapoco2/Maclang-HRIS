@@ -8,7 +8,11 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export function SingleCombobox({
   value,
@@ -105,7 +109,12 @@ export function SingleCombobox({
   );
 }
 
-export function MultiCombobox({ value = [], onChange, options = [], placeholder }) {
+export function MultiCombobox({
+  value = [],
+  onChange,
+  options = [],
+  placeholder,
+}) {
   const [open, setOpen] = useState(false);
   const selected = Array.isArray(value) ? value : [value].filter(Boolean);
   const selectedLabels = options

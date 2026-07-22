@@ -3,15 +3,6 @@ import { employeeService } from "@/services/employeeService";
 import { positionLabel } from "../utils/employeeFormatters";
 import { deriveOrgPlacementFromPosition } from "../utils/employeeHelpers";
 
-/**
- * Everything tied to "which position is this employee in, and what does
- * that mean for salary grade / step / division / department" — for all
- * three employment types. Depends on `formData`/`setFormData` and the
- * `positions` list owned by useEmployeeFormState, plus the
- * hasHydratedRef/prevEmployeeTypeRef it also owns (so the employee-type
- * reset effect below only fires on genuine user-driven type switches, not
- * during initial hydration).
- */
 export function usePositionSteps({
   formData,
   setFormData,
@@ -25,7 +16,6 @@ export function usePositionSteps({
   const [cosPositions, setCosPositions] = useState([]);
   const [consultantPositions, setConsultantPositions] = useState([]);
 
-  // ── COS / Consultant position lists (mount-only) ─────────────────────────
   useEffect(() => {
     employeeService
       .getCosPositions()
@@ -37,7 +27,6 @@ export function usePositionSteps({
       .catch(() => setConsultantPositions([]));
   }, []);
 
-  // ── Plantilla position -> salary grade / division / department / steps ──
   useEffect(() => {
     if (
       !formData.plantillaPositionId ||
@@ -170,7 +159,6 @@ export function usePositionSteps({
     };
   }, [formData.plantillaPositionId, positions]);
 
-  // ── Step increment -> label + (non-override) salary sync ────────────────
   useEffect(() => {
     if (!formData.stepIncrementId) {
       setSelectedStepLabel("");
@@ -186,13 +174,12 @@ export function usePositionSteps({
     if (formData.salaryOverride) return;
     setFormData((prev) => ({
       ...prev,
-      annualSalary: step.annual_salary ?? "",
-      monthlySalary: step.monthly_salary ?? "",
+      annualSalary: step.annual_salary ?? prev.annualSalary,
+      monthlySalary: step.monthly_salary ?? prev.monthlySalary,
       stepNumber: String(step.step),
     }));
   }, [formData.stepIncrementId, steps, formData.salaryOverride]);
 
-  // ── Employee type switch -> reset position/step/salary-override fields ──
   useEffect(() => {
     if (!hasHydratedRef.current) {
       prevEmployeeTypeRef.current = formData.employeeType;

@@ -1,10 +1,5 @@
 import { useRef, useState } from "react";
 
-/**
- * Avatar preview/upload state — independent of the rest of the form, so it
- * lives in its own hook. Exposes the same handlers EmployeeHeader wired
- * directly before (click-to-upload, drag & drop, remove).
- */
 export function useAvatarUpload() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);

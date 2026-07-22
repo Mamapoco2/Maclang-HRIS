@@ -1,8 +1,3 @@
-// ─── Employee form constants ──────────────────────────────────────────────
-// Pure, static configuration extracted verbatim from EmployeeForm.jsx.
-// No side effects, no imports of components — safe to reuse anywhere in
-// the module (table filters, validators, etc.) without pulling in React.
-
 export const TABS = [
   { id: "employment", label: "Employment" },
   { id: "pds", label: "Personal Data Sheet" },
@@ -14,7 +9,6 @@ export const EMPLOYEE_TYPES = [
   { value: "Consultant", label: "Consultant" },
 ];
 
-// Prefix applied to the employee number depending on employment type.
 export const EMPLOYEE_TYPE_PREFIXES = {
   Plantilla: "RMBGH-",
   "Contract of Service": "CT-",
@@ -86,9 +80,6 @@ export const TITLE_OPTIONS = [
   "HD TECHNICIAN",
 ].map((v) => ({ value: v, label: v }));
 
-// Fields the Personal Data Sheet submits as JSON-encoded arrays rather
-// than scalar form fields. Used by buildEmployeeFormData to decide how to
-// append each `pdsValues` entry to the outgoing FormData.
 export const PDS_TABLE_KEYS = [
   "children",
   "edu_elementary",
@@ -107,7 +98,7 @@ export const PDS_TABLE_KEYS = [
 ];
 
 export const INITIAL_EMPLOYEE_FORM_STATE = {
-  employeeNumber: "",
+  employeeNumber: EMPLOYEE_TYPE_PREFIXES.Plantilla,
   rolePosition: [],
   employeeType: "Plantilla",
   status: "",

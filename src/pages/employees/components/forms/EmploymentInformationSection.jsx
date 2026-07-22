@@ -7,16 +7,14 @@ import {
   STATUS_OPTIONS,
   POSITION_CLASSIFICATION_OPTIONS,
 } from "../../utils/employeeConstants";
-import { applyEmployeeNumberPrefix } from "../../utils/employeeFormatters";
+import {
+  applyEmployeeNumberPrefix,
+  employeeNumberNeedsReentry,
+} from "../../utils/employeeFormatters";
 import { CompensationSection } from "./CompensationSection";
 import { PositionDetailsSection } from "./PositionDetailsSection";
+import { toast } from "sonner";
 
-/**
- * "Employment information" section: classification, sex, division,
- * department, deployment area, status, the pending-provision banner, the
- * Employee Type pills (which also re-syncs the Employee No. prefix), and
- * the Compensation + position-details blocks underneath.
- */
 export function EmploymentInformationSection({
   formData,
   setFormData,
@@ -103,9 +101,9 @@ export function EmploymentInformationSection({
       {pendingProvision?.pending && (
         <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 normal-case">
           This employee has a <strong>Completed</strong> application for{" "}
-          <strong>{pendingProvision.posting_title}</strong>. The Employee
-          Type and Position have been automatically filled in — please
-          review and save to proceed with provisioning.
+          <strong>{pendingProvision.posting_title}</strong>. The Employee Type
+          and Position have been automatically filled in — please review and
+          save to proceed with provisioning.
         </div>
       )}
 
@@ -120,14 +118,28 @@ export function EmploymentInformationSection({
               key={t.value}
               type="button"
               onClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  employeeType: t.value,
-                  employeeNumber: applyEmployeeNumberPrefix(
-                    prev.employeeNumber,
-                    t.value,
-                  ),
-                }))
+                setFormData((prev) => {
+                  if (
+                    employeeNumberNeedsReentry(prev.employeeNumber, t.value)
+                  ) {
+                    toast.info(
+                      "Employment type changed — please enter a new Employee No. for this type (numbers aren't shared across Plantilla/COS/Consultant).",
+                    );
+                    return {
+                      ...prev,
+                      employeeType: t.value,
+                      employeeNumber: applyEmployeeNumberPrefix("", t.value),
+                    };
+                  }
+                  return {
+                    ...prev,
+                    employeeType: t.value,
+                    employeeNumber: applyEmployeeNumberPrefix(
+                      prev.employeeNumber,
+                      t.value,
+                    ),
+                  };
+                })
               }
               className={cn(
                 "flex-1 py-2 px-3 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all duration-150",

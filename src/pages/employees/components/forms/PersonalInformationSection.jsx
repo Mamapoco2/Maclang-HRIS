@@ -4,20 +4,40 @@ import {
   PREFIX_OPTIONS,
   SUFFIX_OPTIONS,
   TITLE_OPTIONS,
+  EMPLOYEE_TYPE_PREFIXES,
 } from "../../utils/employeeConstants";
+import { stripEmployeeNumberPrefix } from "../../utils/employeeFormatters";
 
-/** "Employee information" section: name, prefix/suffix, title/profession. */
 export function PersonalInformationSection({ formData, handleChange }) {
+  const employeeNumberPrefix =
+    EMPLOYEE_TYPE_PREFIXES[formData.employeeType] ?? "";
+  const employeeNumberSuffix = stripEmployeeNumberPrefix(
+    formData.employeeNumber,
+  );
+
   return (
     <FormSection label="Employee information">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <FieldSelect label="Employee No." className="sm:col-span-1">
-          <input
-            type="text"
-            value={formData.employeeNumber}
-            onChange={(e) => handleChange("employeeNumber", e.target.value)}
-            className="field-input"
-          />
+          <div className="field-input">
+            {employeeNumberPrefix && (
+              <span className="text-black-900 select-none shrink-0">
+                {employeeNumberPrefix}
+              </span>
+            )}
+            <input
+              type="text"
+              value={employeeNumberSuffix}
+              onChange={(e) =>
+                handleChange(
+                  "employeeNumber",
+                  employeeNumberPrefix +
+                    stripEmployeeNumberPrefix(e.target.value),
+                )
+              }
+              className="flex-1 min-w-0 h-full bg-transparent outline-none border-0 p-0"
+            />
+          </div>
         </FieldSelect>
 
         <FieldSelect label="Prefix">

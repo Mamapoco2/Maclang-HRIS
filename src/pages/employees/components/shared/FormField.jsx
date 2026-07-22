@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 
-/** Section header with a label and a hairline divider filling the rest of the row. */
 export function FormSection({ label, children }) {
   return (
     <section className="space-y-3">
@@ -15,7 +14,6 @@ export function FormSection({ label, children }) {
   );
 }
 
-/** Label + control wrapper used by every field in the form. */
 export function FieldSelect({ label, children, className = "" }) {
   return (
     <div className={cn("flex flex-col gap-1", className)}>
@@ -27,7 +25,6 @@ export function FieldSelect({ label, children, className = "" }) {
   );
 }
 
-/** Plain native <select> styled to match `.field-input` (see EmployeeForm's <style>). */
 export function NativeSelect({ value, onChange, options, placeholder }) {
   return (
     <select

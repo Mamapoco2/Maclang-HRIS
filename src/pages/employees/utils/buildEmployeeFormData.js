@@ -2,13 +2,6 @@ import { PDS_TABLE_KEYS } from "./employeeConstants";
 
 const up = (v) => (v ? String(v).toUpperCase() : "");
 
-/**
- * Assembles the multipart FormData payload sent to
- * addEmployee/updateEmployee, exactly mirroring the original inline
- * handleSubmit logic in EmployeeForm.jsx. Kept as a pure function (no
- * React, no service calls) so the submit handler in EmployeeForm stays a
- * thin orchestrator.
- */
 export function buildEmployeeFormData({
   formData,
   pdsValues,

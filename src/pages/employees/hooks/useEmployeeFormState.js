@@ -7,26 +7,14 @@ import {
   positionLabel,
   toMoneyString,
   applyEmployeeNumberPrefix,
+  employeeNumberNeedsReentry,
+  employeeNumberHasDigits,
 } from "../utils/employeeFormatters";
 import {
   deriveOrgPlacementFromPosition,
   deriveApprovedStepAndCompensation,
 } from "../utils/employeeHelpers";
 
-/**
- * Owns the employee record's core form state and the "load everything
- * needed to edit this employee" effect: departments, assignable plantilla
- * positions, and any pending PSB-application provision, then hydrates
- * `formData` from the employee (or resets to blank for a new hire).
- *
- * Two employee-number behaviors live here (both extracted verbatim):
- *  1. On every hydration, the number's prefix (RMBGH-/CT-/CS-) is synced
- *     to the record's current employment_type — covers records whose type
- *     changed after the number was first assigned.
- *  2. When a completed PSB application auto-provisions this record to
- *     Plantilla, the prefix is (re)synced to Plantilla as part of that
- *     override, mirroring the manual "click the Plantilla pill" behavior.
- */
 export function useEmployeeFormState(employee) {
   const [formData, setFormData] = useState(INITIAL_EMPLOYEE_FORM_STATE);
   const [departments, setDepartments] = useState([]);
@@ -119,12 +107,6 @@ export function useEmployeeFormState(employee) {
         );
 
         let finalFormData = {
-          // ── Employee No. prefix sync ─────────────────────────────────────
-          // Keeps the number's prefix (RMBGH-/CT-/CS-) in sync with the
-          // record's current employment_type on every load — covers cases
-          // where the type was changed/saved previously but the number
-          // still carries the old prefix (e.g. converted from COS to
-          // Plantilla outside the pendingProvision auto-fill flow below).
           employeeNumber: applyEmployeeNumberPrefix(
             employee.employee_number ?? "",
             nextEmployeeType,
@@ -150,11 +132,6 @@ export function useEmployeeFormState(employee) {
           stepIncrementId: approvedStep.stepId,
           stepNumber: approvedStep.stepNumber,
           sgLevel: sgValue ? String(sgValue) : "",
-          // ── Historical salary preservation ──────────────────────────────
-          // Per requirement: the Employee record's own monthly_salary /
-          // annual_salary are the source of truth and must render exactly
-          // as saved (2 decimals, comma-formatted) — never recomputed from
-          // the position's current Salary Grade or Step Increment here.
           annualSalary: toMoneyString(employee.annual_salary),
           monthlySalary: toMoneyString(employee.monthly_salary),
           salaryOverride: !!employee.salary_override,
@@ -172,32 +149,23 @@ export function useEmployeeFormState(employee) {
         if (pendingProvisionData?.plantilla_position) {
           const pos = pendingProvisionData.plantilla_position;
           const orgPlacement = deriveOrgPlacementFromPosition(pos);
-
-          // ── Hire-time salary source of truth ───────────────────────────
-          // The approved Plantilla Posting's own saved monthly_salary /
-          // annual_salary are authoritative here — NOT the position's
-          // current Salary Grade default and NOT a Step Increment
-          // computation. We also force salaryOverride = true so the
-          // existing override guard (used throughout usePositionSteps'
-          // SG/step sync effects) protects these values from being
-          // silently recomputed, both now and on every future load of
-          // this record — satisfying the "preserve historical salary even
-          // if the posting/position later changes" requirement.
           const postingMonthly = toMoneyString(pos.monthly_salary);
           const postingAnnual = toMoneyString(pos.annual_salary);
+
+          const numberNeedsReentry = employeeNumberNeedsReentry(
+            finalFormData.employeeNumber,
+            "Plantilla",
+          );
 
           finalFormData = {
             ...finalFormData,
             employeeType: "Plantilla",
-            // ── Employee No. prefix sync ──────────────────────────────────
-            // When a completed PSB application auto-provisions this record
-            // to Plantilla (from COS/Consultant), the Employee No. prefix
-            // must switch to RMBGH- together with the type — mirrors the
-            // manual "click the Plantilla pill" behavior.
-            employeeNumber: applyEmployeeNumberPrefix(
-              finalFormData.employeeNumber,
-              "Plantilla",
-            ),
+            employeeNumber: numberNeedsReentry
+              ? ""
+              : applyEmployeeNumberPrefix(
+                  finalFormData.employeeNumber,
+                  "Plantilla",
+                ),
             plantillaPositionId: String(pos.id),
             stepIncrementId: "",
             stepNumber: "",
@@ -235,6 +203,11 @@ export function useEmployeeFormState(employee) {
           toast.info(
             `Auto-filled from completed application: ${pendingProvisionData.posting_title}. Review and save to provision.`,
           );
+          if (!employeeNumberHasDigits(finalFormData.employeeNumber)) {
+            toast.warning(
+              "This employee's number is numbered under their previous type — please assign a new Employee No. for Plantilla before saving.",
+            );
+          }
         }
       } catch (err) {
         if (!ignore) {
