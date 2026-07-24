@@ -1,3 +1,4 @@
+// src/pages/register/components/registerForm.jsx
 import { useContext, useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
@@ -47,20 +48,22 @@ function RuleRow({ label, passed, touched }) {
   return (
     <li className="flex items-center gap-1.5 text-xs">
       {passed ? (
-        <Check className="w-3 h-3 text-green-500 shrink-0" strokeWidth={3} />
+        <Check className="w-3 h-3 text-[#2F9E58] shrink-0" strokeWidth={3} />
       ) : (
-        <X className="w-3 h-3 text-red-500 shrink-0" strokeWidth={3} />
+        <X className="w-3 h-3 text-[#C2410C] shrink-0" strokeWidth={3} />
       )}
-      <span
-        className={
-          passed ? "text-green-600 dark:text-green-400" : "text-red-500"
-        }
-      >
+      <span className={passed ? "text-[#2F9E58]" : "text-[#C2410C]"}>
         {label}
       </span>
     </li>
   );
 }
+
+const sectionLabel =
+  "text-[11px] font-medium text-[#7C93A8] uppercase tracking-[0.15em] border-b border-[#D7E0E8] pb-2 font-['IBM_Plex_Mono',monospace]";
+const fieldLabel = "text-xs font-medium text-[#5A7188] uppercase tracking-wide";
+const fieldInput =
+  "h-10 rounded-lg border-[#D7E0E8] bg-white text-[#16324A] placeholder:text-[#9BAAB8] focus-visible:border-[#6FA3D8] focus-visible:ring-[#6FA3D8]/30";
 
 export default function RegisterForm() {
   const { register: registerUser } = useContext(AuthContext);
@@ -162,24 +165,24 @@ export default function RegisterForm() {
 
   if (registered) {
     return (
-      <div className="flex flex-col items-center text-center py-6 space-y-4">
-        <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-          <Clock className="w-8 h-8 text-amber-500" />
+      <div className="flex flex-col items-center space-y-4 py-6 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#E8A33D]/10">
+          <Clock className="h-8 w-8 text-[#E8A33D]" />
         </div>
         <div className="space-y-2">
-          <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">
-            Account Pending Activation
+          <h3 className="font-['Petrona',serif] text-lg font-semibold text-[#16324A]">
+            Account pending activation
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs">
+          <p className="max-w-xs text-sm leading-relaxed text-[#5A7188]">
             Your account has been created. An HR administrator must activate it
             before you can log in. Please check back later.
           </p>
         </div>
         <Link
           to="/login"
-          className="text-sm font-semibold text-blue-700 hover:underline uppercase tracking-wider"
+          className="text-sm font-medium text-[#16324A] underline decoration-[#6FA3D8] decoration-2 underline-offset-4 transition-colors hover:text-[#6FA3D8]"
         >
-          Back to Login
+          Back to login
         </Link>
       </div>
     );
@@ -188,23 +191,18 @@ export default function RegisterForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {serverError && (
-        <div className="rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+        <div className="rounded-md border border-[#E8A33D]/30 bg-[#E8A33D]/10 px-4 py-3 text-sm text-[#8A5A12]">
           {serverError}
         </div>
       )}
 
       {/* SECTION: Personal Information */}
       <div className="space-y-4">
-        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-gray-800 pb-2">
-          Personal Information
-        </p>
+        <p className={sectionLabel}>Personal Information</p>
 
         {/* GIVEN NAME — full width */}
         <div className="space-y-1.5">
-          <Label
-            htmlFor="given_name"
-            className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-          >
+          <Label htmlFor="given_name" className={fieldLabel}>
             Given Name
           </Label>
           <Input
@@ -212,7 +210,7 @@ export default function RegisterForm() {
             type="text"
             placeholder="e.g. Elias"
             autoComplete="given-name"
-            className="bg-white/80 dark:bg-gray-800/80 uppercase h-10"
+            className={fieldInput}
             {...register("given_name", {
               required: "Given name is required.",
               minLength: { value: 2, message: "Too short." },
@@ -220,19 +218,18 @@ export default function RegisterForm() {
             })}
           />
           {errors.given_name && (
-            <p className="text-xs text-red-500">{errors.given_name.message}</p>
+            <p className="text-xs text-[#C2410C]">
+              {errors.given_name.message}
+            </p>
           )}
         </div>
 
         {/* MIDDLE + LAST NAME — 2 columns */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label
-              htmlFor="middle_name"
-              className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
+            <Label htmlFor="middle_name" className={fieldLabel}>
               Middle Name{" "}
-              <span className="normal-case font-normal text-gray-400 text-xs">
+              <span className="text-[11px] font-normal normal-case text-[#9BAAB8]">
                 (optional)
               </span>
             </Label>
@@ -241,7 +238,7 @@ export default function RegisterForm() {
               type="text"
               placeholder="e.g. Santos"
               autoComplete="additional-name"
-              className="bg-white/80 dark:bg-gray-800/80 uppercase h-10"
+              className={fieldInput}
               {...register("middle_name", {
                 onChange: () => syncUsername(),
               })}
@@ -249,10 +246,7 @@ export default function RegisterForm() {
           </div>
 
           <div className="space-y-1.5">
-            <Label
-              htmlFor="last_name"
-              className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
+            <Label htmlFor="last_name" className={fieldLabel}>
               Last Name
             </Label>
             <Input
@@ -260,7 +254,7 @@ export default function RegisterForm() {
               type="text"
               placeholder="e.g. Marquez"
               autoComplete="family-name"
-              className="bg-white/80 dark:bg-gray-800/80 uppercase h-10"
+              className={fieldInput}
               {...register("last_name", {
                 required: "Last name is required.",
                 minLength: { value: 2, message: "Too short." },
@@ -268,17 +262,16 @@ export default function RegisterForm() {
               })}
             />
             {errors.last_name && (
-              <p className="text-xs text-red-500">{errors.last_name.message}</p>
+              <p className="text-xs text-[#C2410C]">
+                {errors.last_name.message}
+              </p>
             )}
           </div>
         </div>
 
         {/* USERNAME */}
         <div className="space-y-1.5">
-          <Label
-            htmlFor="username"
-            className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-          >
+          <Label htmlFor="username" className={fieldLabel}>
             Username
           </Label>
           <Input
@@ -287,36 +280,35 @@ export default function RegisterForm() {
             readOnly
             tabIndex={-1}
             placeholder="Auto-generated from your name"
-            className="bg-gray-50 dark:bg-gray-900/60 text-gray-600 dark:text-gray-400 cursor-default uppercase h-10"
+            className="h-10 cursor-default rounded-lg border-[#D7E0E8] bg-[#F1F4F7] text-[#5A7188]"
             {...register("username", { required: "Username is required." })}
           />
 
-          {/* Status messages */}
           {usernameStatus === "checking" && (
-            <p className="flex items-center gap-1.5 text-xs text-gray-400">
-              <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+            <p className="flex items-center gap-1.5 text-xs text-[#9BAAB8]">
+              <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
               Checking availability...
             </p>
           )}
 
           {usernameStatus === "available" && (
-            <p className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-              <Check className="w-3 h-3 shrink-0" strokeWidth={3} />
+            <p className="flex items-center gap-1.5 text-xs text-[#2F9E58]">
+              <Check className="h-3 w-3 shrink-0" strokeWidth={3} />
               Username is available
             </p>
           )}
 
           {usernameStatus === "taken" && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-xs text-red-500">
-                <AlertCircle className="w-3 h-3 shrink-0" />
+              <p className="flex items-center gap-1.5 text-xs text-[#C2410C]">
+                <AlertCircle className="h-3 w-3 shrink-0" />
                 This username is already taken. Please choose one of the
                 suggestions below.
               </p>
               {usernameSuggestions.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="flex items-center gap-1 text-xs text-gray-400">
-                    <Sparkles className="w-3 h-3 shrink-0" />
+                  <span className="flex items-center gap-1 text-xs text-[#9BAAB8]">
+                    <Sparkles className="h-3 w-3 shrink-0" />
                     Available:
                   </span>
                   {usernameSuggestions.map((s) => (
@@ -324,7 +316,7 @@ export default function RegisterForm() {
                       key={s}
                       type="button"
                       onClick={() => handleSuggestionClick(s)}
-                      className="text-xs font-medium px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                      className="rounded-md bg-[#6FA3D8]/10 px-2 py-1 text-xs font-medium text-[#16324A] transition-colors hover:bg-[#6FA3D8]/20"
                     >
                       {s}
                     </button>
@@ -335,31 +327,26 @@ export default function RegisterForm() {
           )}
 
           {usernameStatus === "idle" && username.length >= 2 && (
-            <p className="flex items-center gap-1.5 text-xs text-blue-500 dark:text-blue-400">
-              <Sparkles className="w-3 h-3 shrink-0" />
+            <p className="flex items-center gap-1.5 text-xs text-[#6FA3D8]">
+              <Sparkles className="h-3 w-3 shrink-0" />
               Auto-generated username:{" "}
               <span className="font-semibold tracking-wide">{username}</span>
             </p>
           )}
 
           {errors.username && (
-            <p className="text-xs text-red-500">{errors.username.message}</p>
+            <p className="text-xs text-[#C2410C]">{errors.username.message}</p>
           )}
         </div>
       </div>
 
       {/* SECTION: Account Details */}
       <div className="space-y-4">
-        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-gray-800 pb-2">
-          Account Details
-        </p>
+        <p className={sectionLabel}>Account Details</p>
 
         {/* EMAIL */}
         <div className="space-y-1.5">
-          <Label
-            htmlFor="email"
-            className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-          >
+          <Label htmlFor="email" className={fieldLabel}>
             Email Address
           </Label>
           <Input
@@ -367,7 +354,7 @@ export default function RegisterForm() {
             type="email"
             placeholder="you@example.com"
             autoComplete="email"
-            className="bg-white/80 dark:bg-gray-800/80 h-10"
+            className={fieldInput}
             {...register("email", {
               required: "Email is required.",
               pattern: {
@@ -377,7 +364,7 @@ export default function RegisterForm() {
             })}
           />
           {errors.email && (
-            <p className="text-xs text-red-500">{errors.email.message}</p>
+            <p className="text-xs text-[#C2410C]">{errors.email.message}</p>
           )}
         </div>
 
@@ -385,10 +372,7 @@ export default function RegisterForm() {
         <div className="grid grid-cols-2 gap-4">
           {/* PASSWORD */}
           <div className="space-y-1.5">
-            <Label
-              htmlFor="password"
-              className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
+            <Label htmlFor="password" className={fieldLabel}>
               Password
             </Label>
             <div className="relative">
@@ -397,7 +381,7 @@ export default function RegisterForm() {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 autoComplete="new-password"
-                className="bg-white/80 dark:bg-gray-800/80 pr-10 h-10"
+                className={`${fieldInput} pr-10`}
                 {...register("password", {
                   required: "Password is required.",
                   minLength: { value: 8, message: "At least 8 characters." },
@@ -406,7 +390,7 @@ export default function RegisterForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9BAAB8] hover:text-[#16324A]"
                 tabIndex={-1}
               >
                 {showPassword ? (
@@ -432,10 +416,7 @@ export default function RegisterForm() {
 
           {/* CONFIRM PASSWORD */}
           <div className="space-y-1.5">
-            <Label
-              htmlFor="password_confirmation"
-              className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
+            <Label htmlFor="password_confirmation" className={fieldLabel}>
               Confirm Password
             </Label>
             <div className="relative">
@@ -444,7 +425,7 @@ export default function RegisterForm() {
                 type={showConfirm ? "text" : "password"}
                 placeholder="••••••••"
                 autoComplete="new-password"
-                className="bg-white/80 dark:bg-gray-800/80 pr-10 h-10"
+                className={`${fieldInput} pr-10`}
                 {...register("password_confirmation", {
                   required: "Please confirm your password.",
                   validate: (val) =>
@@ -454,7 +435,7 @@ export default function RegisterForm() {
               <button
                 type="button"
                 onClick={() => setShowConfirm((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9BAAB8] hover:text-[#16324A]"
                 tabIndex={-1}
               >
                 {showConfirm ? (
@@ -480,15 +461,15 @@ export default function RegisterForm() {
       <Button
         type="submit"
         disabled={isSubmitting || usernameStatus === "taken"}
-        className="w-full bg-blue-700 hover:bg-blue-600 text-white uppercase tracking-widest font-semibold h-11"
+        className="h-11 w-full rounded-lg bg-[#16324A] text-sm font-medium tracking-wide text-white transition-colors hover:bg-[#16324A]/90 disabled:opacity-60"
       >
         {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating Account...
-          </>
+          <span className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Creating account...
+          </span>
         ) : (
-          "Create Account"
+          "Create account"
         )}
       </Button>
     </form>

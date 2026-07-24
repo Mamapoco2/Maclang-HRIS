@@ -37,16 +37,31 @@ const NAV_USER = [
   {
     title: "Leave",
     icon: IconCalendarEvent,
-    permission: "leave.view",
+    // NOTE: no permission here — visibility is derived from children.
+    // "leave.view" doesn't exist as a real, assignable permission
+    // (it's not in the admin permission editor), so gating on it
+    // never actually restricts anything.
     items: [
-      { title: "My Requests", url: "/leaveRequest", permission: "leave.view" },
+      {
+        title: "My Requests",
+        url: "/leaveRequest",
+        permission: "leave.request.view",
+      },
       {
         title: "New Request",
         url: "/newLeaveRequest",
-        permission: "leave.view",
+        permission: "leave.request.manage",
       },
-      { title: "Calendar", url: "/leaveCalendar", permission: "leave.view" },
-      { title: "Balance", url: "/leaveBalance", permission: "leave.view" },
+      {
+        title: "Calendar",
+        url: "/leaveCalendar",
+        permission: "leave.calendar.view",
+      },
+      {
+        title: "Balance",
+        url: "/leaveBalance",
+        permission: "leave.balance.view",
+      },
     ],
   },
   {
@@ -65,17 +80,29 @@ function canSee(item, userPermissions, isSuperUser) {
 
 function filterNav(navItems, userPermissions, isSuperUser) {
   return navItems.reduce((acc, item) => {
-    if (!canSee(item, userPermissions, isSuperUser)) return acc;
+    const isContainer = Array.isArray(item.items);
 
-    if (!item.items) {
-      acc.push(item);
+    if (isContainer) {
+      // Container itself may or may not have its own permission.
+      // If it does, it must pass too. Then filter children.
+      if (!canSee(item, userPermissions, isSuperUser)) return acc;
+
+      const visibleChildren = filterNav(
+        item.items,
+        userPermissions,
+        isSuperUser,
+      );
+      if (visibleChildren.length > 0) {
+        acc.push({ ...item, items: visibleChildren });
+      }
       return acc;
     }
 
-    const visibleChildren = filterNav(item.items, userPermissions, isSuperUser);
-    if (visibleChildren.length > 0)
-      acc.push({ ...item, items: visibleChildren });
+    if (!canSee(item, userPermissions, isSuperUser)) {
+      return acc;
+    }
 
+    acc.push(item);
     return acc;
   }, []);
 }

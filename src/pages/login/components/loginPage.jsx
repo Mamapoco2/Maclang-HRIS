@@ -5,82 +5,154 @@ import { Link } from "react-router-dom";
 import logo from "../../../assets/rmbghlogo.png";
 import LoginForm from "./loginForm";
 import LoginFooter from "./loginFooter";
+import EcgTrace from "../../register/components/EcgTrace";
 import { useCurrentTime } from "./useLogin";
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export default function LoginPage() {
   const { formattedDate, formattedTime } = useCurrentTime();
 
   return (
-    <div className="relative flex h-auto min-h-screen flex-col items-center justify-center overflow-x-hidden px-4 py-10 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-100 via-white to-blue-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-all duration-700">
-      {/* Background blobs */}
-      <div className="absolute top-10 left-10 w-48 h-48 bg-blue-300/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-56 h-56 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative flex min-h-screen w-full font-['Inter',sans-serif] text-[#16324A]">
+      {/*
+        Fonts loaded here for convenience — for production, move this
+        @import (or equivalent <link> tags) into index.html instead.
+      */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Petrona:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-      {/* Live clock */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="absolute top-8 text-center"
-      >
-        <p className="text-gray-700 dark:text-gray-300 text-sm tracking-wide">
-          {formattedDate}
-        </p>
-        <p className="text-2xl font-semibold text-blue-700 dark:text-blue-400">
-          {formattedTime}
-        </p>
-      </motion.div>
+         @keyframes ecg-draw {
+          to { stroke-dashoffset: -1000; }
+        }
+        @keyframes ecg-glow {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+        @keyframes ecg-dot-pulse {
+          0%, 100% { opacity: 0.5; r: 2.2px; }
+          50% { opacity: 1; r: 3px; }
+        }
+        .ecg-path {
+          stroke-dasharray: 1000;
+          stroke-dashoffset: 1000;
+          animation: ecg-draw 1.66s linear infinite;
+        }
+        .ecg-pulse {
+          animation: ecg-glow 2.4s ease-in-out infinite;
+        }
+        .ecg-dot {
+          animation: ecg-dot-pulse 0.83s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ecg-path, .ecg-pulse, .ecg-dot { animation: none !important; }
+        }
+      `}</style>
 
-      {/* Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="z-10 w-full sm:max-w-lg"
-      >
-        <Card className="w-full border border-blue-300/50 dark:border-blue-600/50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md shadow-lg">
-          {/* Header — items-center centers children horizontally */}
-          <CardHeader className="flex flex-col items-center gap-4 text-center">
-            <img src={logo} alt="Logo" className="h-15 w-auto object-contain" />
+      {/* LEFT — identity panel */}
+      <aside className="relative hidden w-[42%] flex-col justify-between overflow-hidden bg-[#16324A] px-12 py-12 text-[#F1F4F7] lg:flex">
+        {/* faint chart-paper grid texture */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#F1F4F7 1px, transparent 1px), linear-gradient(90deg, #F1F4F7 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
 
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="relative z-10 flex items-center gap-3"
+        >
+          <img
+            src={logo}
+            alt="RMBGH"
+            className="h-11 w-11 rounded-full object-cover ring-2 ring-[#6FA3D8]/40"
+          />
+          <span className="font-['IBM_Plex_Mono',monospace] text-[11px] uppercase tracking-[0.2em] text-[#7C93A8]">
+            Staff Portal Access
+          </span>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="relative z-10 max-w-sm"
+        >
+          <h1 className="font-['Petrona',serif] text-[2.35rem] font-semibold leading-[1.1] tracking-tight">
+            Rosario Maclang Bautista
+            <span className="block text-[#6FA3D8]">General Hospital</span>
+          </h1>
+          <p className="mt-4 text-[15px] leading-relaxed text-[#B9C7D6]">
+            Continuity of care starts here. Sign in to reach records, schedules,
+            and the tools your shift depends on.
+          </p>
+        </motion.div>
+
+        {/* signature element */}
+        <div className="relative z-10">
+          <EcgTrace />
+          <div className="mt-6 flex items-center justify-between font-['IBM_Plex_Mono',monospace] text-xs text-[#7C93A8]">
+            <span>{formattedDate}</span>
+            <span className="ecg-pulse text-[#6FA3D8]">{formattedTime}</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* RIGHT — form panel */}
+      <main className="flex flex-1 items-center justify-center bg-[#F1F4F7] px-6 py-12 sm:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
+          {/* compact identity, mobile only */}
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <img
+              src={logo}
+              alt="RMBGH"
+              className="h-10 w-10 rounded-full object-cover ring-2 ring-[#6FA3D8]/40"
+            />
             <div>
-              <CardTitle className="mb-1.5 text-2xl text-gray-900 dark:text-white">
-                Sign in to your account
-              </CardTitle>
-
-              <CardDescription className="text-base">
-                Welcome back — let's get you in.
-              </CardDescription>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            <div className="space-y-4">
-              <LoginForm />
-
-              {/* Register link */}
-              <p className="text-muted-foreground text-center text-sm">
-                Don't have an account?{" "}
-                <Link
-                  to="/register"
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium transition-colors"
-                >
-                  Create one
-                </Link>
+              <p className="font-['Petrona',serif] text-base font-semibold text-[#16324A]">
+                RMBGH Portal
+              </p>
+              <p className="font-['IBM_Plex_Mono',monospace] text-[10px] uppercase tracking-[0.2em] text-[#7C93A8]">
+                Staff Portal Access
               </p>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
 
-      <LoginFooter />
+          <p className="font-['IBM_Plex_Mono',monospace] text-[11px] uppercase tracking-[0.2em] text-[#6FA3D8]">
+            Sign in
+          </p>
+          <h2 className="mt-2 font-['Petrona',serif] text-3xl font-semibold text-[#16324A]">
+            Welcome back
+          </h2>
+          <p className="mt-2 text-sm text-[#5A7188]">
+            Enter your credentials to continue to your dashboard.
+          </p>
+
+          <div className="mt-8">
+            <LoginForm />
+          </div>
+
+          <p className="mt-6 text-center text-sm text-[#5A7188]">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="font-medium text-[#16324A] underline decoration-[#6FA3D8] decoration-2 underline-offset-4 transition-colors hover:text-[#6FA3D8]"
+            >
+              Create one
+            </Link>
+          </p>
+
+          <LoginFooter />
+        </motion.div>
+      </main>
     </div>
   );
 }

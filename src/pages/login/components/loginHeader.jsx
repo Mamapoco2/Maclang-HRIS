@@ -1,16 +1,18 @@
-import { CardHeader, CardTitle } from "@/components/ui/card";
-
+// src/pages/login/components/LoginHeader.jsx
+// Not used by the new split-screen LoginPage (identity now lives in the
+// left panel), but restyled to match the token set in case it's reused
+// elsewhere — e.g. a compact header on a password-reset screen.
 export default function LoginHeader({ logo }) {
   return (
-    <CardHeader className="flex flex-col items-center space-y-3">
+    <div className="flex flex-col items-center gap-3">
       <img
         src={logo}
         alt="RMBGH Logo"
-        className="w-20 h-20 rounded-full border-4 border-blue-400 object-cover shadow-md"
+        className="h-16 w-16 rounded-full object-cover ring-2 ring-[#6FA3D8]/40"
       />
-      <CardTitle className="text-center text-lg font-semibold text-gray-800 dark:text-gray-100">
+      <p className="font-['Petrona',serif] text-lg font-semibold text-[#16324A]">
         RMBGH Portal
-      </CardTitle>
-    </CardHeader>
+      </p>
+    </div>
   );
 }
