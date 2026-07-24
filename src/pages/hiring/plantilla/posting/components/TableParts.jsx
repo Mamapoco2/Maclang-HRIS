@@ -10,6 +10,7 @@ import {
   ChevronRight,
   BriefcaseBusiness,
   Users,
+  Loader2,
 } from "lucide-react";
 import { Button, Skeleton } from "./ui";
 import {
@@ -90,6 +91,7 @@ export function RowActions({
   onDelete,
   onApply,
   onViewApplications,
+  editLoading = false,
 }) {
   const applyDisabled =
     item.status === "Closed" || item.status === "Filled" || item.alreadyApplied;
@@ -113,9 +115,14 @@ export function RowActions({
             variant="ghost"
             size="icon"
             onClick={onEdit}
+            disabled={editLoading}
             aria-label="Edit"
           >
-            <Pencil className="h-4 w-4" />
+            {editLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Pencil className="h-4 w-4" />
+            )}
           </Button>
           <Button
             variant="ghost"

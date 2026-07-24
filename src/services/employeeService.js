@@ -205,4 +205,17 @@ export const employeeService = {
     const res = await api.get("/consultant-positions", { params });
     return res.data?.data ?? res.data ?? [];
   },
+
+  async getPendingPlantillaProvision(employeeId) {
+    if (!employeeId) return { pending: false };
+    try {
+      const res = await api.get(
+        `/employees/${employeeId}/pending-plantilla-provision`,
+      );
+      return res.data;
+    } catch (err) {
+      console.error("getPendingPlantillaProvision:", err);
+      return { pending: false };
+    }
+  },
 };

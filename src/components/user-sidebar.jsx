@@ -35,6 +35,41 @@ const NAV_USER = [
     permission: "dashboard.view",
   },
   {
+    title: "Hiring",
+    items: [
+      {
+        title: "Plantilla (PSB)",
+        items: [
+          {
+            title: "Plantilla Postings",
+            url: "/hiring/plantilla/positions",
+            permission: "hiring.plantilla.postings.view",
+          },
+          {
+            title: "Applications",
+            url: "/hiring/plantilla/applications",
+            permission: "hiring.plantilla.applications.view",
+          },
+          {
+            title: "Calendar",
+            url: "/hiring/plantilla/calendar",
+            permission: "hiring.view",
+          },
+          {
+            title: "Onboarding",
+            url: "/hiring/plantilla/onboarding",
+            permission: "hiring.plantilla.onboarding.view",
+          },
+          {
+            title: "My Applications",
+            url: "/hiring/plantilla/my-applications",
+            permission: "hiring.view",
+          },
+        ],
+      },
+    ],
+  },
+  {
     title: "Leave",
     icon: IconCalendarEvent,
     // NOTE: no permission here — visibility is derived from children.
@@ -48,9 +83,25 @@ const NAV_USER = [
         permission: "leave.request.view",
       },
       {
+        title: "My Requests",
+        url: "/leaveRequest",
+        permission: "leave.request.view",
+      },
+      {
         title: "New Request",
         url: "/newLeaveRequest",
         permission: "leave.request.manage",
+        permission: "leave.request.manage",
+      },
+      {
+        title: "Calendar",
+        url: "/leaveCalendar",
+        permission: "leave.calendar.view",
+      },
+      {
+        title: "Balance",
+        url: "/leaveBalance",
+        permission: "leave.balance.view",
       },
       {
         title: "Calendar",
@@ -98,6 +149,11 @@ function filterNav(navItems, userPermissions, isSuperUser) {
       return acc;
     }
 
+    if (!canSee(item, userPermissions, isSuperUser)) {
+      return acc;
+    }
+
+    acc.push(item);
     if (!canSee(item, userPermissions, isSuperUser)) {
       return acc;
     }

@@ -1,11 +1,12 @@
 export const EMP_STATUS = ["Permanent"];
 export const DOC_KEYS = [
-  { key: "pds", label: "Personal Data Sheet" },
-  { key: "transcript", label: "Transcript of Records" },
+  { key: "letter_of_intent", label: "Letter of Intent" },
+  { key: "pds", label: "Personal Data Sheet (PDS) \u2013 Revised 2025" },
+  { key: "work_experience", label: "Work Experience Sheet" },
+  { key: "performance_rating", label: "Latest Performance Rating / Appraisal" },
+  { key: "eligibility", label: "Eligibility / Licensure" },
+  { key: "transcript", label: "Transcript of Records (TOR)" },
   { key: "diploma", label: "Diploma" },
-  { key: "eligibility", label: "Eligibility Certificate" },
-  { key: "certificates", label: "Training Certificates" },
-  { key: "others", label: "Other Supporting Documents" },
 ];
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -26,6 +27,8 @@ export const STATUS_DOT = {
 
 export const EMPTY_FORM = {
   base_item_number: "",
+  position_slot_names: [],
+  plantilla_position_ids: [],
   title: "",
   display_department_id: "",
   display_division_id: "",
@@ -42,18 +45,18 @@ export const EMPTY_FORM = {
   qualification_training: "",
   qualification_eligibility: "",
   qualification_competency: "",
-  job_description: "",
   date_posted: "",
   closing_date: "",
   expected_appointment_date: "",
   status: "Open",
   required_documents: {
+    letter_of_intent: true,
     pds: true,
-    transcript: false,
-    diploma: false,
-    eligibility: false,
-    certificates: false,
-    others: false,
+    work_experience: true,
+    performance_rating: true,
+    eligibility: true,
+    transcript: true,
+    diploma: true,
   },
 };
 // ── PSB Applications / Interviews ──────────────────────────────────────────

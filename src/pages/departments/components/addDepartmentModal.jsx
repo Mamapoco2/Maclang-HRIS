@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 const TYPE_OPTIONS = [

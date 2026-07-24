@@ -3,7 +3,7 @@ import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { Button, Input, Textarea, Label, Select, Modal } from "./ui";
-import { FormSection } from "./EditDialog";
+import { FormSection } from "./posting/PostingForm";
 import {
   INTERVIEW_STAGE_STATUS_OPTIONS,
   INTERVIEW_OVERALL_STATUS_OPTIONS,

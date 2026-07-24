@@ -1,4 +1,3 @@
-//src/pages/plantillaitems/components/deletecomfirmationModal.jsx
 import { useState } from "react";
 import {
   AlertDialog,

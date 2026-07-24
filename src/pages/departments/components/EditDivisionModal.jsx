@@ -142,6 +142,37 @@ export default function EditDivisionModal({
       .finally(() => setLoadingDivisions(false));
   }, [open]);
 
+  useEffect(() => {
+    if (!open || loadingEmployees || employees.length === 0) return;
+    if (!form.head_employee_id) return;
+
+    const stillExists = employees.some(
+      (e) => String(e.id) === form.head_employee_id,
+    );
+    if (!stillExists) {
+      setForm((prev) => ({ ...prev, head_employee_id: "" }));
+      toast.error(
+        "The previously assigned head employee no longer exists in the system. Please reselect.",
+      );
+    }
+  }, [open, loadingEmployees, employees, form.head_employee_id]);
+
+  useEffect(() => {
+    if (!open || loadingDivisions || divisions.length === 0 || !division)
+      return;
+    if (!form.parent_id) return;
+
+    const stillValid = divisions.some(
+      (d) => String(d.id) === form.parent_id && d.id !== division.id,
+    );
+    if (!stillValid) {
+      setForm((prev) => ({ ...prev, parent_id: "" }));
+      toast.error(
+        "The previously assigned parent no longer exists or is no longer valid. Please reselect.",
+      );
+    }
+  }, [open, loadingDivisions, divisions, division, form.parent_id]);
+
   const set = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: null }));

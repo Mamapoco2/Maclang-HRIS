@@ -1,7 +1,28 @@
 export function normalisePosting(p) {
+  const slotObjects = Array.isArray(p.plantilla_positions)
+    ? p.plantilla_positions
+    : Array.isArray(p.plantillaPositions)
+      ? p.plantillaPositions
+      : [];
+
+  const positionSlotNames = p.position_slot_name
+    ? p.position_slot_name
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : (p.positionSlotNames ??
+      p.position_slot_names ??
+      (slotObjects.length > 0
+        ? slotObjects.map((s) => s.position_slot_name).filter(Boolean)
+        : []));
+
   return {
     id: p.id,
     baseItemNumber: p.base_item_number,
+    positionSlotNames,
+    plantillaPositionIds:
+      p.plantilla_position_ids ??
+      (slotObjects.length > 0 ? slotObjects.map((s) => s.id) : []),
     positionTitle: p.title,
     officeId: p.display_department_id,
     office: p.department?.name || "—",
@@ -13,6 +34,14 @@ export function normalisePosting(p) {
       ? `SG-${p.salary_grade.salary_grade}`
       : "—",
     stepIncrementId: p.step_increment_id,
+    stepIncrement: p.step_increment
+      ? {
+          id: p.step_increment.id,
+          step: p.step_increment.step,
+          monthlySalary: Number(p.step_increment.monthly_salary || 0),
+          annualSalary: Number(p.step_increment.annual_salary || 0),
+        }
+      : null,
     monthlySalary: Number(p.monthly_salary || 0),
     employmentStatus: p.employment_status,
     vacancies: p.vacancies,

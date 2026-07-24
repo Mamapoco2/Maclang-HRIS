@@ -45,21 +45,6 @@ function TableSkeleton({ cols }) {
   ));
 }
 
-/**
- * Unified positions table.
- *
- * Props
- * ─────
- * positions         array  — each item may have `_type: "cos" | "consultant"`
- * loading           boolean
- * search            string
- * showTypeColumn    boolean  — show the Type badge column (used on unified page)
- * cosService        { update, remove }
- * consultantService { update, remove }
- * service           { update, remove }  — legacy single-service prop (still supported)
- * label             string              — legacy single-label prop (still supported)
- * onRefresh         () => void
- */
 export default function PositionsTable({
   positions,
   loading,
@@ -67,8 +52,8 @@ export default function PositionsTable({
   showTypeColumn = false,
   cosService,
   consultantService,
-  service, // legacy
-  label, // legacy
+  service,
+  label,
   onRefresh,
 }) {
   const [page, setPage] = useState(1);
@@ -87,21 +72,27 @@ export default function PositionsTable({
     safePage * PAGE_SIZE,
   );
 
-  // Resolve service + label for a given position (supports both unified and legacy usage)
   const resolveService = (pos) => {
     if (service) return service;
-    return pos?._type === "consultant" ? consultantService : cosService;
+    if (!pos) return null;
+    return pos._type === "consultant" ? consultantService : cosService;
   };
   const resolveLabel = (pos) => {
     if (label) return label;
-    return pos?._type === "consultant" ? "Consultant" : "COS";
+    if (!pos) return "";
+    return pos._type === "consultant" ? "Consultant" : "COS";
   };
 
   const handleDelete = async () => {
     if (!deletePos) return;
+    const svc = resolveService(deletePos);
+    if (!svc) {
+      toast.error("Unable to determine which service to use for deletion.");
+      return;
+    }
     setDeleting(true);
     try {
-      await resolveService(deletePos).remove(deletePos.id);
+      await svc.remove(deletePos.id);
       toast.success(`${resolveLabel(deletePos)} position deleted.`);
       setDeletePos(null);
       onRefresh();
