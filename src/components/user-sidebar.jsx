@@ -91,7 +91,6 @@ const NAV_USER = [
         title: "New Request",
         url: "/newLeaveRequest",
         permission: "leave.request.manage",
-        permission: "leave.request.manage",
       },
       {
         title: "Calendar",
