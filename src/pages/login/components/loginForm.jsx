@@ -1,4 +1,3 @@
-// src/pages/login/components/loginForm.jsx
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/lib/validation";
@@ -12,6 +11,7 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFirstAccessibleRoute } from "@/hooks/useFirstAccessibleRoute";
+import { cn } from "@/lib/utils";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000;
@@ -29,6 +29,7 @@ export default function LoginForm() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(loginSchema) });
 
@@ -53,16 +54,31 @@ export default function LoginForm() {
     if (res.success) {
       attempts.current = 0;
       setLoginSucceeded(true);
-    } else {
-      attempts.current += 1;
+      return;
+    }
 
-      if (attempts.current >= MAX_ATTEMPTS) {
-        setLockoutUntil(Date.now() + LOCKOUT_MS);
-        attempts.current = 0;
-        setServerError("Too many attempts. Try again in 60 seconds.");
-      } else {
-        setServerError(res.error || "Invalid username or password.");
-      }
+    attempts.current += 1;
+
+    if (attempts.current >= MAX_ATTEMPTS) {
+      setLockoutUntil(Date.now() + LOCKOUT_MS);
+      attempts.current = 0;
+      setServerError("Too many attempts. Try again in 60 seconds.");
+      return;
+    }
+
+    const message = res.error || "Invalid username or password.";
+    const lower = message.toLowerCase();
+
+    if (lower.includes("uppercase")) {
+      setError("username", { type: "server", message });
+    } else if (
+      lower.includes("incorrect") ||
+      lower.includes("username and password")
+    ) {
+      setError("username", { type: "server", message: "" });
+      setError("password", { type: "server", message });
+    } else {
+      setServerError(message);
     }
   };
 
@@ -91,10 +107,16 @@ export default function LoginForm() {
           type="text"
           autoComplete="username"
           placeholder="Enter your username"
-          className="h-11 rounded-lg border-[#D7E0E8] bg-white text-[#16324A] placeholder:text-[#9BAAB8] focus-visible:border-[#6FA3D8] focus-visible:ring-[#6FA3D8]/30"
+          aria-invalid={!!errors.username}
+          className={cn(
+            "h-11 rounded-lg border bg-white text-[#16324A] placeholder:text-[#9BAAB8]",
+            errors.username
+              ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30"
+              : "border-[#D7E0E8] focus-visible:border-[#6FA3D8] focus-visible:ring-[#6FA3D8]/30",
+          )}
           {...register("username")}
         />
-        {errors.username && (
+        {errors.username?.message && (
           <p className="text-xs text-[#C2410C]">{errors.username.message}</p>
         )}
       </div>
@@ -113,7 +135,13 @@ export default function LoginForm() {
             type={isPasswordVisible ? "text" : "password"}
             autoComplete="current-password"
             placeholder="••••••••••••••••"
-            className="h-11 rounded-lg border-[#D7E0E8] bg-white pr-10 text-[#16324A] placeholder:text-[#9BAAB8] focus-visible:border-[#6FA3D8] focus-visible:ring-[#6FA3D8]/30"
+            aria-invalid={!!errors.password}
+            className={cn(
+              "h-11 rounded-lg border bg-white pr-10 text-[#16324A] placeholder:text-[#9BAAB8]",
+              errors.password
+                ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30"
+                : "border-[#D7E0E8] focus-visible:border-[#6FA3D8] focus-visible:ring-[#6FA3D8]/30",
+            )}
             {...register("password")}
           />
           <Button
@@ -133,7 +161,7 @@ export default function LoginForm() {
             </span>
           </Button>
         </div>
-        {errors.password && (
+        {errors.password?.message && (
           <p className="text-xs text-[#C2410C]">{errors.password.message}</p>
         )}
       </div>

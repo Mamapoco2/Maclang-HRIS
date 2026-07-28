@@ -2,9 +2,9 @@ import { useContext } from "react";
 import { AuthContext } from "@/context/authContext";
 
 const ROUTE_PERMISSION_MAP = [
-  { path: "/Announcement", permission: "announcements.view" },
-
   { path: "/dashboard", permission: "dashboard.view" },
+
+  { path: "/Announcement", permission: "announcements.view" },
 
   {
     path: "/hiring/plantilla/positions",
@@ -78,6 +78,8 @@ const ROUTE_PERMISSION_MAP = [
 
 const SUPER_ROLES = ["superadmin", "super-admin"];
 
+const SUPER_USER_DEFAULT_ROUTE = "/dashboard";
+
 export function useFirstAccessibleRoute(fallback = "/status/403") {
   const { user } = useContext(AuthContext);
 
@@ -85,9 +87,10 @@ export function useFirstAccessibleRoute(fallback = "/status/403") {
   const isSuperUser = userRoles.some((r) => SUPER_ROLES.includes(r));
   const userPermissions = user?.permissions ?? [];
 
+  if (isSuperUser) return SUPER_USER_DEFAULT_ROUTE;
+
   const firstRoute = ROUTE_PERMISSION_MAP.find(({ permission }) => {
     if (!permission) return true;
-    if (isSuperUser) return true;
     return userPermissions.includes(permission);
   });
 

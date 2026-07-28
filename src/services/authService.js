@@ -44,7 +44,55 @@ const normalizeUser = (user) => ({
   has_completed_orientation: user.has_completed_orientation ?? false,
 });
 
+const GENERIC_LOGIN_ERROR =
+  "We're having trouble signing you in at the moment. Please try again later.";
+const getLoginErrorMessage = (err) => {
+  const isTimeoutOrOffline =
+    err.code === "ERR_CANCELED" || err.name === "AbortError" || !err.response;
+
+  if (isTimeoutOrOffline) {
+    return "Unable to connect right now. Please check your internet connection and try again.";
+  }
+
+  const status = err.response.status;
+
+  if (status === 422) {
+    const usernameError = err.response?.data?.errors?.username?.[0] ?? "";
+    if (usernameError.toLowerCase().includes("uppercase")) {
+      return "Please enter your username in uppercase letters.";
+    }
+    return "The username or password you entered is incorrect. Please try again.";
+  }
+
+  if (status === 403) {
+    return (
+      err.response?.data?.message ??
+      "Your account isn't active yet. Please contact your administrator for assistance."
+    );
+  }
+
+  if (status === 429) {
+    return "You've tried signing in too many times. Please wait a few minutes before trying again.";
+  }
+
+  return GENERIC_LOGIN_ERROR;
+};
+
 const login = async (username, password) => {
+  if (!username?.trim() || !password) {
+    return {
+      success: false,
+      error: "Please enter both your username and password.",
+    };
+  }
+
+  if (username !== username.toUpperCase()) {
+    return {
+      success: false,
+      error: "Please enter your username in uppercase letters.",
+    };
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -59,12 +107,7 @@ const login = async (username, password) => {
     setUser(normalized);
     return { success: true, user: normalized };
   } catch (err) {
-    if (err.code === "ERR_CANCELED" || err.name === "AbortError")
-      return { success: false, error: "Request timed out. Please try again." };
-    return {
-      success: false,
-      error: err.response?.data?.message ?? "Login failed. Please try again.",
-    };
+    return { success: false, error: getLoginErrorMessage(err) };
   } finally {
     clearTimeout(timeout);
   }
