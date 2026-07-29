@@ -54,7 +54,7 @@ export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
       <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-indigo-600">
-            {item.baseItemNumber}
+            {item.positionSlotNames?.[0] || item.baseItemNumber}
           </p>
           <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
             {item.positionTitle}
@@ -82,11 +82,14 @@ export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
           <InfoGrid
             rows={[
               ["Position Title", item.positionTitle],
-              ["Item Number", item.baseItemNumber],
+              [
+                "Item Number",
+                item.positionSlotNames?.[0] || item.baseItemNumber,
+              ],
               ["Salary Grade", item.salaryGrade],
               ["Monthly Salary", formatCurrency(item.monthlySalary)],
               ["Employment Status", item.employmentStatus],
-              ["Vacancy Count", item.vacantSlots ?? item.vacancies],
+              // ["Vacancy Count", item.vacantSlots ?? item.vacancies],
             ]}
           />
         </Section>
@@ -142,10 +145,10 @@ export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
               ["Remaining Slots", item.remainingVacancies ?? item.vacantSlots],
               ["Posting Date", formatDate(item.datePosted)],
               ["Closing Date", formatDate(item.closingDate)],
-              [
-                "Expected Appointment Date",
-                formatDate(item.expectedAppointmentDate),
-              ],
+              // [
+              //   "Expected Appointment Date",
+              //   formatDate(item.expectedAppointmentDate),
+              // ],
             ]}
           />
         </Section>

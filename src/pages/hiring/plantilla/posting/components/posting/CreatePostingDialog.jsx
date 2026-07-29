@@ -40,52 +40,77 @@ export function CreatePostingDialog({
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [availableSteps, setAvailableSteps] = useState([]);
+  const [availableSlots, setAvailableSlots] = useState([]);
 
   useEffect(() => {
     if (open) {
       setForm(buildInitialForm());
       setAvailableSteps([]);
+      setAvailableSlots([]);
       setErrors({});
     }
   }, [open]);
 
   if (!open) return <Modal open={false} onClose={onClose} />;
 
-  const selectableVacantItems = filterSelectableVacantItems(
-    vacantItems,
-    postedBaseItemNumbers,
-  );
+  const selectableVacantItems = filterSelectableVacantItems(vacantItems);
 
   const applyVacantItem = (baseItemNumber) => {
     const vi = vacantItems.find((v) => v.base_item_number === baseItemNumber);
     if (!vi) {
-      setForm((f) => ({ ...f, base_item_number: baseItemNumber }));
+      setForm((f) => ({
+        ...f,
+        base_item_number: baseItemNumber,
+        position_slot_names: [],
+        plantilla_position_ids: [],
+      }));
       setAvailableSteps([]);
+      setAvailableSlots([]);
       return;
     }
     const slots = getSelectableSlots(vi);
     setAvailableSteps(vi.step_increments ?? []);
-    const firstSlot = slots[0] ?? null;
+    setAvailableSlots(slots);
     setForm((f) => ({
       ...f,
       base_item_number: vi.base_item_number,
-      position_slot_names: slots.map((s) => s.position_slot_name),
-      plantilla_position_ids: slots.map((s) => s.id),
+      position_slot_names: [],
+      plantilla_position_ids: [],
       title: vi.title || f.title,
       display_department_id: vi.display_department_id ?? "",
       display_division_id: vi.display_division_id ?? "",
-      salary_grade_id: firstSlot?.salary_grade_id ?? vi.salary_grade_id ?? "",
-      step_increment_id:
-        firstSlot?.step_increment_id ?? vi.step_increment_id ?? "",
-      monthly_salary: formatSalaryNumber(
-        firstSlot?.monthly_salary ?? vi.monthly_salary ?? null,
-      ),
-      annual_salary: formatSalaryNumber(
-        firstSlot?.annual_salary ?? vi.annual_salary ?? null,
-      ),
+      salary_grade_id: vi.salary_grade_id ?? "",
+      step_increment_id: vi.step_increment_id ?? "",
+      monthly_salary: formatSalaryNumber(vi.monthly_salary ?? null),
+      annual_salary: formatSalaryNumber(vi.annual_salary ?? null),
       immediate_supervisor: vi.immediate_supervisor ?? f.immediate_supervisor,
       status: f.status || "Open",
-      vacancies: f.vacancies || String(slots.length || vi.vacant_count || ""),
+      vacancies: "",
+    }));
+  };
+
+  const applyItemNumber = (slotId) => {
+    const slot = availableSlots.find((s) => String(s.id) === String(slotId));
+    if (!slot) {
+      setForm((f) => ({
+        ...f,
+        position_slot_names: [],
+        plantilla_position_ids: [],
+        vacancies: "",
+      }));
+      return;
+    }
+    setForm((f) => ({
+      ...f,
+      position_slot_names: [slot.position_slot_name],
+      plantilla_position_ids: [slot.id],
+      salary_grade_id: slot.salary_grade_id ?? f.salary_grade_id,
+      step_increment_id: slot.step_increment_id ?? f.step_increment_id,
+      monthly_salary: formatSalaryNumber(
+        slot.monthly_salary ?? f.monthly_salary,
+      ),
+      annual_salary: formatSalaryNumber(slot.annual_salary ?? f.annual_salary),
+      vacancies: "1",
     }));
   };
 
@@ -197,7 +222,12 @@ export function CreatePostingDialog({
           salaryGrades={salaryGrades}
           stepLabel={stepLabel}
           statusLabel="Open"
-          slotNameHelpText="All available (non-Filled) item numbers under the selected position are listed here automatically."
+          itemNumberOptions={availableSlots.map((s) => ({
+            value: s.id,
+            label: s.position_slot_name,
+          }))}
+          itemNumberEditable
+          onItemNumberChange={applyItemNumber}
           onFieldChange={handleFieldChange}
           onMonthlySalaryChange={handleMonthlySalaryChange}
           onAnnualSalaryChange={handleAnnualSalaryChange}

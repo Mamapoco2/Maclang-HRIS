@@ -83,24 +83,9 @@ const NAV_USER = [
         permission: "leave.request.view",
       },
       {
-        title: "My Requests",
-        url: "/leaveRequest",
-        permission: "leave.request.view",
-      },
-      {
         title: "New Request",
         url: "/newLeaveRequest",
         permission: "leave.request.manage",
-      },
-      {
-        title: "Calendar",
-        url: "/leaveCalendar",
-        permission: "leave.calendar.view",
-      },
-      {
-        title: "Balance",
-        url: "/leaveBalance",
-        permission: "leave.balance.view",
       },
       {
         title: "Calendar",
@@ -148,11 +133,6 @@ function filterNav(navItems, userPermissions, isSuperUser) {
       return acc;
     }
 
-    if (!canSee(item, userPermissions, isSuperUser)) {
-      return acc;
-    }
-
-    acc.push(item);
     if (!canSee(item, userPermissions, isSuperUser)) {
       return acc;
     }

@@ -335,7 +335,7 @@ function AppRoutes() {
             <Route
               path="/Announcement"
               element={
-                <PermissionRoute permission={null}>
+                <PermissionRoute permission="announcements.view">
                   <Announcement />
                 </PermissionRoute>
               }
@@ -435,7 +435,7 @@ function AppRoutes() {
             <Route
               path="/release-manager"
               element={
-                <PermissionRoute permission="accounts.manage">
+                <PermissionRoute requireSuperAdmin>
                   <ReleaseManagerPage />
                 </PermissionRoute>
               }

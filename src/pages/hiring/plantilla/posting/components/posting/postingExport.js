@@ -10,7 +10,6 @@ function sanitizeCsvCell(value) {
 }
 
 const CSV_HEADERS = [
-  "Item No.",
   "Position Slot Name",
   "Position Title",
   "Office",
@@ -27,7 +26,6 @@ const CSV_HEADERS = [
 
 function toCsvRow(item) {
   return [
-    item.baseItemNumber,
     formatPositionSlotNumbers(item),
     item.positionTitle,
     item.office,

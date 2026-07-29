@@ -93,7 +93,7 @@ export function ApplicationsDrawer({ posting, onClose }) {
       <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-indigo-600">
-            {posting?.baseItemNumber}
+            {posting?.positionSlotNames?.[0] || posting?.baseItemNumber}
           </p>
           <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
             Applicants — {posting?.positionTitle}

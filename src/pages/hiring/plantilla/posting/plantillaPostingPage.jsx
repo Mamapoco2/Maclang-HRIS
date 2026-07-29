@@ -5,7 +5,8 @@ import React, {
   useEffect,
   useContext,
 } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { CheckCircle2, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/api/api";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
@@ -43,6 +44,7 @@ const EMPTY_FILTERS = {
 
 export default function PlantillaPostingPage() {
   const { user, hasRole } = useContext(AuthContext) || {};
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const isAdmin = hasPermission(user, PERMISSIONS.PLANTILLA_POSTINGS_MANAGE);
   const canViewSummary =
@@ -60,6 +62,8 @@ export default function PlantillaPostingPage() {
   );
 
   // ── Search / filter / sort / page ───────────────────────────────────
+  const linkedItemParam = searchParams.get("item") || "";
+  const [pinnedItem, setPinnedItem] = useState(linkedItemParam || null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -68,6 +72,8 @@ export default function PlantillaPostingPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+
+  const clearPinnedItem = useCallback(() => setPinnedItem(null), []);
 
   // ── Dialog / drawer state ───────────────────────────────────────────
   const [viewItem, setViewItem] = useState(null);
@@ -81,6 +87,20 @@ export default function PlantillaPostingPage() {
   const [applicationsPosting, setApplicationsPosting] = useState(null);
 
   useEffect(() => {
+    if (linkedItemParam) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("item");
+          return next;
+        },
+        { replace: true },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const handle = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
@@ -92,22 +112,33 @@ export default function PlantillaPostingPage() {
     async (signal) => {
       setLoading(true);
       try {
-        const params = {
-          page,
-          per_page: pageSize,
-          search: debouncedSearch || undefined,
-          department_id: filters.department_id || undefined,
-          division_id: filters.division_id || undefined,
-          salary_grade_id: filters.salary_grade_id || undefined,
-          employment_status: filters.employment_status || undefined,
-          status: filters.status || undefined,
-        };
+        const params = pinnedItem
+          ? { page: 1, per_page: pageSize, search: pinnedItem }
+          : {
+              page,
+              per_page: pageSize,
+              search: debouncedSearch || undefined,
+              department_id: filters.department_id || undefined,
+              division_id: filters.division_id || undefined,
+              salary_grade_id: filters.salary_grade_id || undefined,
+              employment_status: filters.employment_status || undefined,
+              status: filters.status || undefined,
+            };
         const fetcher = isAdmin
           ? plantillaPostingService.getPostings
           : plantillaPostingService.getAvailablePostings;
         const res = await fetcher(params, { signal });
-        setItems((res.data ?? []).map(normalisePosting));
-        setTotalCount(res.total ?? 0);
+        let normalised = (res.data ?? []).map(normalisePosting);
+        if (pinnedItem) {
+          // Belt-and-suspenders: the backend search is a LIKE match and
+          // could still return neighbouring items (e.g. item "12" vs
+          // "120"), so enforce an exact match client-side too.
+          normalised = normalised.filter(
+            (it) => it.baseItemNumber === pinnedItem,
+          );
+        }
+        setItems(normalised);
+        setTotalCount(pinnedItem ? normalised.length : (res.total ?? 0));
       } catch (err) {
         if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED")
           return;
@@ -117,7 +148,7 @@ export default function PlantillaPostingPage() {
         setLoading(false);
       }
     },
-    [isAdmin, page, pageSize, debouncedSearch, filters],
+    [isAdmin, page, pageSize, debouncedSearch, filters, pinnedItem],
   );
 
   const loadPostedBaseItemNumbers = useCallback(async (signal) => {
@@ -197,6 +228,7 @@ export default function PlantillaPostingPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const resetFilters = useCallback(() => {
+    setPinnedItem(null);
     setSearch("");
     setDebouncedSearch("");
     setFilters(EMPTY_FILTERS);
@@ -298,6 +330,23 @@ export default function PlantillaPostingPage() {
           </div>
         )}
 
+        {pinnedItem && (
+          <div className="mt-6 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            <Filter className="h-4 w-4 flex-shrink-0" />
+            <span className="flex-1">
+              Showing only item <strong>{pinnedItem}</strong> — linked from an
+              announcement.
+            </span>
+            <button
+              onClick={clearPinnedItem}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+            >
+              <X className="h-3.5 w-3.5" />
+              Show all postings
+            </button>
+          </div>
+        )}
+
         <PostingFilters
           search={search}
           onSearchChange={setSearch}
@@ -313,6 +362,7 @@ export default function PlantillaPostingPage() {
           departments={departments}
           divisions={divisions}
           salaryGrades={salaryGrades}
+          locked={!!pinnedItem}
         />
 
         <div className="mt-6 min-w-0">

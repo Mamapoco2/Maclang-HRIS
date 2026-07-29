@@ -69,7 +69,7 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
       onSuccess();
     } catch (err) {
       toast?.error?.(
-        err?.response?.data?.message ?? "Hindi na-submit ang application.",
+        err?.response?.data?.message ?? "Application submission failed.",
       );
       setSubmitting(false);
     }
@@ -91,7 +91,8 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
             Apply for Position
           </h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            {item.positionTitle} · {item.baseItemNumber}
+            {item.positionTitle} ·{" "}
+            {item.positionSlotNames?.[0] || item.baseItemNumber}
           </p>
         </div>
         <button
@@ -139,9 +140,9 @@ export function ApplyDialog({ item, user, onClose, onSuccess }) {
             )}
           </div>
           <p className="mb-2 text-xs text-slate-400">
-            Optional na ang pag-upload ng mga sumusunod — pwede ka pa ring
-            mag-apply kahit hindi kumpleto, pero puwedeng balikan ka ng HR para
-            hingin ang kulang.
+            "Uploading the following documents is optional—you may still apply
+            even if your submission is incomplete, but HR may contact you to
+            request any missing requirements."
           </p>
           <div className="space-y-2">
             {requiredDocs.map((d) => (

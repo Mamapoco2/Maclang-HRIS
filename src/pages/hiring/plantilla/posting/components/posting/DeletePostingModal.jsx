@@ -21,7 +21,8 @@ export function DeletePostingModal({ item, deleting, onCancel, onConfirm }) {
             This posting will be removed. This action cannot be undone.
           </p>
           <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            {item.positionTitle} · {item.baseItemNumber}
+            {item.positionTitle} ·{" "}
+            {item.positionSlotNames?.[0] || item.baseItemNumber}
           </p>
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={onCancel} disabled={deleting}>

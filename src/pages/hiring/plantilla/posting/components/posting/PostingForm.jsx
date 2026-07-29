@@ -1,5 +1,5 @@
 import React from "react";
-import { Input, Label, FieldError, Switch } from "../ui";
+import { Input, Label, FieldError, Switch, Select } from "../ui";
 import { DOC_KEYS } from "../constants";
 import { formatDateSlash } from "./postingHelpers";
 
@@ -45,12 +45,15 @@ function ReadOnlyField({ children }) {
 export function PostingForm({
   form,
   errors,
-  departments,
   divisions,
+  departments,
   salaryGrades,
   stepLabel,
   statusLabel,
   slotNameHelpText,
+  itemNumberOptions = [],
+  itemNumberEditable = false,
+  onItemNumberChange,
   onFieldChange,
   onMonthlySalaryChange,
   onAnnualSalaryChange,
@@ -58,11 +61,11 @@ export function PostingForm({
   onAnnualSalaryBlur,
   onDocChange,
 }) {
-  const departmentName =
-    departments.find((d) => String(d.id) === String(form.display_department_id))
-      ?.name || "—";
   const divisionName =
     divisions.find((d) => String(d.id) === String(form.display_division_id))
+      ?.name || "—";
+  const departmentName =
+    departments.find((d) => String(d.id) === String(form.display_department_id))
       ?.name || "—";
   const salaryGradeLabel = (() => {
     const sg = salaryGrades.find(
@@ -76,25 +79,19 @@ export function PostingForm({
       <FormSection title="Position Details">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label required>Plantilla Item Number</Label>
-            <ReadOnlyField>{form.base_item_number || "—"}</ReadOnlyField>
-          </div>
-          <div>
-            <Label required>Position Slot Name</Label>
-            <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-input bg-muted px-3 py-1.5">
-              {form.position_slot_names?.length > 0 ? (
-                form.position_slot_names.map((name) => (
-                  <span
-                    key={name}
-                    className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700"
-                  >
-                    {name}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-muted-foreground">—</span>
-              )}
-            </div>
+            <Label required>Item Number</Label>
+            {itemNumberEditable ? (
+              <Select
+                value={form.plantilla_position_ids?.[0] ?? ""}
+                onChange={onItemNumberChange}
+                options={itemNumberOptions}
+                placeholder="Select an item number"
+              />
+            ) : (
+              <ReadOnlyField>
+                {form.position_slot_names?.[0] || "—"}
+              </ReadOnlyField>
+            )}
             <p className="mt-1 text-[11px] text-slate-400">
               {slotNameHelpText}
             </p>
@@ -125,7 +122,11 @@ export function PostingForm({
             <ReadOnlyField>{stepLabel}</ReadOnlyField>
           </div>
           <div>
-            <Label>Gross Monthly Compensation</Label>
+            <Label required>Status</Label>
+            <ReadOnlyField>{statusLabel}</ReadOnlyField>
+          </div>
+          <div>
+            <Label>Gross Salary</Label>
             <CurrencyInput
               value={form.monthly_salary}
               onChange={onMonthlySalaryChange}
@@ -142,10 +143,6 @@ export function PostingForm({
               onChange={onAnnualSalaryChange}
               onBlur={onAnnualSalaryBlur}
             />
-          </div>
-          <div>
-            <Label required>Status</Label>
-            <ReadOnlyField>{statusLabel}</ReadOnlyField>
           </div>
         </div>
       </FormSection>

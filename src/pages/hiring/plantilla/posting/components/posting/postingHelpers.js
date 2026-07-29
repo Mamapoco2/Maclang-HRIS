@@ -62,13 +62,9 @@ export function extractPostedBaseItemNumbers(postings) {
   );
 }
 
-export function filterSelectableVacantItems(
-  vacantItems,
-  postedBaseItemNumbers = new Set(),
-) {
+export function filterSelectableVacantItems(vacantItems) {
   return (vacantItems ?? [])
-    .filter((v) => (v.status || "").toLowerCase() !== "filled")
-    .filter((v) => !postedBaseItemNumbers.has(v.base_item_number))
+    .filter((v) => getSelectableSlots(v).length > 0)
     .slice()
     .sort((a, b) =>
       (a.title || "").localeCompare(b.title || "", undefined, {
@@ -149,19 +145,14 @@ export function validatePostingForm(form, { mode }) {
   if (!form.base_item_number?.trim())
     errors.base_item_number = "Position is required.";
   if (!form.position_slot_names || form.position_slot_names.length === 0)
-    errors.position_slot_names =
-      "At least one available item number is required.";
+    errors.position_slot_names = "An item number is required.";
   if (!form.title?.trim()) errors.title = "Position title is required.";
   if (!form.employment_status)
     errors.employment_status = "Employment status is required.";
   if (!form.vacancies || Number(form.vacancies) <= 0)
     errors.vacancies = "Vacancies must be greater than zero.";
-  if (
-    mode === "create" &&
-    form.plantilla_position_ids?.length !== Number(form.vacancies)
-  )
-    errors.vacancies =
-      "Vacancies must equal the number of available item numbers under the selected position.";
+  if (mode === "create" && form.plantilla_position_ids?.length !== 1)
+    errors.position_slot_names = "Select exactly one item number to post.";
   if (!form.date_posted) errors.date_posted = "Posting date is required.";
   if (!form.closing_date) errors.closing_date = "Closing date is required.";
   if (

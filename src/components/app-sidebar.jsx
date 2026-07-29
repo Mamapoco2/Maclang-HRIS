@@ -1,4 +1,3 @@
-// app-sidebar.jsx
 import * as React from "react";
 import { useContext } from "react";
 import {
@@ -389,7 +388,7 @@ const NAV_MAIN = [
     title: "Release Manager",
     url: "/release-manager",
     icon: IconRocket,
-    permission: "accounts.manage",
+    superAdminOnly: true,
   },
   {
     title: "Audit Logs",
@@ -403,6 +402,7 @@ const NAV_SECONDARY = [];
 const NAV_DOCUMENTS = [{ name: "Reports", url: "#", icon: IconReport }];
 
 function canSee(item, userPermissions, isSuperUser) {
+  if (item.superAdminOnly) return isSuperUser;
   if (isSuperUser) return true;
   if (!item.permission) return true;
   return userPermissions.includes(item.permission);

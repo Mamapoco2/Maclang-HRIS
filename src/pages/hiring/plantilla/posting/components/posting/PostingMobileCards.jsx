@@ -28,8 +28,7 @@ export function PostingMobileCards({
                 {it.positionTitle}
               </p>
               <p className="text-xs text-slate-400">
-                {it.baseItemNumber}
-                {" · Slot: "}
+                {"Slot: "}
                 {formatPositionSlotNumbers(it)}
               </p>
             </div>

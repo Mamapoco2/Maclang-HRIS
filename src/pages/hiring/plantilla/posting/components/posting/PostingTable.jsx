@@ -16,18 +16,15 @@ export function PostingTable({
   return (
     <div className="hidden min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
       <div className="max-h-[560px] w-full max-w-full overflow-x-auto overflow-y-auto">
-        <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
           <thead className="sticky top-0 z-10 bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500">
             <tr>
-              <Th>Item No.</Th>
-              <Th>Position Slot Name</Th>
+              <Th>Item Number</Th>
               <Th>Position Title</Th>
               <Th>Office</Th>
               <Th>Division</Th>
               <Th>Salary Grade</Th>
               <Th>Monthly Salary</Th>
-              <Th>Employment Status</Th>
-              <Th>Vacancies</Th>
               <Th>Date Posted</Th>
               <Th>Closing Date</Th>
               <Th>Applicants</Th>
@@ -38,9 +35,6 @@ export function PostingTable({
           <tbody className="divide-y divide-slate-100">
             {items.map((it) => (
               <tr key={it.id} className="transition-colors hover:bg-slate-50">
-                <Td className="font-medium text-slate-700">
-                  {it.baseItemNumber}
-                </Td>
                 <Td className="font-medium text-slate-700">
                   {formatPositionSlotNumbers(it)}
                 </Td>
@@ -53,8 +47,6 @@ export function PostingTable({
                 <Td className="whitespace-nowrap">
                   {formatCurrency(it.monthlySalary)}
                 </Td>
-                <Td className="text-slate-500">{it.employmentStatus}</Td>
-                <Td>{it.vacantSlots ?? it.vacancies}</Td>
                 <Td className="whitespace-nowrap text-slate-500">
                   {formatDate(it.datePosted)}
                 </Td>
