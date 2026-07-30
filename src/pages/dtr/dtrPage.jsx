@@ -217,11 +217,6 @@ export default function App() {
             DTR Form
           </Link>
         </div>
-
-        {/* Right side */}
-        <div className="nav-right">
-          <span className="nav-badge">HIPAA Compliant</span>
-        </div>
       </nav>
 
       <Routes>
