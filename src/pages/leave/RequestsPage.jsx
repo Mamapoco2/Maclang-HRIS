@@ -13,6 +13,8 @@ import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "./Toast";
+import { RejectReasonModal } from "./components/RejectReasonModal";
+import { LeaveRequestModal } from "./components/LeaveRequestModal";
 import { LEAVE_REQUESTS, LEAVE_TYPES } from "./mockData";
 import { formatDate, downloadCSV } from "./utils";
 import {
@@ -30,16 +32,20 @@ import {
   X,
   SlidersHorizontal,
   Columns3,
+  MessageSquareWarning,
 } from "lucide-react";
 
 export default function RequestsPage({ onNavigate }) {
   const { toast } = useToast();
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [columnVisibility, setColumnVisibility] = useState({});
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [requests, setRequests] = useState(LEAVE_REQUESTS);
+  const [rejectTarget, setRejectTarget] = useState(null); // the request being rejected, or null
+  const [viewTarget, setViewTarget] = useState(null); // the request being viewed in the CS Form 6 modal, or null
 
   const filteredData = useMemo(() => {
     return requests.filter((r) => {
@@ -113,9 +119,18 @@ export default function RequestsPage({ onNavigate }) {
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ getValue }) => (
-          <div className="flex justify-center">
+        cell: ({ row, getValue }) => (
+          <div className="flex flex-col items-center gap-1">
             <StatusBadge status={getValue()} />
+            {getValue() === "rejected" && row.original.rejectionReason && (
+              <span
+                title={row.original.rejectionReason}
+                className="flex items-center gap-1 text-xs text-red-600 max-w-[160px] truncate"
+              >
+                <MessageSquareWarning className="w-3 h-3 shrink-0" />
+                {row.original.rejectionReason}
+              </span>
+            )}
           </div>
         ),
       },
@@ -147,7 +162,7 @@ export default function RequestsPage({ onNavigate }) {
         cell: ({ row }) => (
           <div className="flex items-center justify-center gap-1">
             <button
-              onClick={() => onNavigate("approvals")}
+              onClick={() => setViewTarget(row.original)}
               className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors"
               title="View"
             >
@@ -156,14 +171,14 @@ export default function RequestsPage({ onNavigate }) {
             {row.original.status === "pending" && (
               <>
                 <button
-                  onClick={() => handleAction(row.original.id, "approved")}
+                  onClick={() => handleApprove(row.original.id)}
                   className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 transition-colors"
                   title="Approve"
                 >
                   <Check className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleAction(row.original.id, "rejected")}
+                  onClick={() => setRejectTarget(row.original)}
                   className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 transition-colors"
                   title="Reject"
                 >
@@ -178,15 +193,35 @@ export default function RequestsPage({ onNavigate }) {
     [],
   );
 
-  const handleAction = (id, status) => {
+  const handleApprove = (id) => {
     setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r)),
+      prev.map((r) =>
+        r.id === id
+          ? { ...r, status: "approved", rejectionReason: undefined }
+          : r,
+      ),
     );
     toast({
-      title: status === "approved" ? "Request Approved" : "Request Rejected",
-      description: `Leave request has been ${status}.`,
-      variant: status === "approved" ? "success" : "destructive",
+      title: "Request Approved",
+      description: "Leave request has been approved.",
+      variant: "success",
     });
+  };
+
+  const handleReject = (reason) => {
+    if (!rejectTarget) return;
+    const id = rejectTarget.id;
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, status: "rejected", rejectionReason: reason } : r,
+      ),
+    );
+    toast({
+      title: "Request Rejected",
+      description: "Leave request has been rejected.",
+      variant: "destructive",
+    });
+    setRejectTarget(null);
   };
 
   const table = useReactTable({
@@ -210,6 +245,7 @@ export default function RequestsPage({ onNavigate }) {
       "End Date": r.endDate,
       Days: r.days,
       Status: r.status,
+      "Rejection Reason": r.rejectionReason ?? "",
       Applied: r.appliedDate,
       Approver: r.approverName,
     }));
@@ -226,11 +262,6 @@ export default function RequestsPage({ onNavigate }) {
       <PageHeader
         title="Leave Requests"
         description="Manage and track all employee leave requests"
-        actions={
-          <Button onClick={() => onNavigate("new-request")} size="sm">
-            <Plus className="w-4 h-4" /> New Request
-          </Button>
-        }
       />
 
       {/* Summary pills */}
@@ -452,6 +483,23 @@ export default function RequestsPage({ onNavigate }) {
           </div>
         </div>
       </Card>
+
+      {/* Rejection reason modal */}
+      {rejectTarget && (
+        <RejectReasonModal
+          request={rejectTarget}
+          onClose={() => setRejectTarget(null)}
+          onSave={handleReject}
+        />
+      )}
+
+      {/* View request modal (CS Form 6 replica) */}
+      {viewTarget && (
+        <LeaveRequestModal
+          request={viewTarget}
+          onClose={() => setViewTarget(null)}
+        />
+      )}
     </div>
   );
 }

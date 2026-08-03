@@ -80,6 +80,10 @@ const SUPER_ROLES = ["superadmin", "super-admin"];
 
 const SUPER_USER_DEFAULT_ROUTE = "/dashboard";
 
+const ROLE_DEFAULT_ROUTE = [
+  { role: "hr", path: "/Announcement", permission: "announcements.view" },
+];
+
 export function useFirstAccessibleRoute(fallback = "/status/403") {
   const { user } = useContext(AuthContext);
 
@@ -88,6 +92,12 @@ export function useFirstAccessibleRoute(fallback = "/status/403") {
   const userPermissions = user?.permissions ?? [];
 
   if (isSuperUser) return SUPER_USER_DEFAULT_ROUTE;
+
+  const roleOverride = ROLE_DEFAULT_ROUTE.find(
+    ({ role, permission }) =>
+      userRoles.includes(role) && userPermissions.includes(permission),
+  );
+  if (roleOverride) return roleOverride.path;
 
   const firstRoute = ROUTE_PERMISSION_MAP.find(({ permission }) => {
     if (!permission) return true;

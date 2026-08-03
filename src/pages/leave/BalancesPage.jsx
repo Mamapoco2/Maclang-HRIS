@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from "./PageHeader";
 import { employeeService } from "@/services/employeeService";
 import { LEAVE_TYPES } from "./mockData";
+import { LeaveCreditsModal } from "./components/LeaveCreditsModal";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ function Donut({ used, total, color, size = 52 }) {
 
 // ─── Single leave-type card ───────────────────────────────────────────────────
 
-function BalanceCard({ leaveType, data }) {
+function CreditCard({ leaveType, data, onEdit, onDelete }) {
   const lt = LEAVE_TYPES.find((t) => t.value === leaveType);
   if (!lt || !data || data.total === 0) return null;
   const remaining = data.total - data.used + (data.carryForward ?? 0);
@@ -117,6 +118,7 @@ function BalanceCard({ leaveType, data }) {
         borderRadius: 10,
         border: "1px solid var(--border)",
         background: "var(--card)",
+        position: "relative",
       }}
     >
       <Donut used={data.used} total={data.total} color={lt.color} />
@@ -165,6 +167,81 @@ function BalanceCard({ leaveType, data }) {
           </p>
         )}
       </div>
+      {(onEdit || onDelete) && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              title="Edit"
+              style={{
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 6,
+                border: "1px solid var(--border)",
+                background: "var(--background)",
+                cursor: "pointer",
+                color: "var(--muted-foreground)",
+              }}
+            >
+              <svg
+                width={12}
+                height={12}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              title="Remove"
+              style={{
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 6,
+                border: "1px solid var(--border)",
+                background: "var(--background)",
+                cursor: "pointer",
+                color: "#dc2626",
+              }}
+            >
+              <svg
+                width={12}
+                height={12}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -228,14 +305,24 @@ function SkeletonRow() {
 }
 
 // ─── Employee row with inline expand ─────────────────────────────────────────
-// Leave balance section is a placeholder — wire up leaveService here later.
 
-function EmployeeRow({ employee, isOpen, onToggle }) {
+function EmployeeRow({
+  employee,
+  isOpen,
+  onToggle,
+  credits,
+  onAdd,
+  onEdit,
+  onDelete,
+}) {
   const palette = avatarPalette(empId(employee));
   const name = empName(employee);
   const id = empId(employee);
   const desig = empDesig(employee);
   const dept = empDept(employee);
+
+  const entries = Object.entries(credits ?? {});
+  const hasMoreTypes = entries.length < LEAVE_TYPES.length;
 
   return (
     <div
@@ -325,59 +412,100 @@ function EmployeeRow({ employee, isOpen, onToggle }) {
         </svg>
       </button>
 
-      {/* Expanded panel — replace the placeholder below once leaveService is ready */}
+      {/* Expanded panel */}
       {isOpen && (
         <div
           style={{
             borderTop: "1px solid var(--border)",
-            padding: "20px 16px",
+            padding: "16px",
             background: "var(--background)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 6,
           }}
         >
-          <svg
-            width={28}
-            height={28}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            style={{ color: "var(--muted-foreground)", opacity: 0.4 }}
-          >
-            <path
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
-              strokeLinecap="round"
-            />
-            <rect x="9" y="3" width="6" height="4" rx="1" />
-            <path d="M9 12h6M9 16h4" strokeLinecap="round" />
-          </svg>
-          <p
-            style={{
-              fontSize: 13,
-              fontWeight: 500,
-              color: "var(--muted-foreground)",
-              margin: 0,
-            }}
-          >
-            Leave balance coming soon
-          </p>
-          <p
-            style={{
-              fontSize: 11,
-              color: "var(--muted-foreground)",
-              margin: 0,
-              opacity: 0.7,
-            }}
-          >
-            Wire up{" "}
-            <code style={{ fontSize: 11 }}>
-              leaveService.getBalanceByEmployee({id})
-            </code>{" "}
-            here
-          </p>
+          {entries.length === 0 ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                padding: "12px 0",
+              }}
+            >
+              <svg
+                width={28}
+                height={28}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                style={{ color: "var(--muted-foreground)", opacity: 0.4 }}
+              >
+                <path
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+                  strokeLinecap="round"
+                />
+                <rect x="9" y="3" width="6" height="4" rx="1" />
+                <path d="M9 12h6M9 16h4" strokeLinecap="round" />
+              </svg>
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--muted-foreground)",
+                  margin: 0,
+                }}
+              >
+                No leave credits set yet
+              </p>
+              <button
+                onClick={onAdd}
+                className="mt-2 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors"
+                style={{
+                  background: "#6366f1",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                + Add leave credits
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: 10,
+                  marginBottom: 12,
+                }}
+              >
+                {entries.map(([type, data]) => (
+                  <CreditCard
+                    key={type}
+                    leaveType={type}
+                    data={data}
+                    onEdit={() => onEdit(type)}
+                    onDelete={() => onDelete(type)}
+                  />
+                ))}
+              </div>
+              {hasMoreTypes && (
+                <button
+                  onClick={onAdd}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors"
+                  style={{
+                    background: "var(--card)",
+                    color: "#6366f1",
+                    borderColor: "var(--border)",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add another leave type
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -396,6 +524,12 @@ export default function BalancesPage() {
   const [empError, setEmpError] = useState(null);
 
   const [departments, setDepartments] = useState([]);
+
+  // ── Leave credits (local-only placeholder state) ──────────────────────────
+  // Shape: { [employeeId]: { [leaveTypeValue]: { total, used, carryForward } } }
+  // Swap fetch/save below for real leaveService calls once the endpoint exists.
+  const [credits, setCredits] = useState({});
+  const [modal, setModal] = useState(null); // { employee, editingType } | null
 
   // ── Fetch employees ────────────────────────────────────────────────────────
   const fetchEmployees = useCallback(async () => {
@@ -449,10 +583,44 @@ export default function BalancesPage() {
     setExpandedId((prev) => (prev === id ? null : id));
   }
 
+  function openAddModal(employee) {
+    setModal({ employee, editingType: null });
+  }
+
+  function openEditModal(employee, leaveType) {
+    setModal({ employee, editingType: leaveType });
+  }
+
+  function closeModal() {
+    setModal(null);
+  }
+
+  function handleSaveCredits(leaveType, data) {
+    if (!modal) return;
+    const empKey = empId(modal.employee);
+    setCredits((prev) => ({
+      ...prev,
+      [empKey]: {
+        ...(prev[empKey] ?? {}),
+        [leaveType]: data,
+      },
+    }));
+    closeModal();
+  }
+
+  function handleDeleteCredits(employee, leaveType) {
+    const empKey = empId(employee);
+    setCredits((prev) => {
+      const next = { ...(prev[empKey] ?? {}) };
+      delete next[leaveType];
+      return { ...prev, [empKey]: next };
+    });
+  }
+
   return (
     <div className="p-5">
       <PageHeader
-        title="Leave Balances"
+        title="Leave Credits"
         description="Track and manage employee leave allocations"
       />
 
@@ -611,10 +779,25 @@ export default function BalancesPage() {
                 employee={emp}
                 isOpen={expandedId === id}
                 onToggle={() => handleToggle(id)}
+                credits={credits[id]}
+                onAdd={() => openAddModal(emp)}
+                onEdit={(type) => openEditModal(emp, type)}
+                onDelete={(type) => handleDeleteCredits(emp, type)}
               />
             );
           })}
         </div>
+      )}
+
+      {/* Add / edit credits modal */}
+      {modal && (
+        <LeaveCreditsModal
+          employee={modal.employee}
+          existing={credits[empId(modal.employee)]}
+          editingType={modal.editingType}
+          onClose={closeModal}
+          onSave={handleSaveCredits}
+        />
       )}
     </div>
   );
