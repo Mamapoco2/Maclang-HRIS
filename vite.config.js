@@ -1,17 +1,17 @@
+import fs from "fs";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import basicSsl from "@vitejs/plugin-basic-ssl";
 import { defineConfig } from "vite";
+
+const certPath = "C:/Users/colin/Desktop/MACLANG DEPT/cert.pem";
+const keyPath = "C:/Users/colin/Desktop/MACLANG DEPT/key.pem";
+const hasCert = fs.existsSync(certPath) && fs.existsSync(keyPath);
 
 export default defineConfig({
   darkMode: "class",
 
-  plugins: [
-    react(),
-    tailwindcss(),
-    basicSsl(),
-  ],
+  plugins: [react(), tailwindcss()],
 
   resolve: {
     alias: {
@@ -21,6 +21,11 @@ export default defineConfig({
 
   server: {
     host: "0.0.0.0",
-    https: true,
+    https: hasCert
+      ? {
+          cert: fs.readFileSync(certPath),
+          key: fs.readFileSync(keyPath),
+        }
+      : true,
   },
 });
