@@ -320,7 +320,7 @@ export default function EmployeePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Employment Types</SelectItem>
-                <SelectItem value="non-plantilla">Non-Plantilla</SelectItem>
+                <SelectItem value="plantilla">Plantilla</SelectItem>
                 <SelectItem value="consultant">Consultant</SelectItem>
                 <SelectItem value="contract-of-service">
                   Contract of Service
