@@ -22,6 +22,7 @@ import {
   formatFileSize,
   formatTimestamp,
 } from "@/utils/signatureValidation";
+import { toast } from "sonner";
 
 const STATUS_LABELS = {
   idle: "Not uploaded",
@@ -35,19 +36,19 @@ export function SignatureUploadCard({
   description,
   label,
   signature,
+  previewUrl,
+  busy,
   onUpload,
   onDelete,
-  onAuditLog,
 }) {
   const fileRef = useRef(null);
-  const [status, setStatus] = useState("idle");
   const [error, setError] = useState(null);
-  const [localPreview, setLocalPreview] = useState(null);
 
-  const previewUrl = localPreview ?? signature?.previewUrl ?? null;
   const uploadedAt = signature?.uploadedAt ?? null;
   const fileSize = signature?.fileSize ?? null;
   const fileName = signature?.fileName ?? null;
+  const isUploading = busy === "uploading";
+  const isDeleting = busy === "deleting";
 
   const handleFileSelect = async (file) => {
     if (!file) return;
@@ -55,34 +56,22 @@ export function SignatureUploadCard({
     const validation = validateSignatureFile(file);
     if (!validation.valid) {
       setError(validation.error);
-      setStatus("error");
       return;
     }
 
     setError(null);
-    setStatus("uploading");
 
-    const preview = URL.createObjectURL(file);
-    setLocalPreview(preview);
-
-    await new Promise((r) => setTimeout(r, 900));
-
-    const uploadedSignature = {
-      previewUrl: preview,
-      fileName: file.name,
-      fileSize: file.size,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    onUpload?.(uploadedSignature);
-    onAuditLog?.({
-      action: signature ? "updated" : "uploaded",
-      type: label,
-      fileName: file.name,
-      timestamp: uploadedSignature.uploadedAt,
-    });
-
-    setStatus("success");
+    try {
+      await onUpload?.(file);
+      toast.success(`${label} saved`, { description: file.name });
+    } catch (err) {
+      const message =
+        err?.response?.data?.errors?.signature?.[0] ??
+        err?.response?.data?.message ??
+        "Something went wrong while uploading. Please try again.";
+      setError(message);
+      toast.error("Upload failed", { description: message });
+    }
   };
 
   const handleInputChange = (e) => {
@@ -91,22 +80,27 @@ export function SignatureUploadCard({
     e.target.value = "";
   };
 
-  const handleDelete = () => {
-    if (localPreview) URL.revokeObjectURL(localPreview);
-    setLocalPreview(null);
+  const handleDelete = async () => {
     setError(null);
-    setStatus("idle");
-    onDelete?.();
-    onAuditLog?.({
-      action: "deleted",
-      type: label,
-      fileName: fileName ?? "signature",
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      await onDelete?.();
+      toast.success(`${label} removed`);
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ?? "Unable to delete this signature.";
+      setError(message);
+      toast.error("Delete failed", { description: message });
+    }
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const displayStatus = signature ? "success" : status;
+  const displayStatus = error
+    ? "error"
+    : signature
+      ? "success"
+      : isUploading
+        ? "uploading"
+        : "idle";
 
   return (
     <Card>
@@ -134,13 +128,12 @@ export function SignatureUploadCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Preview area with checkerboard for transparent PNGs */}
         <div
           className="rounded-xl border border-border overflow-hidden"
           aria-label={`${label} preview`}
         >
           <div
-            className="relative min-h-[140px] flex items-center justify-center p-6"
+            className="relative h-64 sm:h-72 flex items-center justify-center p-6"
             style={{
               backgroundImage:
                 "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
@@ -149,11 +142,16 @@ export function SignatureUploadCard({
               backgroundColor: "#f8fafc",
             }}
           >
-            {previewUrl ? (
+            {isUploading ? (
+              <div className="text-center text-muted-foreground">
+                <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                <p className="text-sm">Uploading…</p>
+              </div>
+            ) : previewUrl ? (
               <img
                 src={previewUrl}
                 alt={`${label} preview`}
-                className="max-h-24 max-w-full object-contain"
+                className="w-full h-full object-contain"
               />
             ) : (
               <div className="text-center text-muted-foreground">
@@ -168,7 +166,7 @@ export function SignatureUploadCard({
           <div className="px-4 py-2.5 bg-muted/50 border-t border-border flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{label}</span>
             {fileName && <span>{fileName}</span>}
-            {fileSize && <span>{formatFileSize(fileSize)}</span>}
+            {fileSize != null && <span>{formatFileSize(fileSize)}</span>}
             {uploadedAt && <span>Updated {formatTimestamp(uploadedAt)}</span>}
           </div>
         </div>
@@ -183,14 +181,7 @@ export function SignatureUploadCard({
           </div>
         )}
 
-        {status === "uploading" && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Uploading signature…
-          </div>
-        )}
-
-        {status === "success" && !error && (
+        {signature && !error && !isUploading && (
           <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
             Signature saved successfully
@@ -202,7 +193,7 @@ export function SignatureUploadCard({
             variant="outline"
             size="sm"
             className="gap-2"
-            disabled={status === "uploading"}
+            disabled={isUploading || isDeleting}
             onClick={() => fileRef.current?.click()}
           >
             {signature ? (
@@ -222,10 +213,14 @@ export function SignatureUploadCard({
               variant="ghost"
               size="sm"
               className="gap-2 text-destructive hover:text-destructive"
-              disabled={status === "uploading"}
+              disabled={isUploading || isDeleting}
               onClick={handleDelete}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              {isDeleting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="w-3.5 h-3.5" />
+              )}
               Delete
             </Button>
           )}

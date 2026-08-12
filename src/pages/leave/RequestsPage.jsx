@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,42 +10,79 @@ import {
 import { PageHeader } from "./PageHeader";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
-import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/Button";
-import { useToast } from "./Toast";
-import { RejectReasonModal } from "./components/RejectReasonModal";
+import LeaveApi from "@/services/leaveApiService";
 import { LeaveRequestModal } from "./components/LeaveRequestModal";
-import { LEAVE_REQUESTS, LEAVE_TYPES } from "./mockData";
+import { LEAVE_TYPES } from "./leavePolicy";
 import { formatDate, downloadCSV } from "./utils";
 import {
   Search,
-  Filter,
   Download,
-  Plus,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
   ChevronLeft,
   ChevronRight,
   Eye,
-  Check,
-  X,
-  SlidersHorizontal,
   Columns3,
   MessageSquareWarning,
 } from "lucide-react";
 
-export default function RequestsPage({ onNavigate }) {
-  const { toast } = useToast();
+function mapRequestToRow(r) {
+  const pendingStep = r.approval_steps?.find(
+    (s) => s.step_order === r.current_step_order && s.status === "pending",
+  );
+  const lastActedStep = [...(r.approval_steps ?? [])]
+    .reverse()
+    .find((s) => s.status !== "pending");
+  const approverStep = pendingStep ?? lastActedStep;
 
+  return {
+    id: r.id,
+    leaveType: r.leave_type?.code ?? "—",
+    startDate: r.start_date,
+    endDate: r.end_date,
+    days: r.total_days,
+    status: r.status,
+    rejectionReason:
+      r.status === "rejected" ? (lastActedStep?.remarks ?? null) : undefined,
+    appliedDate: r.submitted_at ?? r.created_at,
+    approverName: approverStep?.approver?.name ?? "—",
+    reason: r.reason,
+    details: r.details,
+    isHalfDay: r.is_half_day,
+    documents: r.documents,
+  };
+}
+
+export default function RequestsPage({ onNavigate }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [columnVisibility, setColumnVisibility] = useState({});
   const [showColumnMenu, setShowColumnMenu] = useState(false);
-  const [requests, setRequests] = useState(LEAVE_REQUESTS);
-  const [rejectTarget, setRejectTarget] = useState(null); // the request being rejected, or null
-  const [viewTarget, setViewTarget] = useState(null); // the request being viewed in the CS Form 6 modal, or null
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [viewTarget, setViewTarget] = useState(null);
+
+  const loadRequests = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    LeaveApi.listRequests({ per_page: 100 })
+      .then((res) => {
+        setRequests((res.data ?? []).map(mapRequestToRow));
+      })
+      .catch((err) => {
+        setError(
+          err?.response?.data?.message || "Failed to load your leave requests.",
+        );
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
 
   const filteredData = useMemo(() => {
     return requests.filter((r) => {
@@ -53,11 +90,7 @@ export default function RequestsPage({ onNavigate }) {
       if (typeFilter !== "all" && r.leaveType !== typeFilter) return false;
       if (globalFilter) {
         const q = globalFilter.toLowerCase();
-        return (
-          r.employeeName.toLowerCase().includes(q) ||
-          r.department.toLowerCase().includes(q) ||
-          r.leaveType.toLowerCase().includes(q)
-        );
+        return r.leaveType.toLowerCase().includes(q);
       }
       return true;
     });
@@ -65,23 +98,6 @@ export default function RequestsPage({ onNavigate }) {
 
   const columns = useMemo(
     () => [
-      {
-        accessorKey: "employeeName",
-        header: "Employee",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-3">
-            <Avatar name={row.original.employeeName} size="sm" />
-            <div className="text-center">
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                {row.original.employeeName}
-              </p>
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {row.original.department}
-              </p>
-            </div>
-          </div>
-        ),
-      },
       {
         accessorKey: "leaveType",
         header: "Leave Type",
@@ -147,7 +163,7 @@ export default function RequestsPage({ onNavigate }) {
       },
       {
         accessorKey: "approverName",
-        header: "Approver",
+        header: "Current Approver",
         cell: ({ getValue }) => (
           <div className="flex justify-center">
             <span className="text-sm text-[var(--foreground)]">
@@ -168,61 +184,12 @@ export default function RequestsPage({ onNavigate }) {
             >
               <Eye className="w-4 h-4" />
             </button>
-            {row.original.status === "pending" && (
-              <>
-                <button
-                  onClick={() => handleApprove(row.original.id)}
-                  className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 transition-colors"
-                  title="Approve"
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setRejectTarget(row.original)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 transition-colors"
-                  title="Reject"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </>
-            )}
           </div>
         ),
       },
     ],
     [],
   );
-
-  const handleApprove = (id) => {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, status: "approved", rejectionReason: undefined }
-          : r,
-      ),
-    );
-    toast({
-      title: "Request Approved",
-      description: "Leave request has been approved.",
-      variant: "success",
-    });
-  };
-
-  const handleReject = (reason) => {
-    if (!rejectTarget) return;
-    const id = rejectTarget.id;
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, status: "rejected", rejectionReason: reason } : r,
-      ),
-    );
-    toast({
-      title: "Request Rejected",
-      description: "Leave request has been rejected.",
-      variant: "destructive",
-    });
-    setRejectTarget(null);
-  };
 
   const table = useReactTable({
     data: filteredData,
@@ -238,8 +205,6 @@ export default function RequestsPage({ onNavigate }) {
 
   const handleExport = () => {
     const data = filteredData.map((r) => ({
-      Employee: r.employeeName,
-      Department: r.department,
       "Leave Type": r.leaveType,
       "Start Date": r.startDate,
       "End Date": r.endDate,
@@ -247,22 +212,29 @@ export default function RequestsPage({ onNavigate }) {
       Status: r.status,
       "Rejection Reason": r.rejectionReason ?? "",
       Applied: r.appliedDate,
-      Approver: r.approverName,
+      "Current Approver": r.approverName,
     }));
-    downloadCSV(data, "leave-requests.csv");
-    toast({
-      title: "Export Successful",
-      description: "CSV file has been downloaded.",
-      variant: "success",
-    });
+    downloadCSV(data, "my-leave-requests.csv");
   };
 
   return (
     <div className="p-5">
       <PageHeader
-        title="Leave Requests"
-        description="Manage and track all employee leave requests"
+        title="My Leave Requests"
+        description="Track the leave requests you've filed and their approval status"
       />
+
+      {error && (
+        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={loadRequests}
+            className="text-xs font-medium underline hover:no-underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Summary pills */}
       <div className="flex gap-3 mb-5 flex-wrap">
@@ -311,7 +283,7 @@ export default function RequestsPage({ onNavigate }) {
             <input
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              placeholder="Search by name, department..."
+              placeholder="Search by leave type..."
               className="w-full pl-9 pr-4 py-2 text-sm bg-[var(--muted)] border-0 rounded-lg outline-none focus:ring-2 focus:ring-[var(--ring)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]"
             />
           </div>
@@ -404,7 +376,18 @@ export default function RequestsPage({ onNavigate }) {
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-16 text-center"
+                  >
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Loading your leave requests…
+                    </p>
+                  </td>
+                </tr>
+              ) : table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map((row, i) => (
                   <tr
                     key={row.id}
@@ -428,7 +411,7 @@ export default function RequestsPage({ onNavigate }) {
                     className="px-4 py-16 text-center"
                   >
                     <p className="text-sm text-[var(--muted-foreground)]">
-                      No leave requests found
+                      You haven't filed any leave requests yet
                     </p>
                   </td>
                 </tr>
@@ -483,15 +466,6 @@ export default function RequestsPage({ onNavigate }) {
           </div>
         </div>
       </Card>
-
-      {/* Rejection reason modal */}
-      {rejectTarget && (
-        <RejectReasonModal
-          request={rejectTarget}
-          onClose={() => setRejectTarget(null)}
-          onSave={handleReject}
-        />
-      )}
 
       {/* View request modal (CS Form 6 replica) */}
       {viewTarget && (

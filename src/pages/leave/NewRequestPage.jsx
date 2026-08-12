@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "./PageHeader";
@@ -6,19 +6,52 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FormField, Input, Textarea, Select } from "./FormField";
 import { useToast } from "./Toast";
-import { LEAVE_TYPES, CURRENT_USER, LEAVE_BALANCES } from "./mockData";
-import { LEAVE_TYPE_MAP, HIDE_DATE_SELECTION } from "./leavePolicy";
+import { useAuth } from "@/hooks/useAuth";
+import LeaveApi from "@/services/leaveApiService";
+import {
+  LEAVE_TYPE_MAP,
+  HIDE_DATE_SELECTION,
+  LEAVE_DETAIL_FIELDS,
+} from "./leavePolicy";
 import { LeaveTypeFields } from "./components/LeaveTypeFields";
 import { LeaveRequirementsPanel } from "./components/LeaveRequirementsPanel";
-import { CalendarDays, User, Building2, Briefcase } from "lucide-react";
+import {
+  CalendarDays,
+  User,
+  Building2,
+  Briefcase,
+  Loader2,
+} from "lucide-react";
 import { daysBetween, formatDate } from "./utils";
+
+function extractErrorMessage(err, fallback) {
+  const response = err?.response;
+  if (!response) return fallback;
+  const errors = response.data?.errors;
+  if (errors && typeof errors === "object") {
+    const firstField = Object.keys(errors)[0];
+    const firstMessage = errors[firstField]?.[0];
+    if (firstMessage) return firstMessage;
+  }
+  return response.data?.message || fallback;
+}
 
 export default function NewRequestPage({ onNavigate }) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const employee = user?.employee ?? null;
+
   const [loading, setLoading] = useState(false);
   const [uploads, setUploads] = useState({});
   const [vawcFiles, setVawcFiles] = useState([]);
+
+  const [leaveTypes, setLeaveTypes] = useState([]);
+  const [typesLoading, setTypesLoading] = useState(true);
+  const [typesError, setTypesError] = useState(null);
+
+  const [balances, setBalances] = useState([]);
+  const [balancesLoading, setBalancesLoading] = useState(true);
 
   const goTo = (page) => {
     const routes = {
@@ -29,14 +62,62 @@ export default function NewRequestPage({ onNavigate }) {
     else navigate(routes[page] || "/leaveDashboard");
   };
 
-  const employee = CURRENT_USER;
-  const balance = LEAVE_BALANCES.find((b) => b.employeeId === employee.id);
+  // ─── Load active/eligible leave types for this employee ──────────────────
+  useEffect(() => {
+    let cancelled = false;
+
+    LeaveApi.listTypes()
+      .then((data) => {
+        if (!cancelled) setLeaveTypes(data ?? []);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setTypesError(
+            extractErrorMessage(err, "Failed to load leave types."),
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTypesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ─── Load this employee's balances for the current year ──────────────────
+  useEffect(() => {
+    if (!employee?.id) {
+      setBalancesLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setBalancesLoading(true);
+
+    LeaveApi.getMyBalances(employee.id, new Date().getFullYear())
+      .then((data) => {
+        if (!cancelled) setBalances(data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setBalances([]);
+      })
+      .finally(() => {
+        if (!cancelled) setBalancesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employee?.id]);
 
   const { register, handleSubmit, watch, reset } = useForm({
     defaultValues: {
       leaveType: "",
       startDate: "",
       endDate: "",
+      isHalfDay: false,
       reason: "",
       destination: "within_ph",
       locationType: "within_ph",
@@ -46,8 +127,16 @@ export default function NewRequestPage({ onNavigate }) {
   const leaveType = watch("leaveType");
   const startDate = watch("startDate");
   const endDate = watch("endDate");
+  const isHalfDay = watch("isHalfDay");
   const reason = watch("reason") || "";
   const hideDates = HIDE_DATE_SELECTION.has(leaveType);
+
+  // Server-provided leave type record (id, code, color, max_days, ...)
+  const serverType = useMemo(
+    () => leaveTypes.find((t) => t.code === leaveType) ?? null,
+    [leaveTypes, leaveType],
+  );
+  // Local presentation config (icon, bg, notices) keyed by the same code.
   const typeConfig = LEAVE_TYPE_MAP[leaveType];
 
   const days =
@@ -55,7 +144,9 @@ export default function NewRequestPage({ onNavigate }) {
     startDate &&
     endDate &&
     new Date(endDate) >= new Date(startDate)
-      ? daysBetween(startDate, endDate)
+      ? isHalfDay
+        ? 0.5
+        : daysBetween(startDate, endDate)
       : hideDates && leaveType === "monetization"
         ? watch("creditsToMonetize") || "—"
         : 0;
@@ -77,22 +168,79 @@ export default function NewRequestPage({ onNavigate }) {
     uploadedFilesForPanel.bpo = vawcFiles[0];
   }
 
-  const onSubmit = async () => {
+  const onSubmit = async (formValues) => {
+    if (!employee?.id) {
+      toast({
+        title: "No linked employee record",
+        description: "Your account isn't linked to an employee profile yet.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (!serverType) {
+      toast({
+        title: "Select a leave type",
+        description: "Please choose a valid, active leave type.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const detailKeys = LEAVE_DETAIL_FIELDS[leaveType] ?? [];
+    const details = detailKeys.reduce((acc, key) => {
+      const value = formValues[key];
+      if (value !== undefined && value !== null && value !== "") {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
+    const fields = {
+      employee_id: employee.id,
+      leave_type_id: serverType.id,
+      start_date: hideDates ? undefined : formValues.startDate,
+      end_date: hideDates ? undefined : formValues.endDate,
+      is_half_day: hideDates ? undefined : !!formValues.isHalfDay,
+      reason: formValues.reason,
+      details,
+    };
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    toast({
-      title: "Leave Request Submitted",
-      description: "Your request is pending approval.",
-      variant: "success",
-    });
-    reset();
-    setUploads({});
-    setVawcFiles([]);
-    goTo("requests");
+    try {
+      await LeaveApi.submitRequest(fields, uploads, vawcFiles);
+      toast({
+        title: "Leave Request Submitted",
+        description: "Your request is pending approval.",
+        variant: "success",
+      });
+      reset();
+      setUploads({});
+      setVawcFiles([]);
+      goTo("requests");
+    } catch (err) {
+      toast({
+        title: "Submission Failed",
+        description: extractErrorMessage(
+          err,
+          "Something went wrong while submitting your request.",
+        ),
+        variant: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const LeaveTypeIcon = typeConfig?.icon;
+
+  const balance = useMemo(() => {
+    const find = (code) => balances.find((b) => b.leave_type?.code === code);
+    const vacation = find("vacation");
+    const sick = find("sick");
+    if (!vacation && !sick) return null;
+    return { vacation, sick };
+  }, [balances]);
 
   return (
     <div className="p-4 md:p-6 max-w-screeen mx-auto">
@@ -100,6 +248,12 @@ export default function NewRequestPage({ onNavigate }) {
         title="Leave Application"
         description="Submit a leave request in accordance with CSC leave policies"
       />
+
+      {typesError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          {typesError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <form
@@ -120,20 +274,24 @@ export default function NewRequestPage({ onNavigate }) {
                   <p className="text-xs text-[var(--muted-foreground)] mb-0.5">
                     Full Name
                   </p>
-                  <p className="text-sm font-semibold">{employee.name}</p>
+                  <p className="text-sm font-semibold">
+                    {employee?.full_name ?? "—"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--muted-foreground)] mb-0.5 flex items-center gap-1">
                     <Building2 className="w-3 h-3" /> Department
                   </p>
-                  <p className="text-sm font-semibold">{employee.department}</p>
+                  <p className="text-sm font-semibold">
+                    {employee?.department?.name ?? "—"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--muted-foreground)] mb-0.5 flex items-center gap-1">
                     <Briefcase className="w-3 h-3" /> Designation
                   </p>
                   <p className="text-sm font-semibold">
-                    {employee.designation}
+                    {employee?.position ?? "—"}
                   </p>
                 </div>
                 <div>
@@ -141,7 +299,7 @@ export default function NewRequestPage({ onNavigate }) {
                     Email
                   </p>
                   <p className="text-sm font-semibold truncate">
-                    {employee.email}
+                    {user?.email ?? "—"}
                   </p>
                 </div>
               </div>
@@ -155,11 +313,15 @@ export default function NewRequestPage({ onNavigate }) {
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField label="Leave Type" required>
-                <Select {...register("leaveType")}>
-                  <option value="">Select leave type</option>
-                  {LEAVE_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
+                <Select {...register("leaveType")} disabled={typesLoading}>
+                  <option value="">
+                    {typesLoading
+                      ? "Loading leave types..."
+                      : "Select leave type"}
+                  </option>
+                  {leaveTypes.map((t) => (
+                    <option key={t.id} value={t.code}>
+                      {t.name}
                     </option>
                   ))}
                 </Select>
@@ -175,6 +337,12 @@ export default function NewRequestPage({ onNavigate }) {
                 >
                   <LeaveTypeIcon className="w-4 h-4" />
                   <span className="font-medium">{typeConfig.label}</span>
+                  {serverType?.max_days != null && (
+                    <span className="ml-auto text-xs opacity-75">
+                      Max {serverType.max_days} day
+                      {serverType.max_days === 1 ? "" : "s"}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -192,6 +360,15 @@ export default function NewRequestPage({ onNavigate }) {
                       />
                     </FormField>
                   </div>
+
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      {...register("isHalfDay")}
+                      className="accent-[var(--primary)]"
+                    />
+                    Half-day leave
+                  </label>
 
                   <FormField
                     label="Number of Days"
@@ -233,7 +410,8 @@ export default function NewRequestPage({ onNavigate }) {
           </Card>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button type="submit" loading={loading} className="flex-1">
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Submit Leave Request
             </Button>
             <Button
@@ -311,46 +489,57 @@ export default function NewRequestPage({ onNavigate }) {
             </CardContent>
           </Card>
 
-          {balance && (
+          {balancesLoading ? (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Available Balance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  {
-                    label: "Vacation",
-                    data: balance.vacation,
-                    color: "#3b82f6",
-                  },
-                  { label: "Sick", data: balance.sick, color: "#f59e0b" },
-                ].map((b) => {
-                  const remaining =
-                    b.data.total - b.data.used + b.data.carryForward;
-                  return (
-                    <div key={b.label}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-[var(--muted-foreground)]">
-                          {b.label}
-                        </span>
-                        <span className="font-medium">
-                          {remaining}/{b.data.total}
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-[var(--muted)] rounded-full">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.min((remaining / b.data.total) * 100, 100)}%`,
-                            background: b.color,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+              <CardContent className="py-6 text-center text-sm text-[var(--muted-foreground)]">
+                Loading balances...
               </CardContent>
             </Card>
+          ) : (
+            balance && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Available Balance</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    {
+                      label: "Vacation",
+                      data: balance.vacation,
+                      color: "#3b82f6",
+                    },
+                    { label: "Sick", data: balance.sick, color: "#f59e0b" },
+                  ]
+                    .filter((b) => b.data)
+                    .map((b) => {
+                      const available = b.data.available;
+                      const used = b.data.used;
+                      const total = available + used;
+                      return (
+                        <div key={b.label}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-[var(--muted-foreground)]">
+                              {b.label}
+                            </span>
+                            <span className="font-medium">
+                              {available}/{total}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-[var(--muted)] rounded-full">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${total > 0 ? Math.min((available / total) * 100, 100) : 0}%`,
+                                background: b.color,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </CardContent>
+              </Card>
+            )
           )}
         </div>
       </div>

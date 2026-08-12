@@ -1,22 +1,23 @@
-import { useState } from "react";
 import { ProfileInformationCard } from "./components/ProfileInformationCard";
 import { SignatureUploadCard } from "./components/SignatureUploadCard";
 import { AccountActionsCard } from "./components/AccountActionsCard";
 import { useAccountUser } from "@/hooks/useAccountUser";
-import { PenLine } from "lucide-react";
+import { useAccountSignatures } from "@/hooks/useAccountSignatures";
+import { AccountApi } from "@/services/accountApiService";
+import { PenLine, Loader2, AlertTriangle } from "lucide-react";
 
 export default function AccountPage() {
   const accountUser = useAccountUser();
-  const [profileData, setProfileData] = useState(null);
-  const [primarySignature, setPrimarySignature] = useState(null);
-  const [countersignSignature, setCountersignSignature] = useState(null);
-  const [auditLog, setAuditLog] = useState([]);
-
-  const user = profileData ? { ...accountUser, ...profileData } : accountUser;
-
-  const addAuditEntry = (entry) => {
-    setAuditLog((prev) => [entry, ...prev].slice(0, 20));
-  };
+  const {
+    signatures,
+    previewUrls,
+    activityLog,
+    loading: signaturesLoading,
+    error: signaturesError,
+    actionState,
+    uploadSignature,
+    deleteSignature,
+  } = useAccountSignatures();
 
   if (!accountUser) {
     return (
@@ -38,8 +39,10 @@ export default function AccountPage() {
         </header>
 
         <ProfileInformationCard
-          user={user}
-          onSave={(data) => setProfileData((prev) => ({ ...prev, ...data }))}
+          user={accountUser}
+          onSave={({ contactNumber }) =>
+            AccountApi.updateProfile({ contactNumber })
+          }
         />
 
         <section aria-labelledby="esignature-heading">
@@ -49,29 +52,44 @@ export default function AccountPage() {
               E-Signature Management
             </h2>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <SignatureUploadCard
-              title="Primary E-Signature"
-              description="Your main signature used on official documents and forms."
-              label="Primary Signature"
-              signature={primarySignature}
-              onUpload={setPrimarySignature}
-              onDelete={() => setPrimarySignature(null)}
-              onAuditLog={addAuditEntry}
-            />
-            <SignatureUploadCard
-              title="Countersign E-Signature"
-              description="Secondary signature for countersigning or delegated approvals."
-              label="Countersign Signature"
-              signature={countersignSignature}
-              onUpload={setCountersignSignature}
-              onDelete={() => setCountersignSignature(null)}
-              onAuditLog={addAuditEntry}
-            />
-          </div>
+
+          {signaturesLoading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading your signatures…
+            </div>
+          ) : signaturesError ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-destructive">
+              <AlertTriangle className="w-4 h-4" />
+              {signaturesError}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SignatureUploadCard
+                title="Primary E-Signature"
+                description="Your main signature used on official documents and forms."
+                label="Primary Signature"
+                signature={signatures.primary}
+                previewUrl={previewUrls.primary}
+                busy={actionState.primary}
+                onUpload={(file) => uploadSignature("primary", file)}
+                onDelete={() => deleteSignature("primary")}
+              />
+              <SignatureUploadCard
+                title="Countersign E-Signature"
+                description="Secondary signature for countersigning or delegated approvals."
+                label="Countersign Signature"
+                signature={signatures.countersign}
+                previewUrl={previewUrls.countersign}
+                busy={actionState.countersign}
+                onUpload={(file) => uploadSignature("countersign", file)}
+                onDelete={() => deleteSignature("countersign")}
+              />
+            </div>
+          )}
         </section>
 
-        <AccountActionsCard auditLog={auditLog} />
+        <AccountActionsCard auditLog={activityLog} />
       </div>
     </div>
   );

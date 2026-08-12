@@ -129,8 +129,56 @@ export const LEAVE_TYPE_MAP = Object.fromEntries(
   LEAVE_TYPES.map((t) => [t.value, t]),
 );
 
-/** Leave types that do not use the date range section */
+export const STATUS_CONFIG = {
+  approved: {
+    label: "Approved",
+    color: "text-emerald-700",
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  pending: {
+    label: "Pending",
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    dot: "bg-amber-500",
+  },
+  rejected: {
+    label: "Rejected",
+    color: "text-red-700",
+    bg: "bg-red-50",
+    border: "border-red-200",
+    dot: "bg-red-500",
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "text-gray-600",
+    bg: "bg-gray-50",
+    border: "border-gray-200",
+    dot: "bg-gray-400",
+  },
+};
+
 export const HIDE_DATE_SELECTION = new Set(["monetization"]);
+
+export const LEAVE_DETAIL_FIELDS = {
+  vacation: ["destination", "purposeOfTravel"],
+  mandatory_forced: [],
+  sick: ["hospitalName", "physicianName"],
+  maternity: ["expectedDeliveryDate", "numberOfChildren"],
+  paternity: [],
+  special_privilege: ["specialPurpose", "locationType", "location"],
+  solo_parent: [],
+  study: ["schoolName", "courseProgram", "studyDuration"],
+  vawc: ["caseDescription"],
+  rehabilitation: ["natureOfInjury", "rehabDuration"],
+  special_women: ["gynecologicalCondition", "surgeryDate", "recoveryPeriod"],
+  calamity: ["calamityType", "affectedLocation", "calamityDate"],
+  monetization: ["creditsToMonetize", "monetizationJustification"],
+  terminal: ["separationType"],
+  adoption: ["childName", "placementDate", "adoptionAgency"],
+};
 
 export const LEAVE_INFO_NOTICES = {
   vacation: {
@@ -221,10 +269,12 @@ export const LEAVE_INFO_NOTICES = {
   },
 };
 
-/** Document requirements shown in the sidebar checklist */
 export const LEAVE_REQUIREMENTS = {
   vacation: [
-    { id: "travel_clearance", label: "Travel Authority / Clearance (if abroad)" },
+    {
+      id: "travel_clearance",
+      label: "Travel Authority / Clearance (if abroad)",
+    },
   ],
   mandatory_forced: [],
   sick: [
@@ -239,12 +289,20 @@ export const LEAVE_REQUIREMENTS = {
   ],
   paternity: [
     { id: "birth_certificate", label: "Birth Certificate", required: true },
-    { id: "marriage_certificate", label: "Marriage Certificate", required: true },
+    {
+      id: "marriage_certificate",
+      label: "Marriage Certificate",
+      required: true,
+    },
     { id: "medical_certificate", label: "Medical Certificate", required: true },
   ],
   special_privilege: [],
   solo_parent: [
-    { id: "solo_parent_id", label: "Solo Parent Identification Card", required: true },
+    {
+      id: "solo_parent_id",
+      label: "Solo Parent Identification Card",
+      required: true,
+    },
   ],
   study: [
     { id: "study_contract", label: "Study Leave Contract", required: true },
@@ -253,34 +311,68 @@ export const LEAVE_REQUIREMENTS = {
     { id: "bpo", label: "Barangay Protection Order" },
     { id: "tpo", label: "Temporary Protection Order" },
     { id: "ppo", label: "Permanent Protection Order" },
-    { id: "barangay_cert", label: "Certification from Punong Barangay/Prosecutor" },
+    {
+      id: "barangay_cert",
+      label: "Certification from Punong Barangay/Prosecutor",
+    },
     { id: "police_report", label: "Police Report" },
     { id: "medical_certificate", label: "Medical Certificate" },
   ],
   rehabilitation: [
-    { id: "accident_report", label: "Accident / Police Report", required: true },
+    {
+      id: "accident_report",
+      label: "Accident / Police Report",
+      required: true,
+    },
     { id: "medical_certificate", label: "Medical Certificate", required: true },
-    { id: "gov_physician_concurrence", label: "Government Physician Concurrence" },
+    {
+      id: "gov_physician_concurrence",
+      label: "Government Physician Concurrence",
+    },
   ],
   special_women: [
     { id: "medical_certificate", label: "Medical Certificate", required: true },
     { id: "clinical_summary", label: "Clinical Summary", required: true },
-    { id: "histopathological_report", label: "Histopathological Report", required: true },
+    {
+      id: "histopathological_report",
+      label: "Histopathological Report",
+      required: true,
+    },
     { id: "operative_report", label: "Operative Report", required: true },
   ],
   calamity: [
     { id: "proof_residency", label: "Proof of Residency", required: true },
-    { id: "gov_verification", label: "Government Verification Document", required: true },
+    {
+      id: "gov_verification",
+      label: "Government Verification Document",
+      required: true,
+    },
   ],
   monetization: [
-    { id: "letter_request", label: "Letter Request to Agency Head", required: true },
+    {
+      id: "letter_request",
+      label: "Letter Request to Agency Head",
+      required: true,
+    },
   ],
   terminal: [
-    { id: "separation_documents", label: "Proof of Resignation/Retirement/Separation", required: true },
-    { id: "clearance", label: "Money, Property & Work Clearance", required: true },
+    {
+      id: "separation_documents",
+      label: "Proof of Resignation/Retirement/Separation",
+      required: true,
+    },
+    {
+      id: "clearance",
+      label: "Money, Property & Work Clearance",
+      required: true,
+    },
   ],
   adoption: [
-    { id: "pre_adoptive_placement", label: "Pre-Adoptive Placement Authority (DSWD)", required: true },
+    {
+      id: "pre_adoptive_placement",
+      label: "Pre-Adoptive Placement Authority (DSWD)",
+      required: true,
+    },
   ],
 };
 
@@ -298,7 +390,9 @@ export const LEAVE_UPLOAD_FIELDS = {
   ],
   solo_parent: [{ id: "solo_parent_id", label: "Solo Parent ID" }],
   study: [{ id: "study_contract", label: "Study Leave Contract" }],
-  vawc: [{ id: "vawc_documents", label: "Supporting Documents", multiple: true }],
+  vawc: [
+    { id: "vawc_documents", label: "Supporting Documents", multiple: true },
+  ],
   rehabilitation: [
     { id: "accident_report", label: "Accident Report" },
     { id: "medical_certificate", label: "Medical Certificate" },
@@ -314,5 +408,7 @@ export const LEAVE_UPLOAD_FIELDS = {
     { id: "gov_verification", label: "Government Verification Document" },
   ],
   terminal: [{ id: "separation_documents", label: "Separation Documents" }],
-  adoption: [{ id: "pre_adoptive_placement", label: "Pre-Adoptive Placement Authority" }],
+  adoption: [
+    { id: "pre_adoptive_placement", label: "Pre-Adoptive Placement Authority" },
+  ],
 };

@@ -74,13 +74,22 @@ export function ProfileInformationCard({ user, onSave }) {
     }
     setError(null);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    setEditing(false);
-    onSave?.({ contactNumber: contactNumber.trim() });
-    toast.success("Profile updated", {
-      description: "Your contact information has been saved.",
-    });
+    try {
+      await onSave?.({ contactNumber: contactNumber.trim() });
+      setEditing(false);
+      toast.success("Profile updated", {
+        description: "Your contact information has been saved.",
+      });
+    } catch (err) {
+      const message =
+        err?.response?.data?.errors?.contact_number?.[0] ??
+        err?.response?.data?.message ??
+        "Unable to save your contact number. Please try again.";
+      setError(message);
+      toast.error("Update failed", { description: message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -99,7 +108,8 @@ export function ProfileInformationCard({ user, onSave }) {
               Profile Information
             </CardTitle>
             <CardDescription>
-              Your official employee profile details. Some fields are managed by HR.
+              Your official employee profile details. Some fields are managed by
+              HR.
             </CardDescription>
           </div>
           {!editing && (
@@ -164,9 +174,7 @@ export function ProfileInformationCard({ user, onSave }) {
                 placeholder="e.g. +63 912 345 6789"
                 className={error ? "border-destructive" : ""}
               />
-              {error && (
-                <p className="text-xs text-destructive">{error}</p>
-              )}
+              {error && <p className="text-xs text-destructive">{error}</p>}
             </div>
           ) : (
             <ReadOnlyField
@@ -194,8 +202,8 @@ export function ProfileInformationCard({ user, onSave }) {
         )}
 
         <p className="text-xs text-muted-foreground">
-          Name, email, department, and role are synced from your employee record.
-          You may update your contact number here.
+          Name, email, department, and role are synced from your employee
+          record. You may update your contact number here.
         </p>
       </CardContent>
     </Card>

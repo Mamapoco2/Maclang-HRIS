@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { LEAVE_TYPES } from "../mockData";
 
 function empName(e) {
   return (
@@ -8,46 +7,49 @@ function empName(e) {
 }
 
 // ─── Add / edit leave credits modal ──────────────────────────────────────────
-// Local-only for now — swap the onSave handler for a leaveService call once
-// the backend endpoint exists (e.g. leaveService.upsertCredits(employeeId, payload)).
-
 export function LeaveCreditsModal({
   employee,
+  leaveTypes,
   existing,
   editingType,
   onClose,
   onSave,
 }) {
-  const isEdit = Boolean(editingType);
-  const usedTypes = new Set(Object.keys(existing ?? {}));
+  const isEdit = editingType != null;
+  const usedTypeIds = new Set(Object.keys(existing ?? {}).map(Number));
 
-  const [leaveType, setLeaveType] = useState(
+  const existingForEdit = isEdit ? existing?.[editingType] : null;
+
+  const [leaveTypeId, setLeaveTypeId] = useState(
     editingType ??
-      LEAVE_TYPES.find((t) => !usedTypes.has(t.value))?.value ??
-      LEAVE_TYPES[0]?.value,
+      leaveTypes.find((t) => !usedTypeIds.has(t.id))?.id ??
+      leaveTypes[0]?.id,
   );
   const [total, setTotal] = useState(
-    editingType ? String(existing[editingType].total) : "",
+    existingForEdit
+      ? String((existingForEdit.used ?? 0) + (existingForEdit.available ?? 0))
+      : "",
   );
   const [used, setUsed] = useState(
-    editingType ? String(existing[editingType].used) : "0",
+    existingForEdit ? String(existingForEdit.used ?? 0) : "0",
   );
   const [carryForward, setCarryForward] = useState(
-    editingType ? String(existing[editingType].carryForward ?? 0) : "0",
+    existingForEdit ? String(existingForEdit.carry_forward_in ?? 0) : "0",
   );
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const availableTypes = isEdit
-    ? LEAVE_TYPES
-    : LEAVE_TYPES.filter((t) => !usedTypes.has(t.value));
+    ? leaveTypes
+    : leaveTypes.filter((t) => !usedTypeIds.has(t.id));
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const totalNum = Number(total);
     const usedNum = Number(used);
     const carryNum = Number(carryForward);
 
-    if (!leaveType) {
+    if (!leaveTypeId) {
       setError("Choose a leave type.");
       return;
     }
@@ -68,16 +70,27 @@ export function LeaveCreditsModal({
       return;
     }
 
-    onSave(leaveType, {
-      total: totalNum,
-      used: usedNum,
-      carryForward: carryNum,
-    });
+    setError(null);
+    setSaving(true);
+    try {
+      await onSave(leaveTypeId, {
+        total: totalNum,
+        used: usedNum,
+        carryForward: carryNum,
+      });
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.response?.data?.errors?.used?.[0] ||
+          "Failed to save credits. Please try again.",
+      );
+      setSaving(false);
+    }
   }
 
   return (
     <div
-      onClick={onClose}
+      onClick={saving ? undefined : onClose}
       style={{
         position: "fixed",
         inset: 0,
@@ -135,14 +148,14 @@ export function LeaveCreditsModal({
               Leave type
             </label>
             <select
-              value={leaveType}
-              onChange={(e) => setLeaveType(e.target.value)}
-              disabled={isEdit}
+              value={leaveTypeId}
+              onChange={(e) => setLeaveTypeId(Number(e.target.value))}
+              disabled={isEdit || saving}
               className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60"
             >
               {availableTypes.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
             </select>
@@ -175,6 +188,7 @@ export function LeaveCreditsModal({
                 value={total}
                 onChange={(e) => setTotal(e.target.value)}
                 placeholder="e.g. 18"
+                disabled={saving}
                 className="w-full px-2 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
@@ -196,6 +210,7 @@ export function LeaveCreditsModal({
                 step="0.5"
                 value={used}
                 onChange={(e) => setUsed(e.target.value)}
+                disabled={saving}
                 className="w-full px-2 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
@@ -217,6 +232,7 @@ export function LeaveCreditsModal({
                 step="0.5"
                 value={carryForward}
                 onChange={(e) => setCarryForward(e.target.value)}
+                disabled={saving}
                 className="w-full px-2 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
@@ -232,22 +248,24 @@ export function LeaveCreditsModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
+              disabled={saving}
+              className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors disabled:opacity-60"
               style={{ color: "var(--foreground)" }}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-3 py-2 text-sm rounded-lg transition-colors"
+              disabled={saving}
+              className="px-3 py-2 text-sm rounded-lg transition-colors disabled:opacity-60"
               style={{
                 background: "#6366f1",
                 color: "#fff",
                 border: "none",
-                cursor: "pointer",
+                cursor: saving ? "default" : "pointer",
               }}
             >
-              {isEdit ? "Save changes" : "Add credits"}
+              {saving ? "Saving…" : isEdit ? "Save changes" : "Add credits"}
             </button>
           </div>
         </form>

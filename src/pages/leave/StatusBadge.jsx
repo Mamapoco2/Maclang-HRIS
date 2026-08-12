@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
-import { STATUS_CONFIG } from "./mockData";
-import { LEAVE_TYPE_MAP } from "./leavePolicy";
+import { STATUS_CONFIG, LEAVE_TYPE_MAP } from "./leavePolicy";
 
 export function StatusBadge({ status, size = "md" }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
@@ -52,7 +51,11 @@ export function LeaveTypeBadge({ type }) {
   return (
     <span
       className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full border"
-      style={{ color: fb.color, backgroundColor: fb.bg, borderColor: `${fb.color}33` }}
+      style={{
+        color: fb.color,
+        backgroundColor: fb.bg,
+        borderColor: `${fb.color}33`,
+      }}
     >
       {fb.label}
     </span>

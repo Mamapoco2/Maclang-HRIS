@@ -1,4 +1,3 @@
-// components/user-sidebar.jsx
 import * as React from "react";
 import { useContext } from "react";
 import {
@@ -72,20 +71,19 @@ const NAV_USER = [
   {
     title: "Leave",
     icon: IconCalendarEvent,
-    // NOTE: no permission here — visibility is derived from children.
-    // "leave.view" doesn't exist as a real, assignable permission
-    // (it's not in the admin permission editor), so gating on it
-    // never actually restricts anything.
     items: [
+      {
+        title: "Approval",
+        url: "/leaveApproval",
+        permission: "leave.approval.view",
+      },
       {
         title: "My Requests",
         url: "/leaveRequest",
-        permission: "leave.request.view",
       },
       {
         title: "New Request",
         url: "/newLeaveRequest",
-        permission: "leave.request.manage",
       },
       {
         title: "Calendar",
@@ -108,6 +106,7 @@ const NAV_USER = [
 ];
 
 function canSee(item, userPermissions, isSuperUser) {
+  if (item.superAdminOnly) return isSuperUser;
   if (isSuperUser) return true;
   if (!item.permission) return true;
   return userPermissions.includes(item.permission);
@@ -118,8 +117,6 @@ function filterNav(navItems, userPermissions, isSuperUser) {
     const isContainer = Array.isArray(item.items);
 
     if (isContainer) {
-      // Container itself may or may not have its own permission.
-      // If it does, it must pass too. Then filter children.
       if (!canSee(item, userPermissions, isSuperUser)) return acc;
 
       const visibleChildren = filterNav(

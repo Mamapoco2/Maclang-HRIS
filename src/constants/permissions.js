@@ -112,6 +112,7 @@ if (import.meta.env?.DEV) {
 
 export const ASSIGNABLE_ROLES = Object.freeze([
   { value: "none", label: "No role" },
+  { value: "medical center chief", label: "Medical Center Chief" },
   { value: "Admin", label: "Admin" },
   { value: "Chairman", label: "Chairman" },
   { value: "Director", label: "Director" },

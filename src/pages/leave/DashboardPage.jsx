@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "./PageHeader";
 import { StatCard } from "./StatCard";
@@ -8,15 +8,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "./utils";
 import { initializeAutoYearlyUpdate } from "@/services/holidayService";
-import {
-  LEAVE_REQUESTS,
-  HOLIDAYS,
-  MONTHLY_TRENDS,
-  LEAVE_TYPE_PIE,
-  ACTIVITIES,
-  LEAVE_BALANCES,
-  CURRENT_USER,
-} from "./mockData";
+import { useAuth } from "@/hooks/useAuth";
+import LeaveApi from "@/services/leaveApiService";
 import {
   AreaChart,
   Area,
@@ -54,32 +47,20 @@ const COLORS = [
   "#6b7280",
 ];
 
-const pendingCount = LEAVE_REQUESTS.filter(
-  (r) => r.status === "pending",
-).length;
-const approvedCount = LEAVE_REQUESTS.filter(
-  (r) => r.status === "approved",
-).length;
-const rejectedCount = LEAVE_REQUESTS.filter(
-  (r) => r.status === "rejected",
-).length;
-
-const userBalance = LEAVE_BALANCES.find(
-  (b) => b.employeeId === CURRENT_USER.id,
-);
-const vacationRemaining = userBalance
-  ? userBalance.vacation.total -
-    userBalance.vacation.used +
-    userBalance.vacation.carryForward
-  : 0;
-const sickRemaining = userBalance
-  ? userBalance.sick.total - userBalance.sick.used + userBalance.sick.carryForward
-  : 0;
-
 export default function DashboardPage({ onNavigate: onNavigateProp }) {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canViewOrgDashboard = hasPermission("leave.dashboard.view");
+
   const [activeTab, setActiveTab] = useState("overview");
-  const [holidays, setHolidays] = useState(HOLIDAYS);
+  const [holidays, setHolidays] = useState([]);
+
+  const [personal, setPersonal] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [teamRequests, setTeamRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const onNavigate = (page) => {
     const routes = {
@@ -91,6 +72,44 @@ export default function DashboardPage({ onNavigate: onNavigateProp }) {
     if (onNavigateProp) onNavigateProp(page);
     else navigate(routes[page] || "/leaveDashboard");
   };
+
+  const loadDashboard = useCallback(() => {
+    setLoading(true);
+    setError(null);
+
+    const year = new Date().getFullYear();
+
+    const tasks = [
+      LeaveApi.getPersonalDashboard(year).catch(() => null),
+      canViewOrgDashboard
+        ? LeaveApi.getOverviewDashboard(year).catch(() => null)
+        : Promise.resolve(null),
+      canViewOrgDashboard
+        ? LeaveApi.getActivityFeed(8).catch(() => [])
+        : Promise.resolve([]),
+      canViewOrgDashboard
+        ? LeaveApi.listRequests({ per_page: 50 }).catch(() => ({ data: [] }))
+        : Promise.resolve({ data: [] }),
+    ];
+
+    Promise.all(tasks)
+      .then(([personalRes, overviewRes, activityRes, teamRes]) => {
+        setPersonal(personalRes);
+        setOverview(overviewRes);
+        setActivities(activityRes ?? []);
+        setTeamRequests(
+          (teamRes.data ?? []).filter(
+            (r) => r.status === "approved" || r.status === "pending",
+          ),
+        );
+      })
+      .catch(() => setError("Failed to load dashboard data."))
+      .finally(() => setLoading(false));
+  }, [canViewOrgDashboard]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   useEffect(() => {
     const cleanup = initializeAutoYearlyUpdate((updatedHolidays) => {
@@ -123,9 +142,21 @@ export default function DashboardPage({ onNavigate: onNavigateProp }) {
         }
       />
 
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={loadDashboard} className="underline font-medium">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-[var(--muted)] p-1 rounded-lg w-fit">
-        {["overview", "team", "analytics"].map((tab) => (
+        {(canViewOrgDashboard
+          ? ["overview", "team", "analytics"]
+          : ["overview"]
+        ).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -144,31 +175,94 @@ export default function DashboardPage({ onNavigate: onNavigateProp }) {
         <OverviewTab
           onNavigate={onNavigate}
           upcomingHolidays={upcomingHolidays}
+          personal={personal}
+          overview={overview}
+          activities={activities}
+          loading={loading}
         />
       )}
-      {activeTab === "team" && <TeamTab />}
-      {activeTab === "analytics" && <AnalyticsTab />}
+      {activeTab === "team" && (
+        <TeamTab teamRequests={teamRequests} loading={loading} />
+      )}
+      {activeTab === "analytics" && <AnalyticsTab overview={overview} />}
     </div>
   );
 }
 
-function OverviewTab({ onNavigate, upcomingHolidays }) {
+function OverviewTab({
+  onNavigate,
+  upcomingHolidays,
+  personal,
+  overview,
+  activities,
+  loading,
+}) {
+  const findBalance = (code) =>
+    personal?.balances?.find((b) => b.leave_type === code);
+  const vacationBalance = findBalance("vacation");
+  const sickBalance = findBalance("sick");
+
+  const pendingCount = overview?.pending_count ?? personal?.pending_count ?? 0;
+  const approvedCount =
+    overview?.approved_count ?? personal?.approved_count ?? 0;
+  const rejectedCount =
+    overview?.rejected_count ?? personal?.rejected_count ?? 0;
+
+  const monthlyTrends = (overview?.monthly_trends ?? []).map((m) => ({
+    month: m.month,
+    ...m.breakdown,
+  }));
+  const leaveTypeDistribution = overview?.leave_type_distribution ?? [];
+
+  const recentActivities = activities.map((log) => {
+    const actionLabels = {
+      submitted: "submitted a request for",
+      finalized_approved: "was approved for",
+      finalized_rejected: "was rejected for",
+    };
+    const typeMap = {
+      submitted: "pending",
+      finalized_approved: "approved",
+      finalized_rejected: "rejected",
+    };
+    return {
+      id: log.id,
+      employee: log.leave_request?.employee?.full_name ?? "—",
+      action: actionLabels[log.action] ?? log.action,
+      target: log.leave_request?.leave_type?.name ?? "",
+      time: formatDate(log.created_at),
+      type: typeMap[log.action] ?? "pending",
+    };
+  });
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Vacation Leave Balance"
-          value={`${vacationRemaining} days`}
-          subtitle={`of ${userBalance?.vacation.total ?? 21} total`}
+          value={vacationBalance ? `${vacationBalance.available} days` : "—"}
+          subtitle={
+            vacationBalance
+              ? `${vacationBalance.used} used this year`
+              : loading
+                ? "Loading..."
+                : "No employee record"
+          }
           icon={Palmtree}
           color="indigo"
           className="animate-fade-in stagger-1"
         />
         <StatCard
           title="Sick Leave Balance"
-          value={`${sickRemaining} days`}
-          subtitle={`of ${userBalance?.sick.total ?? 15} total`}
+          value={sickBalance ? `${sickBalance.available} days` : "—"}
+          subtitle={
+            sickBalance
+              ? `${sickBalance.used} used this year`
+              : loading
+                ? "Loading..."
+                : "No employee record"
+          }
           icon={Thermometer}
           color="amber"
           className="animate-fade-in stagger-2"
@@ -216,7 +310,7 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart
-                data={MONTHLY_TRENDS}
+                data={monthlyTrends}
                 margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
               >
                 <defs>
@@ -290,7 +384,7 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
-                  data={LEAVE_TYPE_PIE}
+                  data={leaveTypeDistribution}
                   cx="50%"
                   cy="50%"
                   innerRadius={55}
@@ -298,8 +392,11 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
                   paddingAngle={3}
                   dataKey="value"
                 >
-                  {LEAVE_TYPE_PIE.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
+                  {leaveTypeDistribution.map((entry, i) => (
+                    <Cell
+                      key={i}
+                      fill={entry.color ?? COLORS[i % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip
@@ -382,7 +479,6 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activities */}
         <Card className="animate-fade-in stagger-5">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -396,30 +492,35 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {ACTIVITIES.map((a) => (
-              <div key={a.id} className="flex items-start gap-3">
-                <Avatar name={a.employee} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[var(--foreground)]">
-                    <span className="font-semibold">{a.employee}</span>{" "}
-                    <span className="text-[var(--muted-foreground)]">
-                      {a.action}
-                    </span>{" "}
-                    {a.target}
-                  </p>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                    {a.time}
-                  </p>
+            {recentActivities.length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
+                No recent activity
+              </p>
+            ) : (
+              recentActivities.map((a) => (
+                <div key={a.id} className="flex items-start gap-3">
+                  <Avatar name={a.employee} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-[var(--foreground)]">
+                      <span className="font-semibold">{a.employee}</span>{" "}
+                      <span className="text-[var(--muted-foreground)]">
+                        {a.action}
+                      </span>{" "}
+                      {a.target}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                      {a.time}
+                    </p>
+                  </div>
+                  <div
+                    className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${a.type === "approved" ? "bg-emerald-500" : a.type === "rejected" ? "bg-red-500" : "bg-amber-500"}`}
+                  />
                 </div>
-                <div
-                  className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${a.type === "approved" ? "bg-emerald-500" : a.type === "rejected" ? "bg-red-500" : "bg-amber-500"}`}
-                />
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
-        {/* My Leave Balance Quick View */}
         <Card className="animate-fade-in stagger-6">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -436,14 +537,16 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
             {[
               {
                 label: "Vacation Leave",
-                used: userBalance?.vacation.used ?? 5,
-                total: userBalance?.vacation.total ?? 21,
+                used: vacationBalance?.used ?? 0,
+                total:
+                  (vacationBalance?.used ?? 0) +
+                  (vacationBalance?.available ?? 0),
                 color: "#3b82f6",
               },
               {
                 label: "Sick Leave",
-                used: userBalance?.sick.used ?? 1,
-                total: userBalance?.sick.total ?? 15,
+                used: sickBalance?.used ?? 0,
+                total: (sickBalance?.used ?? 0) + (sickBalance?.available ?? 0),
                 color: "#f59e0b",
               },
             ].map((item) => (
@@ -460,7 +563,7 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
-                      width: `${(item.used / item.total) * 100}%`,
+                      width: `${item.total > 0 ? (item.used / item.total) * 100 : 0}%`,
                       background: item.color,
                     }}
                   />
@@ -482,10 +585,18 @@ function OverviewTab({ onNavigate, upcomingHolidays }) {
   );
 }
 
-function TeamTab() {
-  const teamLeaves = LEAVE_REQUESTS.filter(
-    (r) => r.status === "approved" || r.status === "pending",
-  );
+function TeamTab({ teamRequests = [], loading }) {
+  const teamLeaves = teamRequests.map((r) => ({
+    id: r.id,
+    employeeName: r.employee?.name ?? "—",
+    department: r.employee?.department ?? "—",
+    leaveType: r.leave_type?.code ?? "—",
+    startDate: r.start_date,
+    endDate: r.end_date,
+    days: r.total_days,
+    status: r.status,
+  }));
+
   return (
     <div className="space-y-4">
       <Card>
@@ -497,33 +608,43 @@ function TeamTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {teamLeaves.map((req) => (
-              <div
-                key={req.id}
-                className="flex items-center gap-4 p-3 rounded-lg hover:bg-[var(--muted)]/50 transition-colors"
-              >
-                <Avatar name={req.employeeName} size="md" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">
-                      {req.employeeName}
+            {loading ? (
+              <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
+                Loading...
+              </p>
+            ) : teamLeaves.length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
+                No team members on leave
+              </p>
+            ) : (
+              teamLeaves.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center gap-4 p-3 rounded-lg hover:bg-[var(--muted)]/50 transition-colors"
+                >
+                  <Avatar name={req.employeeName} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {req.employeeName}
+                      </p>
+                      <span className="text-xs text-[var(--muted-foreground)]">
+                        •
+                      </span>
+                      <span className="text-xs text-[var(--muted-foreground)]">
+                        {req.department}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                      {formatDate(req.startDate)} — {formatDate(req.endDate)} ·{" "}
+                      {req.days} days
                     </p>
-                    <span className="text-xs text-[var(--muted-foreground)]">
-                      •
-                    </span>
-                    <span className="text-xs text-[var(--muted-foreground)]">
-                      {req.department}
-                    </span>
                   </div>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                    {formatDate(req.startDate)} — {formatDate(req.endDate)} ·{" "}
-                    {req.days} days
-                  </p>
+                  <LeaveTypeBadge type={req.leaveType} />
+                  <StatusBadge status={req.status} />
                 </div>
-                <LeaveTypeBadge type={req.leaveType} />
-                <StatusBadge status={req.status} />
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -531,7 +652,13 @@ function TeamTab() {
   );
 }
 
-function AnalyticsTab() {
+function AnalyticsTab({ overview }) {
+  const leaveTypeDistribution = overview?.leave_type_distribution ?? [];
+  const monthlyTrends = (overview?.monthly_trends ?? []).map((m) => ({
+    month: m.month,
+    ...m.breakdown,
+  }));
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card>
@@ -542,7 +669,7 @@ function AnalyticsTab() {
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie
-                data={LEAVE_TYPE_PIE}
+                data={leaveTypeDistribution}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -550,8 +677,11 @@ function AnalyticsTab() {
                 paddingAngle={3}
                 dataKey="value"
               >
-                {LEAVE_TYPE_PIE.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
+                {leaveTypeDistribution.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill={entry.color ?? COLORS[i % COLORS.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip
@@ -577,7 +707,7 @@ function AnalyticsTab() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={MONTHLY_TRENDS.slice(0, 6)} margin={{ left: -20 }}>
+            <BarChart data={monthlyTrends.slice(0, 6)} margin={{ left: -20 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--border)"

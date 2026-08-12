@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { IconSearch } from "@tabler/icons-react";
 
 const ROLE_BADGE_STYLES = {
+  "medical center chief": "bg-indigo-50 text-indigo-700 border-indigo-200",
   admin: "bg-orange-50 text-orange-700 border-orange-200",
   chairman: "bg-rose-50 text-rose-700 border-rose-200",
   director: "bg-purple-50 text-purple-700 border-purple-200",

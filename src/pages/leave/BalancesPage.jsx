@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from "./PageHeader";
 import { employeeService } from "@/services/employeeService";
-import { LEAVE_TYPES } from "./mockData";
+import LeaveApi from "@/services/leaveApiService";
 import { LeaveCreditsModal } from "./components/LeaveCreditsModal";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -46,6 +46,18 @@ function empDesig(e) {
 
 function empDept(e) {
   return e.department ?? e.department_name ?? "";
+}
+
+function empEmploymentType(e) {
+  return e.employment_type ?? e.employmentType ?? null;
+}
+
+function isLeaveTypeEligible(leaveType, employmentType) {
+  const eligible = leaveType.eligible_employment_types;
+  if (!eligible || eligible.length === 0) return true;
+  if (!employmentType) return false;
+  const target = String(employmentType).toLowerCase().trim();
+  return eligible.some((t) => String(t).toLowerCase().trim() === target);
 }
 
 // ─── Donut progress ───────────────────────────────────────────────────────────
@@ -103,11 +115,14 @@ function Donut({ used, total, color, size = 52 }) {
 }
 
 // ─── Single leave-type card ───────────────────────────────────────────────────
+function CreditCard({ leaveTypeMeta, balance, hasRecord, onEdit, onDelete }) {
+  if (!leaveTypeMeta || !balance) return null;
 
-function CreditCard({ leaveType, data, onEdit, onDelete }) {
-  const lt = LEAVE_TYPES.find((t) => t.value === leaveType);
-  if (!lt || !data || data.total === 0) return null;
-  const remaining = data.total - data.used + (data.carryForward ?? 0);
+  const used = Number(balance.used ?? 0);
+  const available = Number(balance.available ?? 0);
+  const carryForward = Number(balance.carry_forward_in ?? 0);
+  const total = used + available;
+
   return (
     <div
       style={{
@@ -121,7 +136,7 @@ function CreditCard({ leaveType, data, onEdit, onDelete }) {
         position: "relative",
       }}
     >
-      <Donut used={data.used} total={data.total} color={lt.color} />
+      <Donut used={used} total={total} color={leaveTypeMeta.color} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
@@ -131,7 +146,7 @@ function CreditCard({ leaveType, data, onEdit, onDelete }) {
             margin: "0 0 6px",
           }}
         >
-          {lt.label}
+          {leaveTypeMeta.name}
         </p>
         <div
           style={{
@@ -141,9 +156,9 @@ function CreditCard({ leaveType, data, onEdit, onDelete }) {
           }}
         >
           {[
-            { label: "Total", value: data.total, color: "var(--foreground)" },
-            { label: "Used", value: data.used, color: lt.color },
-            { label: "Left", value: remaining, color: "#10b981" },
+            { label: "Total", value: total, color: "var(--foreground)" },
+            { label: "Used", value: used, color: leaveTypeMeta.color },
+            { label: "Left", value: available, color: "#10b981" },
           ].map(({ label, value, color }) => (
             <div key={label}>
               <p
@@ -161,18 +176,18 @@ function CreditCard({ leaveType, data, onEdit, onDelete }) {
             </div>
           ))}
         </div>
-        {(data.carryForward ?? 0) > 0 && (
+        {carryForward > 0 && (
           <p style={{ fontSize: 10, color: "#6366f1", margin: "4px 0 0" }}>
-            +{data.carryForward} carried fwd
+            +{carryForward} carried fwd
           </p>
         )}
       </div>
-      {(onEdit || onDelete) && (
+      {(onEdit || (hasRecord && onDelete)) && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {onEdit && (
             <button
               onClick={onEdit}
-              title="Edit"
+              title={hasRecord ? "Edit" : "Set credits"}
               style={{
                 width: 24,
                 height: 24,
@@ -207,10 +222,10 @@ function CreditCard({ leaveType, data, onEdit, onDelete }) {
               </svg>
             </button>
           )}
-          {onDelete && (
+          {hasRecord && onDelete && (
             <button
               onClick={onDelete}
-              title="Remove"
+              title="Reset to zero"
               style={{
                 width: 24,
                 height: 24,
@@ -304,14 +319,16 @@ function SkeletonRow() {
   );
 }
 
-// ─── Employee row with inline expand ─────────────────────────────────────────
+const ZERO_BALANCE = { used: 0, available: 0, carry_forward_in: 0 };
 
+// ─── Employee row with inline expand ─────────────────────────────────────────
 function EmployeeRow({
   employee,
   isOpen,
   onToggle,
-  credits,
-  onAdd,
+  leaveTypes,
+  balanceState,
+  onRetry,
   onEdit,
   onDelete,
 }) {
@@ -321,8 +338,11 @@ function EmployeeRow({
   const desig = empDesig(employee);
   const dept = empDept(employee);
 
-  const entries = Object.entries(credits ?? {});
-  const hasMoreTypes = entries.length < LEAVE_TYPES.length;
+  const balancesByTypeId = balanceState?.data ?? new Map();
+  const employmentType = empEmploymentType(employee);
+  const eligibleLeaveTypes = leaveTypes.filter((lt) =>
+    isLeaveTypeEligible(lt, employmentType),
+  );
 
   return (
     <div
@@ -421,91 +441,104 @@ function EmployeeRow({
             background: "var(--background)",
           }}
         >
-          {entries.length === 0 ? (
+          {balanceState?.loading && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: 10,
+              }}
+            >
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse"
+                  style={{
+                    height: 72,
+                    borderRadius: 10,
+                    background: "var(--muted)",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {!balanceState?.loading && balanceState?.error && (
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 6,
+                gap: 8,
                 padding: "12px 0",
               }}
             >
-              <svg
-                width={28}
-                height={28}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                style={{ color: "var(--muted-foreground)", opacity: 0.4 }}
-              >
-                <path
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
-                  strokeLinecap="round"
-                />
-                <rect x="9" y="3" width="6" height="4" rx="1" />
-                <path d="M9 12h6M9 16h4" strokeLinecap="round" />
-              </svg>
               <p
                 style={{
-                  fontSize: 13,
-                  fontWeight: 500,
+                  fontSize: 12,
                   color: "var(--muted-foreground)",
                   margin: 0,
                 }}
               >
-                No leave credits set yet
+                {balanceState.error}
               </p>
               <button
-                onClick={onAdd}
-                className="mt-2 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors"
+                onClick={onRetry}
                 style={{
-                  background: "#6366f1",
-                  color: "#fff",
-                  border: "none",
+                  fontSize: 11,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
                   cursor: "pointer",
                 }}
               >
-                + Add leave credits
+                Retry
               </button>
             </div>
-          ) : (
-            <div>
+          )}
+
+          {!balanceState?.loading &&
+            !balanceState?.error &&
+            (eligibleLeaveTypes.length === 0 ? (
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "var(--muted-foreground)",
+                  textAlign: "center",
+                  padding: "12px 0",
+                  margin: 0,
+                }}
+              >
+                No leave types available for this employee's employment type.
+              </p>
+            ) : (
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
                   gap: 10,
-                  marginBottom: 12,
                 }}
               >
-                {entries.map(([type, data]) => (
-                  <CreditCard
-                    key={type}
-                    leaveType={type}
-                    data={data}
-                    onEdit={() => onEdit(type)}
-                    onDelete={() => onDelete(type)}
-                  />
-                ))}
+                {eligibleLeaveTypes.map((lt) => {
+                  const hasRecord = balancesByTypeId.has(lt.id);
+                  const balance = hasRecord
+                    ? balancesByTypeId.get(lt.id)
+                    : ZERO_BALANCE;
+
+                  return (
+                    <CreditCard
+                      key={lt.id}
+                      leaveTypeMeta={lt}
+                      balance={balance}
+                      hasRecord={hasRecord}
+                      onEdit={() => onEdit(lt.id)}
+                      onDelete={() => onDelete(lt.id)}
+                    />
+                  );
+                })}
               </div>
-              {hasMoreTypes && (
-                <button
-                  onClick={onAdd}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors"
-                  style={{
-                    background: "var(--card)",
-                    color: "#6366f1",
-                    borderColor: "var(--border)",
-                    cursor: "pointer",
-                  }}
-                >
-                  + Add another leave type
-                </button>
-              )}
-            </div>
-          )}
+            ))}
         </div>
       )}
     </div>
@@ -525,11 +558,13 @@ export default function BalancesPage() {
 
   const [departments, setDepartments] = useState([]);
 
-  // ── Leave credits (local-only placeholder state) ──────────────────────────
-  // Shape: { [employeeId]: { [leaveTypeValue]: { total, used, carryForward } } }
-  // Swap fetch/save below for real leaveService calls once the endpoint exists.
-  const [credits, setCredits] = useState({});
-  const [modal, setModal] = useState(null); // { employee, editingType } | null
+  const [leaveTypes, setLeaveTypes] = useState([]);
+
+  const [balancesById, setBalancesById] = useState({});
+
+  const [modal, setModal] = useState(null);
+
+  const year = new Date().getFullYear();
 
   // ── Fetch employees ────────────────────────────────────────────────────────
   const fetchEmployees = useCallback(async () => {
@@ -546,21 +581,116 @@ export default function BalancesPage() {
     }
   }, []);
 
-  // ── Fetch departments for the filter dropdown ──────────────────────────────
   const fetchDepartments = useCallback(async () => {
     try {
       const res = await employeeService.getDepartments();
       const list = Array.isArray(res) ? res : (res.data ?? []);
       setDepartments(list);
-    } catch {
-      // Non-critical — filter stays empty
-    }
+    } catch {}
+  }, []);
+
+  const fetchLeaveTypes = useCallback(async () => {
+    try {
+      const types = await LeaveApi.listTypes({ all: true });
+      setLeaveTypes(types ?? []);
+    } catch {}
   }, []);
 
   useEffect(() => {
     fetchEmployees();
     fetchDepartments();
-  }, [fetchEmployees, fetchDepartments]);
+    fetchLeaveTypes();
+  }, [fetchEmployees, fetchDepartments, fetchLeaveTypes]);
+
+  // ── Lazy-load balances the first time a row is expanded ────────────────────
+  const loadBalancesFor = useCallback(
+    async (employeeId) => {
+      setBalancesById((prev) => ({
+        ...prev,
+        [employeeId]: {
+          loading: true,
+          error: null,
+          data: prev[employeeId]?.data ?? new Map(),
+        },
+      }));
+      try {
+        const list = await LeaveApi.getMyBalances(employeeId, year);
+        const map = new Map((list ?? []).map((b) => [b.leave_type.id, b]));
+        setBalancesById((prev) => ({
+          ...prev,
+          [employeeId]: { loading: false, error: null, data: map },
+        }));
+      } catch (err) {
+        setBalancesById((prev) => ({
+          ...prev,
+          [employeeId]: {
+            loading: false,
+            error: err?.response?.data?.message || "Failed to load balances.",
+            data: new Map(),
+          },
+        }));
+      }
+    },
+    [year],
+  );
+
+  function handleToggle(id) {
+    setExpandedId((prev) => {
+      const next = prev === id ? null : id;
+      if (next !== null && !balancesById[next]) {
+        loadBalancesFor(next);
+      }
+      return next;
+    });
+  }
+
+  function openEditModal(employee, leaveTypeId) {
+    setModal({ employee, editingType: leaveTypeId });
+  }
+
+  function closeModal() {
+    setModal(null);
+  }
+
+  async function handleSaveCredits(leaveTypeId, data) {
+    if (!modal) return;
+    const empKey = empId(modal.employee);
+    const updated = await LeaveApi.setCredits(empKey, leaveTypeId, year, {
+      total: data.total,
+      used: data.used,
+      carryForward: data.carryForward,
+    });
+    setBalancesById((prev) => {
+      const prevMap = prev[empKey]?.data ?? new Map();
+      const nextMap = new Map(prevMap);
+      nextMap.set(leaveTypeId, updated);
+      return {
+        ...prev,
+        [empKey]: { loading: false, error: null, data: nextMap },
+      };
+    });
+    closeModal();
+  }
+
+  async function handleDeleteCredits(employee, leaveTypeId) {
+    const empKey = empId(employee);
+    try {
+      const updated = await LeaveApi.resetCredits(empKey, leaveTypeId, year);
+      setBalancesById((prev) => {
+        const prevMap = prev[empKey]?.data ?? new Map();
+        const nextMap = new Map(prevMap);
+        nextMap.set(leaveTypeId, updated);
+        return {
+          ...prev,
+          [empKey]: { loading: false, error: null, data: nextMap },
+        };
+      });
+    } catch (err) {
+      window.alert(
+        err?.response?.data?.message || "Failed to reset this leave credit.",
+      );
+    }
+  }
 
   // ── Department helpers (handles { id, name } objects or plain strings) ─────
   const deptLabel = (d) =>
@@ -579,43 +709,9 @@ export default function BalancesPage() {
     });
   }, [employees, search, deptFilter]);
 
-  function handleToggle(id) {
-    setExpandedId((prev) => (prev === id ? null : id));
-  }
-
-  function openAddModal(employee) {
-    setModal({ employee, editingType: null });
-  }
-
-  function openEditModal(employee, leaveType) {
-    setModal({ employee, editingType: leaveType });
-  }
-
-  function closeModal() {
-    setModal(null);
-  }
-
-  function handleSaveCredits(leaveType, data) {
-    if (!modal) return;
-    const empKey = empId(modal.employee);
-    setCredits((prev) => ({
-      ...prev,
-      [empKey]: {
-        ...(prev[empKey] ?? {}),
-        [leaveType]: data,
-      },
-    }));
-    closeModal();
-  }
-
-  function handleDeleteCredits(employee, leaveType) {
-    const empKey = empId(employee);
-    setCredits((prev) => {
-      const next = { ...(prev[empKey] ?? {}) };
-      delete next[leaveType];
-      return { ...prev, [empKey]: next };
-    });
-  }
+  const modalExisting = modal
+    ? Object.fromEntries(balancesById[empId(modal.employee)]?.data ?? new Map())
+    : null;
 
   return (
     <div className="p-5">
@@ -779,21 +875,25 @@ export default function BalancesPage() {
                 employee={emp}
                 isOpen={expandedId === id}
                 onToggle={() => handleToggle(id)}
-                credits={credits[id]}
-                onAdd={() => openAddModal(emp)}
-                onEdit={(type) => openEditModal(emp, type)}
-                onDelete={(type) => handleDeleteCredits(emp, type)}
+                leaveTypes={leaveTypes}
+                balanceState={balancesById[id]}
+                onRetry={() => loadBalancesFor(id)}
+                onEdit={(leaveTypeId) => openEditModal(emp, leaveTypeId)}
+                onDelete={(leaveTypeId) =>
+                  handleDeleteCredits(emp, leaveTypeId)
+                }
               />
             );
           })}
         </div>
       )}
 
-      {/* Add / edit credits modal */}
+      {/* Edit credits modal */}
       {modal && (
         <LeaveCreditsModal
           employee={modal.employee}
-          existing={credits[empId(modal.employee)]}
+          leaveTypes={leaveTypes}
+          existing={modalExisting}
           editingType={modal.editingType}
           onClose={closeModal}
           onSave={handleSaveCredits}

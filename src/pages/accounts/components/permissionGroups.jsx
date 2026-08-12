@@ -190,11 +190,13 @@ export const PERMISSION_GROUPS = [
 ];
 
 export const ASSIGNABLE_ROLES = [
+  { value: "none", label: "No role" },
+  { value: "medical center chief", label: "Medical Center Chief" },
   { value: "admin", label: "Admin" },
   { value: "chairman", label: "Chairman" },
   { value: "director", label: "Director" },
   { value: "hr", label: "HR" },
-  { value: "oic", label: "Officer In Charge" },
+  { value: "officer in charge", label: "Officer In Charge" },
   { value: "head", label: "Head" },
   { value: "supervisor", label: "Supervisor" },
   { value: "staff", label: "Staff" },

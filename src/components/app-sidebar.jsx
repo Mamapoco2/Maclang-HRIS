@@ -4,22 +4,17 @@ import {
   IconChartBar,
   IconDashboard,
   IconReport,
-  IconSettings,
   IconUsers,
   IconBriefcase,
-  IconPlane,
   IconUsersGroup,
   IconSchool,
   IconSpeakerphone,
-  IconUserCheck,
   IconTarget,
-  IconBuildingStore,
   IconFileText,
   IconInnerShadowTop,
   IconAward,
   IconWallet,
   IconSettings2,
-  IconCompass,
   IconBug,
   IconRocket,
 } from "@tabler/icons-react";
@@ -141,7 +136,6 @@ const NAV_MAIN = [
           {
             title: "New Leave Request",
             url: "/newLeaveRequest",
-            permission: "leave.request.manage",
           },
         ],
       },
@@ -413,6 +407,10 @@ function filterNav(navItems, userPermissions, isSuperUser) {
     const isContainer = Array.isArray(item.items);
 
     if (isContainer) {
+      if (!canSee(item, userPermissions, isSuperUser)) {
+        return acc;
+      }
+
       const visibleChildren = filterNav(
         item.items,
         userPermissions,

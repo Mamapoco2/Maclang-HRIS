@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "./PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Avatar } from "@/components/ui/Avatar";
 import { LeaveTypeBadge } from "./StatusBadge";
-import { LEAVE_REQUESTS, HOLIDAYS, LEAVE_TYPES } from "./mockData";
+import { Dialog, DialogHeader, DialogTitle, DialogBody } from "./Dialog";
+import { LEAVE_TYPES } from "./leavePolicy";
+import LeaveApi from "@/services/leaveApiService";
 import { formatDate } from "./utils";
-import { initializeAutoYearlyUpdate } from "@/services/holidayService"; // adjust path if needed
+import { initializeAutoYearlyUpdate } from "@/services/holidayService";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -34,13 +37,43 @@ function isDateInRange(date, start, end) {
   return date >= new Date(start) && date <= new Date(end);
 }
 
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function mapCalendarEntry(r) {
+  return {
+    id: r.id,
+    employeeName: r.employee?.name ?? r.employee_name ?? "—",
+    firstName: r.employee_first_name ?? r.employee?.first_name ?? null,
+    lastName: r.employee_last_name ?? r.employee?.last_name ?? null,
+    department: r.department ?? r.employee?.department ?? null,
+    employmentType: r.employment_type ?? r.employee?.employment_type ?? null,
+    position: r.position ?? r.employee?.designation ?? null,
+    leaveType: r.leave_type_code ?? r.leaveType ?? r.leave_type ?? "—",
+    leaveTypeName: r.leave_type_name ?? null,
+    startDate: r.start_date ?? r.startDate,
+    endDate: r.end_date ?? r.endDate,
+    status: r.status,
+  };
+}
+
+function displayName(leave) {
+  const parts = [leave.firstName, leave.lastName].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : leave.employeeName;
+}
+
 export default function CalendarPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [hoveredDay, setHoveredDay] = useState(null);
   const [filter, setFilter] = useState("all");
-  const [holidays, setHolidays] = useState(HOLIDAYS); // fallback to mock
+  const [holidays, setHolidays] = useState([]);
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const cleanup = initializeAutoYearlyUpdate((updatedHolidays) => {
@@ -56,10 +89,38 @@ export default function CalendarPage() {
     return () => cleanup();
   }, []);
 
+  const loadCalendar = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rangeStart = new Date(year, month, 1);
+      rangeStart.setDate(rangeStart.getDate() - 7);
+      const rangeEnd = new Date(year, month + 1, 0);
+      rangeEnd.setDate(rangeEnd.getDate() + 7);
+
+      const from = `${rangeStart.getFullYear()}-${pad2(rangeStart.getMonth() + 1)}-${pad2(rangeStart.getDate())}`;
+      const to = `${rangeEnd.getFullYear()}-${pad2(rangeEnd.getMonth() + 1)}-${pad2(rangeEnd.getDate())}`;
+
+      const data = await LeaveApi.getCalendar(from, to);
+      setLeaveRequests((data ?? []).map(mapCalendarEntry));
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || "Failed to load the leave calendar.",
+      );
+      setLeaveRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [year, month]);
+
+  useEffect(() => {
+    loadCalendar();
+  }, [loadCalendar]);
+
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
 
-  const approvedLeaves = LEAVE_REQUESTS.filter(
+  const approvedLeaves = leaveRequests.filter(
     (r) => r.status === "approved" || r.status === "pending",
   );
   const filteredLeaves =
@@ -116,6 +177,18 @@ export default function CalendarPage() {
     return hd.getFullYear() === year && hd.getMonth() === month;
   });
 
+  const selectedDayDetails =
+    selectedDay != null ? getEventsForDay(selectedDay) : null;
+  const selectedDateLabel =
+    selectedDay != null
+      ? new Date(year, month, selectedDay).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "";
+
   return (
     <div className="p-5">
       <PageHeader
@@ -123,13 +196,29 @@ export default function CalendarPage() {
         description="View and track team leave schedule"
       />
 
+      {error && (
+        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={loadCalendar}
+            className="text-xs font-medium underline hover:no-underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <Card>
-            {/* Calendar Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <h2 className="text-lg font-bold text-[var(--foreground)]">
                 {MONTHS[month]} {year}
+                {loading && (
+                  <span className="ml-2 text-xs font-normal text-[var(--muted-foreground)]">
+                    Loading…
+                  </span>
+                )}
               </h2>
               <div className="flex items-center gap-2">
                 <button
@@ -156,7 +245,6 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {/* Filter */}
             <div className="px-5 py-3 border-b border-[var(--border)] flex items-center gap-2 overflow-x-auto">
               <button
                 onClick={() => setFilter("all")}
@@ -181,7 +269,6 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* Day Headers */}
             <div className="grid grid-cols-7 border-b border-[var(--border)]">
               {DAYS.map((d) => (
                 <div
@@ -193,7 +280,6 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* Calendar Grid */}
             <div className="grid grid-cols-7">
               {Array.from({ length: firstDay }).map((_, i) => (
                 <div
@@ -212,11 +298,11 @@ export default function CalendarPage() {
                     new Date(year, month, day).getDay() % 6 === 0;
                   const holidayName = holiday?.name ?? holiday?.localName;
                   return (
-                    <div
+                    <button
                       key={day}
-                      onMouseEnter={() => setHoveredDay(day)}
-                      onMouseLeave={() => setHoveredDay(null)}
-                      className={`min-h-[80px] p-2 border-b border-r border-[var(--border)] transition-colors cursor-pointer relative group
+                      type="button"
+                      onClick={() => setSelectedDay(day)}
+                      className={`min-h-[80px] p-2 border-b border-r border-[var(--border)] transition-colors text-left relative
                         ${isWeekend ? "bg-[var(--muted)]/30" : ""}
                         ${isToday ? "bg-indigo-50 dark:bg-indigo-950/20" : "hover:bg-[var(--muted)]/50"}
                       `}
@@ -241,9 +327,8 @@ export default function CalendarPage() {
                             background: getLtBg(leave.leaveType),
                             color: getLtColor(leave.leaveType),
                           }}
-                          title={`${leave.employeeName} - ${leave.leaveType}`}
                         >
-                          {leave.employeeName.split(" ")[0]}
+                          {displayName(leave)}
                         </div>
                       ))}
                       {leaves.length > 2 && (
@@ -251,7 +336,7 @@ export default function CalendarPage() {
                           +{leaves.length - 2} more
                         </div>
                       )}
-                    </div>
+                    </button>
                   );
                 },
               )}
@@ -259,9 +344,7 @@ export default function CalendarPage() {
           </Card>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
-          {/* Legend */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">Leave Types</CardTitle>
@@ -287,7 +370,6 @@ export default function CalendarPage() {
             </CardContent>
           </Card>
 
-          {/* Holidays This Month */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">
@@ -330,13 +412,16 @@ export default function CalendarPage() {
             </CardContent>
           </Card>
 
-          {/* This Month Leaves */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">On Leave This Month</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {monthLeaves.length === 0 ? (
+              {loading ? (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Loading…
+                </p>
+              ) : monthLeaves.length === 0 ? (
                 <p className="text-sm text-[var(--muted-foreground)]">
                   No leaves this month
                 </p>
@@ -344,7 +429,7 @@ export default function CalendarPage() {
                 monthLeaves.map((r) => (
                   <div key={r.id} className="space-y-0.5">
                     <p className="text-sm font-semibold text-[var(--foreground)]">
-                      {r.employeeName}
+                      {displayName(r)}
                     </p>
                     <div className="flex items-center gap-2">
                       <LeaveTypeBadge type={r.leaveType} />
@@ -359,6 +444,72 @@ export default function CalendarPage() {
           </Card>
         </div>
       </div>
+
+      {/* Day detail modal: opens on date click, lists everyone on leave that day */}
+      <Dialog
+        open={selectedDay != null}
+        onClose={() => setSelectedDay(null)}
+        className="max-w-lg"
+      >
+        <DialogHeader onClose={() => setSelectedDay(null)}>
+          <DialogTitle>{selectedDateLabel}</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-3">
+          {selectedDayDetails?.holiday && (
+            <div className="px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-sm text-emerald-700 dark:text-emerald-400">
+              🎉{" "}
+              {selectedDayDetails.holiday.name ??
+                selectedDayDetails.holiday.localName}
+            </div>
+          )}
+
+          {!selectedDayDetails || selectedDayDetails.leaves.length === 0 ? (
+            <p className="text-sm text-[var(--muted-foreground)] text-center py-6">
+              No one is on leave this day.
+            </p>
+          ) : (
+            selectedDayDetails.leaves.map((leave) => (
+              <div
+                key={leave.id}
+                className="flex gap-3 p-3 rounded-lg border border-[var(--border)]"
+              >
+                <Avatar name={displayName(leave)} size="md" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      {displayName(leave)}
+                    </p>
+                    <LeaveTypeBadge type={leave.leaveType} />
+                  </div>
+                  <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1">
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      <span className="font-medium text-[var(--foreground)]">
+                        Department:
+                      </span>{" "}
+                      {leave.department ?? "—"}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      <span className="font-medium text-[var(--foreground)]">
+                        Employment Type:
+                      </span>{" "}
+                      {leave.employmentType ?? "—"}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)] col-span-2">
+                      <span className="font-medium text-[var(--foreground)]">
+                        Position:
+                      </span>{" "}
+                      {leave.position ?? "—"}
+                    </p>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-[var(--muted-foreground)]">
+                    {formatDate(leave.startDate)} — {formatDate(leave.endDate)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </DialogBody>
+      </Dialog>
     </div>
   );
 }
