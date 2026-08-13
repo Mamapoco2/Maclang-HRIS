@@ -21,11 +21,5 @@ export default defineConfig({
 
   server: {
     host: "0.0.0.0",
-    https: hasCert
-      ? {
-          cert: fs.readFileSync(certPath),
-          key: fs.readFileSync(keyPath),
-        }
-      : true,
   },
 });

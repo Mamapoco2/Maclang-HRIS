@@ -62,6 +62,7 @@ import NonPlantillaApplicationsPage from "../pages/hiring/non-plantilla/applicat
 import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding/onboardingPage";
 import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplicationsPage";
 import DTRPage from "../pages/dtr/dtrPage";
+import DTRRecordsPage from "../pages/dtr/components/viewDTR";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -459,6 +460,16 @@ function AppRoutes() {
               element={
                 <PermissionRoute permission="renewals.view">
                   <RenewalsPage />
+                </PermissionRoute>
+              }
+            />
+
+            {/* ── DTR ── */}
+            <Route
+              path="/dtrRecords"
+              element={
+                <PermissionRoute permission="dtr.view">
+                  <DTRRecordsPage />
                 </PermissionRoute>
               }
             />

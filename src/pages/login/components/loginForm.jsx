@@ -12,6 +12,12 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFirstAccessibleRoute } from "@/hooks/useFirstAccessibleRoute";
 import { cn } from "@/lib/utils";
+import {
+  getLockoutState,
+  setLockoutState,
+  clearLockoutState,
+  getLastUsername,
+} from "@/lib/loginLockout";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000;
@@ -30,13 +36,50 @@ export default function LoginForm() {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(loginSchema) });
 
-  const isLockedOut = lockoutUntil && Date.now() < lockoutUntil;
+  const username = watch("username");
+  // On mount / whenever the username changes, check localStorage for an
+  // existing lockout (e.g. the user refreshed mid-lockout) and restore it.
+  useEffect(() => {
+    const lookupUsername = username || getLastUsername();
+    if (!lookupUsername) return;
+
+    const saved = getLockoutState(lookupUsername);
+    if (saved && saved.lockoutUntil > Date.now()) {
+      attempts.current = saved.attempts;
+      setLockoutUntil(saved.lockoutUntil);
+    } else {
+      attempts.current = saved?.attempts ?? 0;
+      setLockoutUntil(null);
+    }
+  }, [username]);
+
+  const isLockedOut = !!lockoutUntil;
   const lockoutSeconds = isLockedOut
-    ? Math.ceil((lockoutUntil - Date.now()) / 1000)
+    ? Math.max(Math.ceil((lockoutUntil - Date.now()) / 1000), 0)
     : 0;
+
+  // Tick the countdown every second and auto-clear the lockout when it
+  // expires, so the form re-enables itself without needing an unrelated
+  // render to happen first.
+  useEffect(() => {
+    if (!lockoutUntil) return undefined;
+
+    const interval = setInterval(() => {
+      if (Date.now() >= lockoutUntil) {
+        setLockoutUntil(null);
+        setServerError("");
+        clearLockoutState(username);
+      } else {
+        setLockoutUntil((prev) => prev); // force re-render for the countdown
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockoutUntil, username]);
 
   useEffect(() => {
     if (loginSucceeded && isAuthenticated) {
@@ -53,6 +96,7 @@ export default function LoginForm() {
 
     if (res.success) {
       attempts.current = 0;
+      clearLockoutState(data.username);
       setLoginSucceeded(true);
       return;
     }
@@ -60,11 +104,21 @@ export default function LoginForm() {
     attempts.current += 1;
 
     if (attempts.current >= MAX_ATTEMPTS) {
-      setLockoutUntil(Date.now() + LOCKOUT_MS);
+      const until = Date.now() + LOCKOUT_MS;
+      setLockoutUntil(until);
+      setLockoutState(data.username, {
+        attempts: attempts.current,
+        lockoutUntil: until,
+      });
       attempts.current = 0;
       setServerError("Too many attempts. Try again in 60 seconds.");
       return;
     }
+
+    setLockoutState(data.username, {
+      attempts: attempts.current,
+      lockoutUntil: 0,
+    });
 
     const message = res.error || "Invalid username or password.";
     const lower = message.toLowerCase();
@@ -88,6 +142,7 @@ export default function LoginForm() {
       {serverError && (
         <p
           role="alert"
+          aria-live="assertive"
           className="rounded-md border border-[#E8A33D]/30 bg-[#E8A33D]/10 px-3 py-2 text-sm text-[#8A5A12]"
         >
           {serverError}

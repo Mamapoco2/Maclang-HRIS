@@ -113,11 +113,7 @@ const NAV_MAIN = [
             url: "/leaveDashboard",
             permission: "leave.dashboard.view",
           },
-          {
-            title: "Approval",
-            url: "/leaveApproval",
-            permission: "leave.approval.view",
-          },
+
           {
             title: "Balance",
             url: "/leaveBalance",
@@ -389,6 +385,12 @@ const NAV_MAIN = [
     url: "/audit-logs",
     icon: IconFileText,
     permission: "audit_logs.view",
+  },
+  {
+    title: "DTR",
+    url: "/dtrRecords",
+    icon: IconFileText,
+    permission: "dtr.view",
   },
 ];
 
