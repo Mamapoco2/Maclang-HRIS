@@ -28,9 +28,12 @@ export const PERMISSIONS = Object.freeze({
   LEAVE_APPROVAL_VIEW: "leave.approval.view",
   LEAVE_APPROVAL_MANAGE: "leave.approval.manage",
   LEAVE_BALANCE_VIEW: "leave.balance.view",
+  LEAVE_BALANCE_MANAGE: "leave.balance.manage",
   LEAVE_CALENDAR_VIEW: "leave.calendar.view",
   LEAVE_REQUEST_VIEW: "leave.request.view",
   LEAVE_REQUEST_MANAGE: "leave.request.manage",
+  LEAVE_HOLIDAYS_MANAGE: "leave.holidays.manage",
+  LEAVE_TYPES_MANAGE: "leave.types.manage",
 
   EMPLOYEES_VIEW: "employees.view",
   EMPLOYEES_MANAGE: "employees.manage",

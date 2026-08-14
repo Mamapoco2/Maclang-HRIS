@@ -113,7 +113,11 @@ const NAV_MAIN = [
             url: "/leaveDashboard",
             permission: "leave.dashboard.view",
           },
-
+          {
+            title: "Approval",
+            url: "/leaveApproval",
+            permission: "leave.approval.view",
+          },
           {
             title: "Balance",
             url: "/leaveBalance",
