@@ -234,13 +234,23 @@ export default function NewRequestPage({ onNavigate }) {
 
   const LeaveTypeIcon = typeConfig?.icon;
 
-  const balance = useMemo(() => {
-    const find = (code) => balances.find((b) => b.leave_type?.code === code);
-    const vacation = find("vacation");
-    const sick = find("sick");
-    if (!vacation && !sick) return null;
-    return { vacation, sick };
-  }, [balances]);
+  const balanceRows = useMemo(() => {
+    return leaveTypes.map((t) => {
+      const record = balances.find(
+        (b) => b.leave_type?.code === t.code || b.leave_type_id === t.id,
+      );
+      const available = record ? Number(record.available) : 0;
+      const used = record ? Number(record.used) : 0;
+      return {
+        code: t.code,
+        label: t.name,
+        color: t.color || "#3b82f6",
+        available,
+        used,
+        total: available + used,
+      };
+    });
+  }, [leaveTypes, balances]);
 
   return (
     <div className="p-4 md:p-6 max-w-screeen mx-auto">
@@ -496,47 +506,33 @@ export default function NewRequestPage({ onNavigate }) {
               </CardContent>
             </Card>
           ) : (
-            balance && (
+            balanceRows.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Available Balance</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {[
-                    {
-                      label: "Vacation",
-                      data: balance.vacation,
-                      color: "#3b82f6",
-                    },
-                    { label: "Sick", data: balance.sick, color: "#f59e0b" },
-                  ]
-                    .filter((b) => b.data)
-                    .map((b) => {
-                      const available = b.data.available;
-                      const used = b.data.used;
-                      const total = available + used;
-                      return (
-                        <div key={b.label}>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-[var(--muted-foreground)]">
-                              {b.label}
-                            </span>
-                            <span className="font-medium">
-                              {available}/{total}
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-[var(--muted)] rounded-full">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${total > 0 ? Math.min((available / total) * 100, 100) : 0}%`,
-                                background: b.color,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                  {balanceRows.map((b) => (
+                    <div key={b.code}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-[var(--muted-foreground)]">
+                          {b.label}
+                        </span>
+                        <span className="font-medium">
+                          {b.available}/{b.total}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-[var(--muted)] rounded-full">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${b.total > 0 ? Math.min((b.available / b.total) * 100, 100) : 0}%`,
+                            background: b.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )

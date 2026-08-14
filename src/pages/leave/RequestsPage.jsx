@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
 import LeaveApi from "@/services/leaveApiService";
 import { LeaveRequestModal } from "./components/LeaveRequestModal";
+import { ApprovalStepsInline } from "./components/ApprovalTrail";
 import { LEAVE_TYPES } from "./leavePolicy";
 import { formatDate, downloadCSV } from "./utils";
 import {
@@ -51,6 +52,8 @@ function mapRequestToRow(r) {
     details: r.details,
     isHalfDay: r.is_half_day,
     documents: r.documents,
+    approvalSteps: r.approval_steps ?? [],
+    currentStepOrder: r.current_step_order,
   };
 }
 
@@ -164,11 +167,13 @@ export default function RequestsPage({ onNavigate }) {
       {
         accessorKey: "approverName",
         header: "Current Approver",
-        cell: ({ getValue }) => (
-          <div className="flex justify-center">
-            <span className="text-sm text-[var(--foreground)]">
-              {getValue()}
-            </span>
+        cell: ({ row }) => (
+          <div className="flex flex-col items-center gap-1.5 max-w-[260px] mx-auto">
+            <ApprovalStepsInline
+              steps={row.original.approvalSteps}
+              currentStepOrder={row.original.currentStepOrder}
+              className="justify-center"
+            />
           </div>
         ),
       },
