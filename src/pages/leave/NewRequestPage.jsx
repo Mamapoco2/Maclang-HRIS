@@ -301,7 +301,11 @@ export default function NewRequestPage({ onNavigate }) {
                     <Briefcase className="w-3 h-3" /> Designation
                   </p>
                   <p className="text-sm font-semibold">
-                    {employee?.position ?? "—"}
+                    {Array.isArray(employee?.position_designation)
+                      ? employee.position_designation
+                          .filter(Boolean)
+                          .join(", ") || "—"
+                      : (employee?.position_designation ?? "—")}
                   </p>
                 </div>
                 <div>

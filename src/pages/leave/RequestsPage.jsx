@@ -39,6 +39,7 @@ function mapRequestToRow(r) {
 
   return {
     id: r.id,
+    employee: r.employee,
     leaveType: r.leave_type?.code ?? "—",
     startDate: r.start_date,
     endDate: r.end_date,

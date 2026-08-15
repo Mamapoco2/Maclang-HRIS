@@ -1,35 +1,3 @@
-// src/pages/leave/LeaveRequestDocument.jsx
-//
-// Pure presentational replica of Civil Service Form No. 6
-// (Application for Leave, Rev. 2020). No routing, no fetching —
-// takes data in, renders the form. Used by both:
-//   - LeaveRequestView.jsx   (full page, route-driven)
-//   - LeaveRequestModal.jsx  (popup, opened from a table row)
-//
-// DATA CONTRACT — see normalizeLeaveRequest() below. Pass either
-// the canonical shape directly, or a "loose" shape (e.g. straight
-// off a table row) and normalizeLeaveRequest will map the common
-// alternate field names onto it.
-//
-// PRINT STRATEGY —
-//   - The form is ALWAYS rendered twice: once inline (the on-screen
-//     preview, wherever this component is used) and once portaled to
-//     document.body (the print copy, parked off-screen via CSS).
-//     Neither copy is conditionally mounted based on JS/React state —
-//     both exist in the DOM at all times.
-//   - Visibility is controlled entirely by @media print. The browser
-//     applies print media rules synchronously and deterministically
-//     as part of generating print output, so there's no dependency on
-//     a beforeprint/afterprint listener or a React re-render
-//     committing in time (that race — an async setState racing the
-//     browser's print-preview snapshot — is what let the live app
-//     keep showing up in the printed/previewed output).
-//   - During print: `body > *:not(#<printAreaId>-portal-root)` hides
-//     the entire live app, and the print copy is switched from
-//     off-screen/hidden to fixed-position/visible.
-// Both render paths share the same <FormBody> component so the
-// preview and the printed output never drift apart.
-
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import rmbghLogo from "../../../assets/rmbghlogo.png";
@@ -102,39 +70,79 @@ export const LEAVE_TYPES = [
   },
 ];
 
-// Maps common alternate field names (e.g. a flat table row using
-// employeeName/department/startDate/endDate/days) onto the
-// canonical LeaveRequest shape above. Fields already in canonical
-// form pass through untouched. Purely additive — never drops data.
+function findStepByLabel(steps, label) {
+  return steps.find((s) => s.label === label);
+}
+
+function managementChainStep(steps) {
+  return steps.find((s) => s.step_order === 1) ?? steps[0];
+}
+
+function actedOfficerName(step) {
+  if (!step || step.status === "pending") return undefined;
+  return step.approver?.formal_name ?? step.approver?.name;
+}
+
 export function normalizeLeaveRequest(raw) {
   if (!raw) return raw;
 
   const hasNameParts = raw.lastName || raw.firstName || raw.middleName;
+  const employee = raw.employee ?? {};
+  const steps = raw.approval_steps ?? raw.approvalSteps ?? [];
+
+  const headStep = managementChainStep(steps);
+  const hrStep = findStepByLabel(steps, "HR");
+  const mccStep = findStepByLabel(steps, "MCC");
 
   return {
     ...raw,
-    office: raw.office ?? raw.department ?? "",
+    office: raw.office ?? employee.department ?? raw.department ?? "",
     lastName: hasNameParts ? raw.lastName : undefined,
     firstName: hasNameParts ? raw.firstName : undefined,
     middleName: hasNameParts ? raw.middleName : undefined,
-    // kept separately rather than force-split into name parts —
-    // splitting "Last, First M." reliably needs a real name parser
-    displayName: hasNameParts ? undefined : raw.employeeName,
-    dateFiled: raw.dateFiled ?? raw.appliedDate,
-    numberOfDays: raw.numberOfDays ?? raw.days,
-    inclusiveDatesFrom: raw.inclusiveDatesFrom ?? raw.startDate,
-    inclusiveDatesTo: raw.inclusiveDatesTo ?? raw.endDate,
+    displayName: hasNameParts ? undefined : (raw.employeeName ?? employee.name),
+    position: raw.position ?? employee.designation ?? raw.designation ?? "",
+    dateFiled: raw.dateFiled ?? raw.appliedDate ?? raw.submitted_at,
+    numberOfDays: raw.numberOfDays ?? raw.days ?? raw.total_days,
+    inclusiveDatesFrom:
+      raw.inclusiveDatesFrom ?? raw.startDate ?? raw.start_date,
+    inclusiveDatesTo: raw.inclusiveDatesTo ?? raw.endDate ?? raw.end_date,
+
+    certification:
+      raw.certification ??
+      (hrStep
+        ? {
+            officerName: actedOfficerName(hrStep),
+            asOfDate: hrStep.acted_at,
+          }
+        : undefined),
+
     recommendation:
       raw.recommendation ??
-      (raw.status === "rejected"
+      (headStep
         ? {
-            decision: "disapproval",
-            disapprovalReason: raw.rejectionReason,
-            officerName: raw.approverName,
+            decision:
+              headStep.status === "approved"
+                ? "approval"
+                : headStep.status === "rejected"
+                  ? "disapproval"
+                  : undefined,
+            disapprovalReason: headStep.remarks,
+            officerName: actedOfficerName(headStep),
           }
-        : raw.status === "approved"
-          ? { decision: "approval", officerName: raw.approverName }
-          : undefined),
+        : undefined),
+
+    action:
+      raw.action ??
+      (mccStep
+        ? {
+            daysWithPay:
+              mccStep.status === "approved" ? raw.total_days : undefined,
+            disapprovedDue:
+              mccStep.status === "rejected" ? mccStep.remarks : undefined,
+            officialName: actedOfficerName(mccStep),
+          }
+        : undefined),
   };
 }
 
@@ -183,9 +191,6 @@ function Field({ label, value, className = "" }) {
   );
 }
 
-// Shared form markup, rendered both for the inline on-screen preview
-// and (via portal) for printing. Keeping this in one place means the
-// preview and the printed output can never drift out of sync.
 function FormBody({
   lr,
   details,
@@ -417,7 +422,9 @@ function FormBody({
               </tbody>
             </table>
             <div className="mt-6 border-t border-black pt-1 text-center text-[9px]">
-              {hasCertification ? lr.certification.officerName : "\u00A0"}
+              {hasCertification
+                ? (lr.certification.officerName ?? "\u00A0")
+                : "\u00A0"}
               <br />
               (Authorized Officer)
             </div>
@@ -444,7 +451,9 @@ function FormBody({
                 : ""}
             </Checkbox>
             <div className="mt-9 border-t border-black pt-1 text-center text-[9px]">
-              {hasRecommendation ? lr.recommendation.officerName : "\u00A0"}
+              {hasRecommendation
+                ? (lr.recommendation.officerName ?? "\u00A0")
+                : "\u00A0"}
               <br />
               (Authorized Officer)
             </div>
@@ -481,7 +490,7 @@ function FormBody({
         {/* Shared sign-off for 7.C/7.D — one official approves or disapproves the whole action */}
         <div className="p-2 text-center text-[11px]">
           <div className="mx-auto mt-2 w-64 border-t border-black pt-1 text-[9px]">
-            {hasAction ? lr.action.officialName : "\u00A0"}
+            {hasAction ? (lr.action.officialName ?? "\u00A0") : "\u00A0"}
             <br />
             (Authorized Official)
           </div>
@@ -503,20 +512,6 @@ export default function LeaveRequestDocument({
 
   const portalRootId = `${printAreaId}-portal-root`;
 
-  // Print scaling: fit the print copy to exactly one legal-size page,
-  // scaling UP as well as down. The print copy is deliberately given a
-  // base width narrower than the page (see PRINT_BASE_WIDTH_PX below),
-  // so there's room to grow into — then we scale it to fill whichever
-  // dimension (width or height) is the tighter constraint. This
-  // replaces the old shrink-only logic, which capped at scale 1
-  // because the print copy's width already matched the page width
-  // exactly, leaving no room to enlarge.
-  //
-  // PRINT_MARGIN_*_MM reserve thin margins around the page (see the
-  // print stylesheet below, which offsets/insets the copy by these
-  // amounts) — they're subtracted from the width/height budgets here
-  // so the fit calculation still guarantees everything lands on a
-  // single page without the margins pushing content off the edge.
   const PRINT_MARGIN_TOP_MM = 6;
   const PRINT_MARGIN_SIDE_MM = 4;
   const PRINT_MARGIN_BOTTOM_MM = 4;
@@ -539,20 +534,12 @@ export default function LeaveRequestDocument({
     const naturalHeight = node.scrollHeight;
     const scaleToFillWidth = pageWidthPx / naturalWidth;
     const scaleToFillHeight = pageHeightPx / naturalHeight;
-    // Use whichever ratio is smaller so neither dimension ever
-    // overflows the page — this naturally allows scale > 1 (bigger)
-    // when there's headroom, and still shrinks when content is long.
     const scale = Math.min(scaleToFillWidth, scaleToFillHeight);
     node.style.setProperty("--print-scale", scale.toFixed(3));
   }, [leaveRequest]);
 
   return (
     <>
-      {/* On-screen preview — rendered normally, inline, right where
-          this component is used (full page or inside a modal). This
-          is the only copy visible on screen; it's hidden during
-          printing (see the print-only stylesheet below, which hides
-          the whole app except the portaled print copy). */}
       <div
         id={printAreaId}
         className="w-full h-full max-w-[850px] border border-black bg-white p-5 text-black shadow-sm"
@@ -566,18 +553,6 @@ export default function LeaveRequestDocument({
         />
       </div>
 
-      {/* Print-only copy. Always portaled to document.body (never
-          conditionally mounted via JS state) so there is no reliance
-          on a beforeprint/afterprint listener or a React re-render
-          committing before the browser generates the print output —
-          that race is what caused the live app to still show up in
-          the print preview. Instead this copy is permanently present
-          in the DOM, parked off-screen with visibility:hidden (which,
-          unlike display:none, still lays it out so scrollHeight above
-          measures correctly), and @media print rules below swap it
-          into view and hide everything else. That swap is applied by
-          the browser itself as part of print rendering, so it can
-          never be "too late". */}
       {createPortal(
         <div id={portalRootId}>
           <div
