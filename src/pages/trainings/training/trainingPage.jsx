@@ -164,7 +164,11 @@ export default function TrainingPage() {
 
   useEffect(() => {
     const echo = getEcho();
-    const notifChannel = echo.channel("notifications");
+    if (!echo) return;
+
+    // Backend broadcasts both on PrivateChannel('notifications') and
+    // PrivateChannel('trainings') — must use .private(), not .channel().
+    const notifChannel = echo.private("notifications");
     const onNotificationCreated = (e) => {
       if (e.type?.toLowerCase() !== "training" || !e.training) return;
       if (e.posted_by_user_id === currentUserId) return;
@@ -181,7 +185,7 @@ export default function TrainingPage() {
     };
     notifChannel.listen(".notification.created", onNotificationCreated);
 
-    const trainingChannel = echo.channel("trainings");
+    const trainingChannel = echo.private("trainings");
     const onParticipantUpdated = (e) => {
       if (!e.training) return;
       const patched = patchEnrolled(e.training);

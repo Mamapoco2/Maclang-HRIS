@@ -1,26 +1,14 @@
 import { useEffect } from "react";
+import { getEcho } from "@/lib/echo";
 
-/**
- * @param {Object}   options
- * @param {Function} options.onNotification  - called with the broadcast payload
- * @param {Function} [options.onRefreshBell] - optional: call to re-fetch unread count
- *
- * Usage:
- *   useTrainingNotifications({
- *     onNotification: (data) => toast.success(data.message),
- *     onRefreshBell:  fetchUnreadCount,
- *   });
- */
 export function useTrainingNotifications({ onNotification, onRefreshBell }) {
   useEffect(() => {
-    if (!window.Echo) {
-      console.warn("Laravel Echo is not initialised.");
-      return;
-    }
+    const echo = getEcho();
+    if (!echo) return;
 
-    const channel = window.Echo.channel("notifications");
+    const channel = echo.private("notifications");
 
-    channel.listen(".training.created", (payload) => {
+    const handler = (payload) => {
       if (typeof onNotification === "function") {
         onNotification(payload);
       }
@@ -28,10 +16,12 @@ export function useTrainingNotifications({ onNotification, onRefreshBell }) {
       if (typeof onRefreshBell === "function") {
         onRefreshBell();
       }
-    });
+    };
+
+    channel.listen(".training.created", handler);
 
     return () => {
-      window.Echo.leaveChannel("notifications");
+      channel.stopListening(".training.created", handler);
     };
   }, []);
 }
