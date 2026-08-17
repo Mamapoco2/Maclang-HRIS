@@ -1,4 +1,3 @@
-// src/components/NotificationBell.jsx
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -194,6 +193,14 @@ export function NotificationBell() {
           .listen(".notification.created", handleIncoming);
         channelNames.push("admin.notifications");
       }
+
+      if (user?.id) {
+        const personalChannel = `App.Models.User.${user.id}`;
+        echo
+          .private(personalChannel)
+          .listen(".notification.created", handleIncoming);
+        channelNames.push(personalChannel);
+      }
     }
 
     return () => {
@@ -202,7 +209,7 @@ export function NotificationBell() {
         channelNames.forEach((name) => echo.leave(name));
       }
     };
-  }, [fetchNotifications, isAdmin]);
+  }, [fetchNotifications, isAdmin, user?.id]);
 
   // ── close on outside click ─────────────────────────────────────────────────
   useEffect(() => {
@@ -249,6 +256,9 @@ export function NotificationBell() {
     } else if (type === "announcement") {
       setOpen(false);
       navigate("/Announcement");
+    } else if (type === "leave") {
+      setOpen(false);
+      navigate("/leaveApproval");
     }
   };
 
