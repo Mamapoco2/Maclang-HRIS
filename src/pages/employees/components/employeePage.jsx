@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { employeeService } from "@/services/employeeService";
+import { getEcho } from "@/lib/echo";
 import EmployeeTable from "./employeeTable";
 import EmployeeForm from "./forms/EmployeeForm";
 import EmployeeDeleteDialog from "./employeeDeleteDialog";
@@ -149,6 +150,26 @@ export default function EmployeePage() {
     if (isFirstRender.current) return;
     loadEmployees({ page: 1, employment_type: employmentTypeFilter });
   }, [employmentTypeFilter]);
+
+  useEffect(() => {
+    const echo = getEcho();
+    if (!echo) return;
+
+    const channel = echo.private("employees");
+
+    const onEmployeeUpdated = (e) => {
+      if (!e.employee) return;
+      setEmployees((prev) => {
+        if (!prev.some((emp) => emp.id === e.employee.id)) return prev;
+        return prev.map((emp) =>
+          emp.id === e.employee.id ? { ...emp, ...e.employee } : emp,
+        );
+      });
+    };
+
+    channel.listen(".employee.updated", onEmployeeUpdated);
+    return () => channel.stopListening(".employee.updated", onEmployeeUpdated);
+  }, []);
 
   const visibleDepartments = divisionFilter
     ? (allDivisions.find((d) => String(d.id) === String(divisionFilter))
@@ -320,7 +341,7 @@ export default function EmployeePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Employment Types</SelectItem>
-                <SelectItem value="plantilla">Plantilla</SelectItem>
+                <SelectItem value="non-plantilla">Non-Plantilla</SelectItem>
                 <SelectItem value="consultant">Consultant</SelectItem>
                 <SelectItem value="contract-of-service">
                   Contract of Service
