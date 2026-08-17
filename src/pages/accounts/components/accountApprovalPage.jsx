@@ -28,13 +28,24 @@ export default function AccountApprovalPage() {
 
   useEffect(() => {
     loadUsers(true);
+
+    const interval = setInterval(() => loadUsers(false), 30000);
+
     const echo = getEcho();
-    if (!echo) return;
-    const channel = echo.channel("pending-users");
-    channel.listen(".user.registered", () => loadUsers(false));
-    channel.listen(".user.activated", () => loadUsers(false));
+    if (!echo) return () => clearInterval(interval);
+
+    const channel = echo.private("pending-users");
+
+    const onRegistered = () => loadUsers(false);
+    const onActivated = () => loadUsers(false);
+
+    channel.listen(".user.registered", onRegistered);
+    channel.listen(".user.activated", onActivated);
+
     return () => {
-      echo.leaveChannel("pending-users");
+      clearInterval(interval);
+      channel.stopListening(".user.registered", onRegistered);
+      channel.stopListening(".user.activated", onActivated);
     };
   }, []);
 

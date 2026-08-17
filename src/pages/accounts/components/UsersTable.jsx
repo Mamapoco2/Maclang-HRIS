@@ -30,11 +30,11 @@ export default function UsersTable() {
     loadUsers(true);
     const echo = getEcho();
     if (!echo) return;
-    const channel = echo.channel("pending-users");
+    const channel = echo.private("pending-users");
     channel.listen(".user.registered", () => loadUsers(false));
     channel.listen(".user.activated", () => loadUsers(false));
     return () => {
-      echo.leaveChannel("pending-users");
+      echo.leave("pending-users");
     };
   }, []);
 

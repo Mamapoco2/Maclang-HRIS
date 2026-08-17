@@ -1,4 +1,3 @@
-// src/hooks/usePendingUsersCount.js
 import { useEffect, useState } from "react";
 import { getPendingCount } from "@/services/accountsService";
 import getEcho from "@/lib/echo";
@@ -8,11 +7,9 @@ export function usePendingUsersCount() {
 
   const fetchCount = async () => {
     try {
-      const c = await getPendingUserCount();
+      const c = await getPendingCount();
       setCount(c);
-    } catch {
-      // silently fail
-    }
+    } catch {}
   };
 
   useEffect(() => {
@@ -21,22 +18,17 @@ export function usePendingUsersCount() {
     const echo = getEcho();
     if (!echo) return;
 
-    const channel = echo.channel("pending-users");
+    const channel = echo.private("pending-users");
 
-    // New registration — count goes UP
-    channel.listen(".user.registered", () => {
-      // console.log("👤 user.registered received — refreshing count");
-      fetchCount();
-    });
+    const onRegistered = () => fetchCount();
+    const onActivated = () => fetchCount();
 
-    // User activated — count goes DOWN
-    channel.listen(".user.activated", () => {
-      // console.log("👤 user.registered received — refreshing count");
-      fetchCount();
-    });
+    channel.listen(".user.registered", onRegistered);
+    channel.listen(".user.activated", onActivated);
 
     return () => {
-      echo.leaveChannel("pending-users");
+      channel.stopListening(".user.registered", onRegistered);
+      channel.stopListening(".user.activated", onActivated);
     };
   }, []);
 
