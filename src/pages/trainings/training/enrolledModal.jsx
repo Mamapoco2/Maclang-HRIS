@@ -39,7 +39,9 @@ export function EnrolledParticipantsModal({
   useEffect(() => {
     if (!training?.id) return;
     const echo = getEcho();
-    const channel = echo.channel("trainings");
+    if (!echo) return;
+    // PrivateChannel('trainings') on the backend — must use .private()
+    const channel = echo.private("trainings");
     const handler = (e) => {
       if (e.training?.id !== training.id) return;
       setTraining((prev) => ({ ...prev, ...e.training }));

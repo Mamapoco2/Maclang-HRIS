@@ -63,10 +63,11 @@ export default function TeamTable() {
     fetchMembers();
   }, [fetchMembers]);
 
-  // Realtime: listen for employee updates
   useEffect(() => {
     const echo = getEcho();
-    const channel = echo.channel("employees");
+    if (!echo) return;
+
+    const channel = echo.private("employees");
 
     const onEmployeeUpdated = (e) => {
       if (!e.employee) return;
