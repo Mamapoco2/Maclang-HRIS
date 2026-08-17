@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LeaveApi } from "@/services/leaveApiService";
+import { getEcho } from "@/lib/echo";
+import { useAuth } from "@/hooks/useAuth";
 
 export function useLeaveApprovals(params = {}) {
   const [pending, setPending] = useState([]);
@@ -8,6 +10,7 @@ export function useLeaveApprovals(params = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const requestId = useRef(0);
+  const { user } = useAuth();
 
   const paramsKey = JSON.stringify(params);
 
@@ -44,6 +47,32 @@ export function useLeaveApprovals(params = {}) {
     fetchPending();
     fetchRecentDecisions();
   }, [fetchPending, fetchRecentDecisions]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const echo = getEcho();
+    if (!echo) return;
+
+    const channel = echo.private(`App.Models.User.${user.id}`);
+
+    let debounceTimer = null;
+    const refetchDebounced = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchPending();
+        fetchRecentDecisions();
+      }, 300);
+    };
+
+    channel.listen(".leave-request.submitted", refetchDebounced);
+    channel.listen(".leave-request.step-actioned", refetchDebounced);
+
+    return () => {
+      clearTimeout(debounceTimer);
+      channel.stopListening(".leave-request.submitted", refetchDebounced);
+      channel.stopListening(".leave-request.step-actioned", refetchDebounced);
+    };
+  }, [user?.id, fetchPending, fetchRecentDecisions]);
 
   const approve = useCallback(
     async (requestId, remarks) => {
