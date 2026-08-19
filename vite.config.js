@@ -1,12 +1,7 @@
-import fs from "fs";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-
-const certPath = "C:/Users/colin/Desktop/MACLANG DEPT/cert.pem";
-const keyPath = "C:/Users/colin/Desktop/MACLANG DEPT/key.pem";
-const hasCert = fs.existsSync(certPath) && fs.existsSync(keyPath);
 
 export default defineConfig({
   darkMode: "class",
