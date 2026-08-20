@@ -97,7 +97,6 @@ export default function PlantillaPostingPage() {
         { replace: true },
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -130,9 +129,6 @@ export default function PlantillaPostingPage() {
         const res = await fetcher(params, { signal });
         let normalised = (res.data ?? []).map(normalisePosting);
         if (pinnedItem) {
-          // Belt-and-suspenders: the backend search is a LIKE match and
-          // could still return neighbouring items (e.g. item "12" vs
-          // "120"), so enforce an exact match client-side too.
           normalised = normalised.filter(
             (it) => it.baseItemNumber === pinnedItem,
           );
@@ -169,6 +165,26 @@ export default function PlantillaPostingPage() {
     loadPostings(controller.signal);
     return () => controller.abort();
   }, [loadPostings]);
+
+  useEffect(() => {
+    if (loading) return;
+    const postingId = searchParams.get("posting");
+    if (!postingId || items.length === 0) return;
+
+    const match = items.find((it) => String(it.id) === String(postingId));
+    if (match) {
+      setViewItem(match);
+    }
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("posting");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [loading, items, searchParams, setSearchParams]);
 
   useEffect(() => {
     api

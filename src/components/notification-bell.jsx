@@ -12,6 +12,8 @@ import {
   Tag,
   Building2,
   BookOpen,
+  Users,
+  Layers,
 } from "lucide-react";
 import notificationService from "@/services/notificationService";
 import getEcho from "@/lib/echo";
@@ -23,7 +25,17 @@ const TYPE_DOT = {
   account_pending: "bg-blue-500",
   announcement: "bg-purple-400",
   training: "bg-cyan-400",
+  plantilla_posting: "bg-emerald-400",
 };
+
+// ─── types that navigate the user somewhere when clicked ───────────────────
+const CLICKABLE_TYPES = new Set([
+  "training",
+  "announcement",
+  "leave",
+  "account_pending",
+  "plantilla_posting",
+]);
 
 const ADMIN_ROLES = ["SuperAdmin", "HR", "Admin"];
 
@@ -109,6 +121,41 @@ function TrainingDetails({ data }) {
           <span
             className={`text-[11px] font-medium text-foreground leading-tight ${capitalize ? "capitalize" : ""}`}
           >
+            {value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── plantilla posting detail card ──────────────────────────────────────────
+function PlantillaPostingDetails({ data }) {
+  if (!data) return null;
+
+  const rows = [
+    { icon: Layers, label: "Item No.", value: data.base_item_number },
+    { icon: Building2, label: "Department", value: data.department },
+    {
+      icon: Tag,
+      label: "Salary Grade",
+      value: data.salary_grade ? `SG-${data.salary_grade}` : null,
+    },
+    { icon: Users, label: "Vacancies", value: data.vacancies },
+    { icon: Calendar, label: "Closing", value: formatDate(data.closing_date) },
+  ].filter((r) => r.value);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/20 p-2.5 space-y-1.5">
+      {rows.map(({ icon: Icon, label, value }) => (
+        <div key={label} className="flex items-start gap-2">
+          <Icon className="h-3 w-3 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-[11px] text-muted-foreground shrink-0 w-20">
+            {label}:
+          </span>
+          <span className="text-[11px] font-medium text-foreground leading-tight">
             {value}
           </span>
         </div>
@@ -259,6 +306,18 @@ export function NotificationBell() {
     } else if (type === "leave") {
       setOpen(false);
       navigate("/leaveApproval");
+    } else if (type === "account_pending") {
+      setOpen(false);
+      const userId = n.data?.user_id;
+      navigate(userId ? `/accounts?user=${userId}` : "/accounts");
+    } else if (type === "plantilla_posting") {
+      setOpen(false);
+      const postingId = n.data?.posting_id;
+      if (postingId) {
+        navigate(`/hiring/plantilla/positions?posting=${postingId}`);
+      } else {
+        navigate("/hiring/plantilla/positions");
+      }
     }
   };
 
@@ -324,7 +383,7 @@ export function NotificationBell() {
                     onClick={() => handleNotificationClick(n)}
                     className={`w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-muted/50 transition-colors ${
                       !n.read ? "bg-blue-50/60 dark:bg-blue-950/20" : ""
-                    } ${normalizedType === "training" || normalizedType === "announcement" ? "cursor-pointer" : ""}`}
+                    } ${CLICKABLE_TYPES.has(normalizedType) ? "cursor-pointer" : ""}`}
                   >
                     <span
                       className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TYPE_DOT[normalizedType] ?? "bg-gray-400"}`}
@@ -348,6 +407,10 @@ export function NotificationBell() {
 
                       {normalizedType === "training" && n.data && (
                         <TrainingDetails data={n.data} />
+                      )}
+
+                      {normalizedType === "plantilla_posting" && n.data && (
+                        <PlantillaPostingDetails data={n.data} />
                       )}
 
                       <p className="text-[10px] text-muted-foreground/60 mt-1.5">

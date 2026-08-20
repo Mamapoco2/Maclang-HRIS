@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   getUsers,
   activateUser,
   bulkActivateUsers,
 } from "@/services/accountsService";
 import { IconLoader2, IconCheck, IconSearch } from "@tabler/icons-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getEcho } from "@/lib/echo";
+
+const PAGE_SIZE = 10;
 
 export default function AccountApprovalPage() {
   const [users, setUsers] = useState([]);
@@ -15,6 +24,10 @@ export default function AccountApprovalPage() {
   const [selected, setSelected] = useState([]);
   const [bulkActivating, setBulkActivating] = useState(false);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [jumpPage, setJumpPage] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightedId, setHighlightedId] = useState(null);
 
   const loadUsers = async (resetSelected = false) => {
     try {
@@ -49,6 +62,48 @@ export default function AccountApprovalPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (loading) return;
+    const userId = searchParams.get("user");
+    if (!userId || users.length === 0) return;
+
+    const matchIndex = users.findIndex((u) => String(u.id) === String(userId));
+    if (matchIndex !== -1) {
+      const match = users[matchIndex];
+      setSearch("");
+      setPage(Math.floor(matchIndex / PAGE_SIZE) + 1);
+      setHighlightedId(match.id);
+      requestAnimationFrame(() => {
+        document
+          .getElementById(`pending-user-${match.id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      const timeout = setTimeout(() => setHighlightedId(null), 3000);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("user");
+          return next;
+        },
+        { replace: true },
+      );
+      return () => clearTimeout(timeout);
+    }
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("user");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [loading, users, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
   const handleActivate = async (id) => {
     setActivatingId(id);
     try {
@@ -75,17 +130,59 @@ export default function AccountApprovalPage() {
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
     );
 
-  const toggleAll = () =>
-    setSelected(selected.length === users.length ? [] : users.map((u) => u.id));
-
-  const allSelected = users.length > 0 && selected.length === users.length;
-  const someSelected = selected.length > 0 && !allSelected;
-
   const filteredUsers = users.filter(
     (u) =>
       u.username?.toLowerCase().includes(search.toLowerCase()) ||
       u.email?.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const pagedUsers = filteredUsers.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const handleJumpPage = (e) => {
+    e.preventDefault();
+    const p = parseInt(jumpPage);
+    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+      setPage(p);
+      setJumpPage("");
+    }
+  };
+
+  const pageRange = () => {
+    const total = totalPages;
+    const cur = page;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const delta = 2;
+    const left = Math.max(2, cur - delta);
+    const right = Math.min(total - 1, cur + delta);
+    const pages = [1];
+    if (left > 2) pages.push("...");
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < total - 1) pages.push("...");
+    pages.push(total);
+    return pages;
+  };
+
+  const toggleAll = () =>
+    setSelected((prev) => {
+      const pageIds = pagedUsers.map((u) => u.id);
+      const allPageSelected = pageIds.every((id) => prev.includes(id));
+      return allPageSelected
+        ? prev.filter((id) => !pageIds.includes(id))
+        : [...new Set([...prev, ...pageIds])];
+    });
+
+  const allSelected =
+    pagedUsers.length > 0 && pagedUsers.every((u) => selected.includes(u.id));
+  const someSelected =
+    !allSelected && pagedUsers.some((u) => selected.includes(u.id));
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -166,7 +263,7 @@ export default function AccountApprovalPage() {
             </thead>
 
             <tbody className="divide-y divide-gray-50">
-              {filteredUsers.length === 0 ? (
+              {pagedUsers.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -178,10 +275,17 @@ export default function AccountApprovalPage() {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => (
+                pagedUsers.map((u) => (
                   <tr
                     key={u.id}
-                    className={`transition-colors ${selected.includes(u.id) ? "bg-emerald-50" : "hover:bg-gray-50"}`}
+                    id={`pending-user-${u.id}`}
+                    className={`transition-colors ${
+                      highlightedId === u.id
+                        ? "bg-blue-50 ring-1 ring-inset ring-blue-300"
+                        : selected.includes(u.id)
+                          ? "bg-emerald-50"
+                          : "hover:bg-gray-50"
+                    }`}
                   >
                     <td className="px-4 py-3">
                       <Checkbox
@@ -227,6 +331,95 @@ export default function AccountApprovalPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Pagination (same style as Employee Management) ── */}
+      {!loading && totalPages > 0 && (
+        <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between gap-2 flex-wrap text-xs text-gray-500">
+          {/* Prev */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+            >
+              <ChevronsLeft size={14} />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="h-8 px-3 flex items-center gap-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+            >
+              <ChevronLeft size={13} /> Prev
+            </button>
+          </div>
+
+          {/* Page numbers */}
+          <div className="flex items-center gap-1 flex-wrap justify-center">
+            {pageRange().map((p, i) =>
+              p === "..." ? (
+                <span key={`ellipsis-${i}`} className="px-1 text-gray-300">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => p !== page && setPage(p)}
+                  className={`h-8 w-8 rounded-lg text-xs font-medium transition-colors ${
+                    p === page
+                      ? "bg-blue-600 text-white"
+                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+            <span className="ml-2 text-gray-400">
+              ({filteredUsers.length} total)
+            </span>
+            {totalPages > 1 && (
+              <form
+                onSubmit={handleJumpPage}
+                className="flex items-center gap-1 ml-1"
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={jumpPage}
+                  onChange={(e) => setJumpPage(e.target.value)}
+                  placeholder="Go to"
+                  className="h-8 w-16 text-xs text-center rounded-lg border border-gray-200 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                />
+                <button
+                  type="submit"
+                  className="h-8 px-3 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Go
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Next */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="h-8 px-3 flex items-center gap-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+            >
+              Next <ChevronRight size={13} />
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+            >
+              <ChevronsRight size={14} />
+            </button>
+          </div>
         </div>
       )}
     </div>
