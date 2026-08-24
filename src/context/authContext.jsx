@@ -5,6 +5,7 @@ import authService from "@/services/authService";
 import { getUser, clearAuth, setUser, getToken } from "@/lib/tokenStorage";
 import { getEcho, resetEcho } from "@/lib/echo";
 import { hasPermission as checkPermission } from "@/lib/authHelpers";
+import { setSessionDisplacedFlag } from "@/lib/sessionFlags";
 
 export const AuthContext = createContext(null);
 
@@ -69,21 +70,36 @@ export const AuthProvider = ({ children }) => {
     const echo = getEcho();
     if (!echo) return;
 
-    const channel = echo.private(`user.${user.id}`);
+    const channelName = `user.${user.id}`;
+    const channel = echo.private(channelName);
 
-    channel.listen(".permissions.updated", (e) => {
+    channel.listen(".permissions.updated", () => {
       refreshUserRef.current();
     });
 
     channel.listen(".logged.in.elsewhere", () => {
-      resetEcho();
+      // Order matters: commit the UI state that the user needs to see
+      // BEFORE tearing down auth/socket state. If clearAuth/resetEcho
+      // throw or trigger cascading unmounts, sessionDisplaced is already
+      // true and the modal has already been scheduled to render.
+      setSessionDisplaced(true);
+      setSessionDisplacedFlag(true);
       clearAuth();
       setUserState(null);
-      setSessionDisplaced(true);
+      resetEcho();
     });
 
     return () => {
-      echo.leaveChannel(`user.${user.id}`);
+      // Defensive: by the time this cleanup runs (e.g. after user?.id
+      // changes to null following the handler above), the echo instance
+      // captured in this closure may already have been torn down by
+      // resetEcho(). Guard against leaveChannel throwing on a
+      // dead/partial connector.
+      try {
+        echo?.leaveChannel(channelName);
+      } catch (err) {
+        console.error("Error leaving channel:", channelName, err);
+      }
     };
   }, [user?.id]);
 
@@ -163,7 +179,10 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const dismissDisplaced = useCallback(() => setSessionDisplaced(false), []);
+  const dismissDisplaced = useCallback(() => {
+    setSessionDisplacedFlag(false);
+    setSessionDisplacedFlag(true);
+  }, []);
 
   const hasPermission = useCallback(
     (permission) => checkPermission(user, permission),

@@ -121,4 +121,7 @@ export const INITIAL_EMPLOYEE_FORM_STATE = {
   salaryOverride: false,
   cosPositionId: "",
   consultantPositionId: "",
+  firstDayOfService: "",
+  contractPeriodFrom: "",
+  contractPeriodTo: "",
 };
