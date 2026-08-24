@@ -263,22 +263,25 @@ export function HeightField({ value, onChange, error }) {
 // a browser validation error. usePdsExtract strips units before setting.
 export function WeightField({ value, onChange, error }) {
   return (
-    <div className="flex items-center gap-2">
-      <Input
-        type="text"
-        inputMode="decimal"
-        placeholder="65"
-        value={value ?? ""}
-        onChange={(e) => {
-          // Allow only digits and a single decimal point
-          const raw = e.target.value.replace(/[^\d.]/g, "");
-          onChange(raw);
-        }}
-        className={cn("flex-1", error && "border-destructive")}
-      />
-      <span className="text-sm text-muted-foreground font-medium shrink-0">
-        kg
-      </span>
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <Input
+          type="text"
+          inputMode="decimal"
+          placeholder="65"
+          value={value ?? ""}
+          onChange={(e) => {
+            // Allow only digits and a single decimal point
+            const raw = e.target.value.replace(/[^\d.]/g, "");
+            onChange(raw);
+          }}
+          className={cn("flex-1", error && "border-destructive")}
+        />
+        <span className="text-sm text-muted-foreground font-medium shrink-0">
+          kg
+        </span>
+      </div>
+      <p className="text-[11px] text-gray-400">Enter in kilograms.</p>
     </div>
   );
 }

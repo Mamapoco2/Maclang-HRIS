@@ -86,6 +86,15 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       return;
     }
 
+    if (
+      formData.contractPeriodFrom &&
+      formData.contractPeriodTo &&
+      formData.contractPeriodTo < formData.contractPeriodFrom
+    ) {
+      toast.error("Contract period 'To' date can't be before the 'From' date.");
+      return;
+    }
+
     setSubmitting(true);
 
     const form = buildEmployeeFormData({
@@ -177,8 +186,8 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col bg-white w-full relative"
-      style={{ maxHeight: "90vh", fontFamily: "inherit" }}
+      className="flex flex-col bg-white w-full min-w-0 relative"
+      style={{ maxHeight: "min(90vh, 90dvh)", fontFamily: "inherit" }}
     >
       <EmployeeHeader
         employee={employee}
@@ -197,14 +206,14 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       />
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-      <div className="flex border-b border-gray-100 px-6 bg-white">
+      <div className="flex border-b border-gray-100 px-4 sm:px-6 bg-white overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "py-3 mr-6 text-xs font-semibold uppercase tracking-widest border-b-2 -mb-px transition-colors duration-150",
+              "py-3 mr-4 sm:mr-6 text-xs font-semibold uppercase tracking-widest border-b-2 -mb-px transition-colors duration-150 whitespace-nowrap",
               activeTab === tab.id
                 ? "border-gray-900 text-gray-900"
                 : "border-transparent text-gray-400 hover:text-gray-600",
@@ -216,7 +225,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       </div>
 
       {/* ── Scrollable body ──────────────────────────────────────────────── */}
-      <div className="overflow-y-auto flex-1 px-6 py-6 space-y-8">
+      <div className="overflow-y-auto flex-1 min-w-0 px-4 sm:px-6 py-6 space-y-8">
         {initializing ? (
           <FormLoader
             label={employee ? "Loading employee data..." : "Preparing form..."}
@@ -256,19 +265,19 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
       </div>
 
       {/* ── Footer / Submit ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-100 bg-white">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 bg-white">
         <button
           type="button"
           onClick={onClose}
           disabled={submitting}
-          className="text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 transition-colors px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 transition-colors px-2 sm:px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={submitting || initializing}
-          className="inline-flex items-center gap-2 h-9 px-5 rounded-lg bg-gray-900 text-white text-xs font-semibold uppercase tracking-wider hover:bg-gray-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 h-9 px-4 sm:px-5 rounded-lg bg-gray-900 text-white text-xs font-semibold uppercase tracking-wider hover:bg-gray-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
         >
           {submitting ? (
             <>
@@ -320,6 +329,20 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         .field-input::placeholder {
           color: #d1d5db;
           text-transform: none;
+        }
+        /* Hide the native calendar icon (Chrome/Edge/Safari) — a custom
+           lucide "Calendar" icon is rendered at the right edge instead.
+           The native indicator stays, invisible, stretched over the full
+           input so the whole field is still clickable to open the picker. */
+        input[type="date"].field-input::-webkit-calendar-picker-indicator {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          opacity: 0;
+          cursor: pointer;
         }
       `}</style>
     </form>

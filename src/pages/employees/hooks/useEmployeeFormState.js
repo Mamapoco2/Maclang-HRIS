@@ -141,6 +141,9 @@ export function useEmployeeFormState(employee) {
           consultantPositionId: employee.consultant_position_id
             ? String(employee.consultant_position_id)
             : "",
+          firstDayOfService: employee.first_day_of_service ?? "",
+          contractPeriodFrom: employee.contract_period_from ?? "",
+          contractPeriodTo: employee.contract_period_to ?? "",
         };
 
         let finalPositionLabel = positionLabel(position);

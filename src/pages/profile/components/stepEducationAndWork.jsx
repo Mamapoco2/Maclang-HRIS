@@ -2,6 +2,7 @@
 import { Section } from "./primitives";
 import { RepeatableTable } from "./repeatableTable";
 import { EDU_COLS } from "../../../constants/constants";
+import { GraduationCap, Award, Briefcase } from "lucide-react";
 
 // ─── Education ────────────────────────────────────────────────────────────────
 const EDU_LEVELS = [
@@ -15,7 +16,11 @@ const EDU_LEVELS = [
 export function StepEducational({ v, set }) {
   return (
     <div className="space-y-6">
-      <Section title="III. Educational Background (No. 26)">
+      <Section
+        title="III. Educational Background (No. 26)"
+        icon={GraduationCap}
+        description="Add each level you completed, starting with Elementary."
+      >
         {EDU_LEVELS.map(([key, label]) => (
           <RepeatableTable
             key={key}
@@ -35,7 +40,7 @@ export function StepEducational({ v, set }) {
 export function StepEligibility({ v, set }) {
   return (
     <div className="space-y-5">
-      <Section title="IV. Civil Service Eligibility (No. 27)">
+      <Section title="IV. Civil Service Eligibility (No. 27)" icon={Award}>
         <p className="text-xs text-muted-foreground -mt-2">
           CES / CSEE / Career Service / RA 1080 (Board/Bar) / Under Special Laws
           / Category II or IV / Uniformed Personnel Eligibilities
@@ -82,7 +87,7 @@ export function StepEligibility({ v, set }) {
 export function StepWorkExperience({ v, set }) {
   return (
     <div className="space-y-5">
-      <Section title="V. Work Experience (No. 28)">
+      <Section title="V. Work Experience (No. 28)" icon={Briefcase}>
         <p className="text-xs text-muted-foreground -mt-2">
           Include private employment. Start from your most recent work.
         </p>

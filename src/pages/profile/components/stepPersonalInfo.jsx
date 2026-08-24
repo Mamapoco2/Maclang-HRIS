@@ -16,6 +16,7 @@ import {
   WeightField,
 } from "./addressFields";
 import { CITIZENSHIPS } from "../../../constants/constants";
+import { User, IdCard, MapPin, Phone } from "lucide-react";
 
 // Only IDs that appear on CS Form No. 212 (Revised 2025)
 const GOV_IDS = [
@@ -36,7 +37,11 @@ export function StepPersonalInfo({ v, set, fe }) {
 
   return (
     <div className="space-y-5">
-      <Section title="I. Personal Information">
+      <Section
+        title="I. Personal Information"
+        icon={User}
+        description="Your legal name and basic identifying details, as they appear on official records."
+      >
         <Grid2>
           <Field id="surname" label="Surname" required error={fe?.surname}>
             <Input
@@ -218,7 +223,11 @@ export function StepPersonalInfo({ v, set, fe }) {
         </Grid2>
       </Section>
 
-      <Section title="Government IDs">
+      <Section
+        title="Government IDs"
+        icon={IdCard}
+        description="Optional, but helps HR verify records faster."
+      >
         <Grid2>
           {GOV_IDS.map(([key, label, placeholder]) => (
             <Field key={key} id={key} label={label} error={fe?.[key]}>
@@ -234,15 +243,15 @@ export function StepPersonalInfo({ v, set, fe }) {
         </Grid2>
       </Section>
 
-      <Section title="Residential Address (No. 17)">
+      <Section title="Residential Address (No. 17)" icon={MapPin}>
         <AddressFields prefix="residential" v={v} set={set} fe={fe} />
       </Section>
 
-      <Section title="Permanent Address (No. 18)">
+      <Section title="Permanent Address (No. 18)" icon={MapPin}>
         <AddressFields prefix="permanent" v={v} set={set} fe={fe} />
       </Section>
 
-      <Section title="Contact Information">
+      <Section title="Contact Information" icon={Phone}>
         <Grid2>
           <Field
             id="telephone_no"

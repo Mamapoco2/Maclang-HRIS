@@ -2,6 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { Field, Section, Grid2 } from "./primitives";
 import { RepeatableTable } from "./repeatableTable";
+import { Heart, Baby, User } from "lucide-react";
 
 const SPOUSE_FIELDS = [
   ["spouse_surname", "Spouse's Surname"],
@@ -18,7 +19,11 @@ export function StepFamilyBackground({ v, set, fe }) {
 
   return (
     <div className="space-y-5">
-      <Section title="II. Family Background — Spouse (No. 22)">
+      <Section
+        title="II. Family Background — Spouse (No. 22)"
+        icon={Heart}
+        description="Leave blank if not applicable."
+      >
         <Grid2>
           {SPOUSE_FIELDS.map(([key, label]) => (
             <Field key={key} id={key} label={label} error={fe?.[key]}>
@@ -56,7 +61,7 @@ export function StepFamilyBackground({ v, set, fe }) {
         </Field>
       </Section>
 
-      <Section title="Name of Children (No. 23)">
+      <Section title="Name of Children (No. 23)" icon={Baby}>
         <RepeatableTable
           rows={v.children ?? []}
           onChange={(r) => set("children", r)}
@@ -68,7 +73,7 @@ export function StepFamilyBackground({ v, set, fe }) {
         />
       </Section>
 
-      <Section title="Father's Name (No. 24)">
+      <Section title="Father's Name (No. 24)" icon={User}>
         <Grid2>
           {[
             ["father_surname", "Surname"],
@@ -88,7 +93,7 @@ export function StepFamilyBackground({ v, set, fe }) {
         </Grid2>
       </Section>
 
-      <Section title="Mother's Maiden Name (No. 25)">
+      <Section title="Mother's Maiden Name (No. 25)" icon={User}>
         <Grid2>
           {[
             ["mother_maiden_surname", "Surname"],

@@ -1,6 +1,54 @@
+import { Calendar } from "lucide-react";
 import { FieldSelect } from "../shared/FormField";
 import { SingleCombobox } from "../shared/Combobox";
 import { positionLabel } from "../../utils/employeeFormatters";
+
+function DateField({ label, value, onChange, min, max }) {
+  return (
+    <FieldSelect label={label}>
+      <div className="relative">
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          min={min || undefined}
+          max={max || undefined}
+          className="field-input pr-8"
+        />
+        <Calendar
+          size={14}
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+        />
+      </div>
+    </FieldSelect>
+  );
+}
+
+function ContractDatesFields({ formData, handleChange }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+      <DateField
+        label="First day of service"
+        value={formData.firstDayOfService}
+        onChange={(v) => handleChange("firstDayOfService", v)}
+      />
+
+      <DateField
+        label="Contract period — from"
+        value={formData.contractPeriodFrom}
+        onChange={(v) => handleChange("contractPeriodFrom", v)}
+        max={formData.contractPeriodTo}
+      />
+
+      <DateField
+        label="Contract period — to"
+        value={formData.contractPeriodTo}
+        onChange={(v) => handleChange("contractPeriodTo", v)}
+        min={formData.contractPeriodFrom}
+      />
+    </div>
+  );
+}
 
 export function PositionDetailsSection({
   formData,
@@ -86,6 +134,8 @@ export function PositionDetailsSection({
             }
           />
         </FieldSelect>
+
+        <ContractDatesFields formData={formData} handleChange={handleChange} />
       </div>
     );
   }
@@ -111,6 +161,8 @@ export function PositionDetailsSection({
             }
           />
         </FieldSelect>
+
+        <ContractDatesFields formData={formData} handleChange={handleChange} />
       </div>
     );
   }

@@ -10,12 +10,24 @@ import {
 import { Field, Section, Grid2 } from "./primitives";
 import { RepeatableTable } from "./repeatableTable";
 import { YesNoField } from "./repeatableTable";
+import {
+  HeartHandshake,
+  BookOpen,
+  Info,
+  HelpCircle,
+  Users,
+  IdCard,
+} from "lucide-react";
 
 // ─── Voluntary Work & L&D ─────────────────────────────────────────────────────
 export function StepVoluntaryAndLnd({ v, set }) {
   return (
     <div className="space-y-6">
-      <Section title="VI. Voluntary Work (No. 29)">
+      <Section
+        title="VI. Voluntary Work (No. 29)"
+        icon={HeartHandshake}
+        description="Organizations, NGOs, or community service — not paid employment."
+      >
         <RepeatableTable
           rows={v.voluntary_works ?? []}
           onChange={(r) => set("voluntary_works", r)}
@@ -37,7 +49,10 @@ export function StepVoluntaryAndLnd({ v, set }) {
           ]}
         />
       </Section>
-      <Section title="VII. L&D Interventions / Training Programs (No. 30)">
+      <Section
+        title="VII. L&D Interventions / Training Programs (No. 30)"
+        icon={BookOpen}
+      >
         <RepeatableTable
           rows={v.trainings ?? []}
           onChange={(r) => set("trainings", r)}
@@ -68,7 +83,7 @@ export function StepVoluntaryAndLnd({ v, set }) {
 export function StepOtherInfo({ v, set }) {
   return (
     <div className="space-y-5">
-      <Section title="VIII. Other Information">
+      <Section title="VIII. Other Information" icon={Info}>
         <RepeatableTable
           label="31. Special Skills and Hobbies"
           rows={v.special_skills ?? []}
@@ -185,7 +200,11 @@ const QUESTIONS = [
 export function StepQuestions({ v, set }) {
   return (
     <div className="space-y-5">
-      <Section title="IX. Questions (No. 34–40)">
+      <Section
+        title="IX. Questions (No. 34–40)"
+        icon={HelpCircle}
+        description="Answer honestly — these mirror the official CS Form No. 212."
+      >
         <div className="space-y-4">
           {QUESTIONS.map(([key, label, detailKey, detailLabel]) => (
             <YesNoField
@@ -238,7 +257,10 @@ export function StepReferencesAndId({ v, set, fe }) {
 
   return (
     <div className="space-y-5">
-      <Section title="41. References (not related to applicant/appointee)">
+      <Section
+        title="41. References (not related to applicant/appointee)"
+        icon={Users}
+      >
         <RepeatableTable
           rows={v.references ?? []}
           onChange={(r) => set("references", r)}
@@ -259,7 +281,7 @@ export function StepReferencesAndId({ v, set, fe }) {
         />
       </Section>
 
-      <Section title="Government Issued ID">
+      <Section title="Government Issued ID" icon={IdCard}>
         <Field
           id="govt_id_type"
           label="ID Type"
