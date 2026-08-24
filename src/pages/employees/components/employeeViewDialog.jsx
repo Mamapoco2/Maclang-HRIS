@@ -313,6 +313,55 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
                 </>
               )}
 
+              {(isCos || isConsultant) && (
+                <>
+                  <InfoRow
+                    icon={Calendar}
+                    label="First Day of Service"
+                    value={
+                      employee.first_day_of_service
+                        ? new Date(
+                            employee.first_day_of_service,
+                          ).toLocaleDateString("en-PH", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : null
+                    }
+                  />
+                  <InfoRow
+                    icon={Calendar}
+                    label="Contract Period"
+                    value={
+                      employee.contract_period_from ||
+                      employee.contract_period_to
+                        ? [
+                            employee.contract_period_from
+                              ? new Date(
+                                  employee.contract_period_from,
+                                ).toLocaleDateString("en-PH", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "—",
+                            employee.contract_period_to
+                              ? new Date(
+                                  employee.contract_period_to,
+                                ).toLocaleDateString("en-PH", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "—",
+                          ].join(" – ")
+                        : null
+                    }
+                  />
+                </>
+              )}
+
               <InfoRow
                 icon={DollarSign}
                 label="Annual Salary"

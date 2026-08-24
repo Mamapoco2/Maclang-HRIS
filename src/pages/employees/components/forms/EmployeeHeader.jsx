@@ -19,7 +19,7 @@ export function EmployeeHeader({
   const hasAvatar = avatarPreview ?? employee?.avatar_url;
 
   return (
-    <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 border-b border-gray-100">
       {/* Avatar */}
       <div
         className="relative group flex-shrink-0"
@@ -92,7 +92,7 @@ export function EmployeeHeader({
       </div>
 
       {/* Employee number + status badge */}
-      <div className="flex-shrink-0 text-right space-y-1.5">
+      <div className="flex-shrink-0 ml-auto text-right space-y-1.5">
         <div>
           <p className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">
             Employee No.

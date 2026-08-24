@@ -15,7 +15,7 @@ export default function EmployeeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+      <DialogContent className="max-w-4xl sm:max-w-4xl w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-h-[92dvh] sm:max-h-[95dvh] overflow-hidden p-3 sm:p-6">
         <VisuallyHidden>
           <DialogTitle>
             {employee ? "Edit Employee" : "New Employee"}

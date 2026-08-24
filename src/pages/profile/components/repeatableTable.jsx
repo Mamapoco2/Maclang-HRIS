@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Inbox } from "lucide-react";
 import { DatePickerField } from "./datePickerField";
 import { Field } from "./primitives";
 
@@ -67,7 +67,7 @@ export function RepeatableTable({
     onChange(rows.map((r, idx) => (idx === i ? { ...r, [key]: val } : r)));
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0">
       {label && (
         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
           {label}
@@ -75,14 +75,14 @@ export function RepeatableTable({
       )}
 
       {/* Desktop */}
-      <div className="hidden sm:block rounded-md border overflow-x-auto">
+      <div className="hidden sm:block rounded-lg border border-gray-200 overflow-x-auto min-w-0">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-muted/50">
+            <tr className="bg-gray-50">
               {columns.map((c) => (
                 <th
                   key={c.key}
-                  className="px-2 py-1.5 text-left font-semibold uppercase whitespace-nowrap"
+                  className="px-2.5 py-2 text-left font-semibold uppercase text-gray-500 tracking-wide whitespace-nowrap"
                 >
                   {c.label}
                 </th>
@@ -95,16 +95,25 @@ export function RepeatableTable({
               <tr>
                 <td
                   colSpan={columns.length + 1}
-                  className="px-3 py-3 text-center text-muted-foreground italic text-xs"
+                  className="px-3 py-8 text-center text-gray-400 text-xs"
                 >
-                  No entries. Click "{addLabel}".
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Inbox className="w-4 h-4 text-gray-300" />
+                    <span>
+                      No entries yet. Click{" "}
+                      <span className="font-semibold text-gray-500">
+                        "{addLabel}"
+                      </span>{" "}
+                      to add one.
+                    </span>
+                  </div>
                 </td>
               </tr>
             )}
             {rows.map((row, i) => (
-              <tr key={i} className="border-t">
+              <tr key={i} className="border-t border-gray-100">
                 {columns.map((c) => (
-                  <td key={c.key} className="px-1.5 py-1 min-w-[120px]">
+                  <td key={c.key} className="px-1.5 py-1.5 min-w-[120px]">
                     <CellInput c={c} row={row} i={i} updateCell={updateCell} />
                   </td>
                 ))}
@@ -113,8 +122,9 @@ export function RepeatableTable({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-destructive"
+                    className="h-6 w-6 text-gray-400 hover:text-rose-500 hover:bg-rose-50"
                     onClick={() => removeRow(i)}
+                    title="Remove this entry"
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -128,18 +138,27 @@ export function RepeatableTable({
       {/* Mobile */}
       <div className="sm:hidden space-y-2">
         {rows.length === 0 && (
-          <p className="text-center text-muted-foreground italic text-xs py-3 rounded-md border">
-            No entries. Tap "{addLabel}".
-          </p>
+          <div className="flex flex-col items-center gap-1.5 text-center text-gray-400 text-xs py-6 rounded-lg border border-gray-200">
+            <Inbox className="w-4 h-4 text-gray-300" />
+            <span>
+              No entries yet. Tap{" "}
+              <span className="font-semibold text-gray-500">"{addLabel}"</span>{" "}
+              to add one.
+            </span>
+          </div>
         )}
         {rows.map((row, i) => (
-          <div key={i} className="rounded-md border p-3 space-y-2 relative">
+          <div
+            key={i}
+            className="rounded-lg border border-gray-200 p-3 space-y-2 relative"
+          >
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-destructive absolute top-2 right-2"
+              className="h-6 w-6 text-gray-400 hover:text-rose-500 hover:bg-rose-50 absolute top-2 right-2"
               onClick={() => removeRow(i)}
+              title="Remove this entry"
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -159,7 +178,7 @@ export function RepeatableTable({
         type="button"
         variant="outline"
         size="sm"
-        className="text-xs h-7"
+        className="text-xs h-8 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
         onClick={addRow}
       >
         <Plus className="h-3 w-3 mr-1" />

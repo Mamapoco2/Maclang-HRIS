@@ -35,6 +35,9 @@ export function buildEmployeeFormData({
   form.append("step_increment_id", formData.stepIncrementId);
   form.append("cos_position_id", formData.cosPositionId);
   form.append("consultant_position_id", formData.consultantPositionId);
+  form.append("first_day_of_service", formData.firstDayOfService ?? "");
+  form.append("contract_period_from", formData.contractPeriodFrom ?? "");
+  form.append("contract_period_to", formData.contractPeriodTo ?? "");
   form.append("first_name", up(formData.firstName));
   form.append("middle_name", up(formData.middleName));
   form.append("last_name", up(formData.lastName));
