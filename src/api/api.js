@@ -2,6 +2,7 @@
 import axios from "axios";
 import { getToken, clearAuth } from "@/lib/tokenStorage";
 import { getEcho } from "@/lib/echo";
+import { isSessionDisplacedFlag } from "@/lib/sessionFlags";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -32,6 +33,7 @@ api.interceptors.response.use(
       const isProfileCheck = url.includes("/profile/status");
       const isAlreadyOnLogin = window.location.pathname === "/login";
       const isLogout = url.includes("/logout");
+      const isDisplacedFlow = isSessionDisplacedFlag();
 
       if (!isProfileCheck && !isAlreadyOnLogin && !isLogout) {
         clearAuth();

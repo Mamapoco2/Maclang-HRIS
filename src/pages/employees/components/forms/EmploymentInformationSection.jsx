@@ -31,6 +31,10 @@ export function EmploymentInformationSection({
   handleMonthlySalaryChange,
   handleAnnualSalaryChange,
 }) {
+  const isCosOrConsultant =
+    formData.employeeType === "Contract of Service" ||
+    formData.employeeType === "Consultant";
+
   return (
     <FormSection label="Employment information">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
@@ -153,6 +157,50 @@ export function EmploymentInformationSection({
           ))}
         </div>
       </div>
+
+      {/* COS / Consultant contract dates */}
+      {isCosOrConsultant && (
+        <div className="space-y-1 mb-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+            Contract details
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <FieldSelect label="First day of service">
+              <input
+                type="date"
+                value={formData.firstDayOfService}
+                onChange={(e) =>
+                  handleChange("firstDayOfService", e.target.value)
+                }
+                className="field-input"
+              />
+            </FieldSelect>
+
+            <FieldSelect label="Contract period (from)">
+              <input
+                type="date"
+                value={formData.contractPeriodFrom}
+                onChange={(e) =>
+                  handleChange("contractPeriodFrom", e.target.value)
+                }
+                className="field-input"
+              />
+            </FieldSelect>
+
+            <FieldSelect label="Contract period (to)">
+              <input
+                type="date"
+                value={formData.contractPeriodTo}
+                min={formData.contractPeriodFrom || undefined}
+                onChange={(e) =>
+                  handleChange("contractPeriodTo", e.target.value)
+                }
+                className="field-input"
+              />
+            </FieldSelect>
+          </div>
+        </div>
+      )}
 
       <CompensationSection
         formData={formData}
