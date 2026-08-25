@@ -72,8 +72,14 @@ const ROUTE_PERMISSION_MAP = [
   { path: "/bug-reports", permission: "bug-reports.view" },
   { path: "/release-manager", permission: "accounts.manage" },
   { path: "/audit-logs", permission: "audit_logs.view" },
-  { path: "/updates", permission: null },
-  { path: "/settings", permission: null },
+
+  // NOTE: /updates and /settings are intentionally NOT permission-gated
+  // (they're public utility pages any logged-in user can open directly).
+  // They must stay OUT of this map's redirect resolution — see the
+  // filter in useFirstAccessibleRoute below. Do not add `permission: null`
+  // entries here expecting them to work as "always accessible" fallback
+  // targets; that was the bug that caused /updates to become the default
+  // redirect for users with zero permissions.
 ];
 
 const SUPER_ROLES = ["superadmin", "super-admin"];
@@ -84,6 +90,17 @@ const ROLE_DEFAULT_ROUTE = [
   { role: "hr", path: "/Announcement", permission: "announcements.view" },
 ];
 
+/**
+ * Resolves the first route the current user is actually allowed to land on.
+ * Used as the redirect target for guards like PermissionRoute / PublicRoute
+ * when the user isn't authorized for the route they tried to visit.
+ *
+ * IMPORTANT: only routes with a real permission requirement are eligible
+ * to be returned here. Public/utility routes (permission: null, e.g.
+ * /updates, /settings) must never be treated as a valid fallback — a user
+ * with zero permissions should land on `fallback` (typically a "no access"
+ * page), not silently end up on an unrelated public page.
+ */
 export function useFirstAccessibleRoute(fallback = "/status/403") {
   const { user } = useContext(AuthContext);
 
@@ -99,10 +116,12 @@ export function useFirstAccessibleRoute(fallback = "/status/403") {
   );
   if (roleOverride) return roleOverride.path;
 
-  const firstRoute = ROUTE_PERMISSION_MAP.find(({ permission }) => {
-    if (!permission) return true;
-    return userPermissions.includes(permission);
-  });
+  // Only routes gated by an actual permission string count as valid
+  // redirect destinations. A falsy `permission` is never treated as
+  // "always accessible" here.
+  const firstRoute = ROUTE_PERMISSION_MAP.find(
+    ({ permission }) => permission && userPermissions.includes(permission),
+  );
 
   return firstRoute?.path ?? fallback;
 }

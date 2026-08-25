@@ -837,10 +837,12 @@ function EmployeeRenewalTable({
     );
 
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+    // FIX: min-w-0 lets this card shrink inside its flex/grid parent instead
+    // of growing to fit the table, which is what pushed content sideways.
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden min-w-0">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
+          <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
               {[
                 ["employeeNumber", "Employee Number"],
@@ -910,7 +912,6 @@ function EmployeeRenewalTable({
                     {emp.position}
                   </td>
                   <td className="px-4 py-3">
-                    {/* FIX: Show employment type with color-coded badge */}
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
                       ${
@@ -1087,7 +1088,7 @@ function UploadDocumentsCard({ toast }) {
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm min-w-0">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-blue-50">
             <Upload className="w-4 h-4 text-blue-600" />
@@ -1296,7 +1297,7 @@ function GenerateContractCard({ employee, toast }) {
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm min-w-0">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-emerald-50">
@@ -1509,7 +1510,7 @@ function GenerateContractCard({ employee, toast }) {
 
 function RenewalTimeline() {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
       <div className="flex items-center gap-2 mb-5">
         <Clock className="w-4 h-4 text-slate-400" />
         <h3 className="text-sm font-semibold text-slate-800">
@@ -1555,7 +1556,7 @@ function RenewalTimeline() {
 function RenewalHistoryTable({ employee }) {
   const rows = useMemo(() => defaultHistory(employee), [employee]);
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm min-w-0">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
         <History className="w-4 h-4 text-slate-400" />
         <h3 className="text-sm font-semibold text-slate-800">
@@ -1643,7 +1644,7 @@ function EmployeeContractCard({ employee, contract }) {
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
       <div className="flex items-center gap-2 mb-4">
         <FileCheck className="w-4 h-4 text-slate-400" />
         <h3 className="text-sm font-semibold text-slate-800">
@@ -1681,13 +1682,12 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
   const { employee: fetched, loading, error } = useEmployeeDetail(employeeId);
   const employee = fetched ?? listSnapshot;
 
-  // ── FIX: Extracted into dedicated hook with uppercase-safe name matching ──
   const { activeContract, setActiveContract, contractLoading } =
     useActiveContract(employee);
 
   if (loading && !employee) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 min-w-0">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800"
@@ -1701,7 +1701,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
 
   if (error && !employee) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800"
@@ -1716,7 +1716,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
@@ -1734,7 +1734,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
       </div>
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
           <img
             src={employee.photo}
@@ -1742,7 +1742,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
             className="w-16 h-16 rounded-xl"
             onError={(e) => (e.target.style.display = "none")}
           />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <p className="text-xs font-mono text-slate-400">
@@ -1775,11 +1775,10 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
           <EmployeeContractCard employee={employee} contract={activeContract} />
 
-          {/* ── AutoRenewalPanel — only shown when a matching active contract exists ── */}
           {activeContract ? (
             <AutoRenewalPanel
               contract={activeContract}
@@ -1788,7 +1787,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
             />
           ) : (
             !contractLoading && (
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Info className="w-4 h-4" />
                   <p className="text-sm">
@@ -1805,7 +1804,7 @@ function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
           <GenerateContractCard employee={employee} toast={toast} />
           <RenewalHistoryTable employee={employee} />
         </div>
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           <RenewalTimeline />
         </div>
       </div>
@@ -1856,15 +1855,24 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-30">
-        <div className="max-w-screen-2xl mx-auto px-6 py-3.5 flex items-center justify-between">
+    // FIX: min-w-0 on the page root (same pattern as the Employees page) lets
+    // this page shrink inside the layout's flex chain instead of forcing the
+    // sidebar area to widen when the table below is wide.
+    <div className="min-h-screen min-w-0 bg-slate-50 font-sans">
+      {/* ── Sticky Header ── */}
+      {/* FIX: max-w-screen-2xl is a fixed 1536px cap (fine on its own), but
+          combined with mx-auto it still doesn't stop this bar from being
+          forced wider than the viewport by flex-shrink issues below — so we
+          also constrain width to the actual parent via w-full + min-w-0,
+          matching the Employees page's header bar. */}
+      <header className="bg-white border-b border-slate-100 shadow-sm top-0 w-full min-w-0">
+        <div className="max-w-screen-2xl mx-auto px-6 py-3.5 flex items-center justify-between w-full min-w-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
               <ClipboardList className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-xs text-slate-400 leading-none">HRMS</p>
+              <p className="text-xs text-slate-400 leading-none">HRIS</p>
               <p className="text-sm font-semibold text-slate-800 leading-tight">
                 Contract Renewal
               </p>
@@ -1881,7 +1889,12 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      {/* ── Content ── */}
+      {/* FIX: min-w-0 + overflow-x-hidden so the wide table inside contains
+          its own horizontal scroll instead of pushing this whole block, and
+          therefore the sidebar layout, sideways — same fix as the Employees
+          page's content wrapper. */}
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-8 space-y-6 min-w-0 overflow-x-hidden">
         {selected ? (
           <EmployeeRenewalDetails
             employeeId={selected.id}
@@ -1895,7 +1908,6 @@ export default function App() {
               <h1 className="text-lg font-bold text-slate-800">
                 Employee Contract Renewals
               </h1>
-              {/* FIX: Clarify scope — Plantilla excluded */}
               <p className="text-sm text-slate-400 mt-0.5">
                 Manage renewals for Contract of Service and Consultant
                 employees. Plantilla positions are excluded.
