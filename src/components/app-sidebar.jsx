@@ -136,6 +136,7 @@ const NAV_MAIN = [
           {
             title: "New Leave Request",
             url: "/newLeaveRequest",
+            permission: "leave.request.manage",
           },
         ],
       },

@@ -80,10 +80,12 @@ const NAV_USER = [
       {
         title: "My Requests",
         url: "/leaveRequest",
+        permission: "leave.request.view",
       },
       {
         title: "New Request",
         url: "/newLeaveRequest",
+        permission: "leave.request.manage",
       },
       {
         title: "Calendar",
