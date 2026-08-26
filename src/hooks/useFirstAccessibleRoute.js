@@ -82,12 +82,22 @@ const ROUTE_PERMISSION_MAP = [
   // redirect for users with zero permissions.
 ];
 
+// Comparisons always run against a lowercased userRoles array (see below),
+// so every entry here MUST be lowercase or it will never match.
 const SUPER_ROLES = ["superadmin", "super-admin"];
 
 const SUPER_USER_DEFAULT_ROUTE = "/dashboard";
 
+// role values here are compared case-insensitively against the user's
+// roles (see roleOverride below), so casing doesn't matter — write them
+// however is most readable.
 const ROLE_DEFAULT_ROUTE = [
   { role: "hr", path: "/Announcement", permission: "announcements.view" },
+  {
+    role: "superadmin",
+    path: "/Announcement",
+    permission: "announcements.view",
+  },
 ];
 
 /**
@@ -95,30 +105,43 @@ const ROLE_DEFAULT_ROUTE = [
  * Used as the redirect target for guards like PermissionRoute / PublicRoute
  * when the user isn't authorized for the route they tried to visit.
  *
- * IMPORTANT: only routes with a real permission requirement are eligible
- * to be returned here. Public/utility routes (permission: null, e.g.
- * /updates, /settings) must never be treated as a valid fallback — a user
- * with zero permissions should land on `fallback` (typically a "no access"
- * page), not silently end up on an unrelated public page.
+ * IMPORTANT — ordering matters here:
+ *   1. ROLE_DEFAULT_ROUTE is checked FIRST. This lets specific roles
+ *      (including super-admin-flagged roles) be routed somewhere other
+ *      than the generic super-user default.
+ *   2. isSuperUser is checked SECOND, as a generic fallback for any
+ *      super role that doesn't have its own ROLE_DEFAULT_ROUTE entry.
+ *   3. ROUTE_PERMISSION_MAP is checked LAST, for everyone else.
+ *
+ * Checking isSuperUser before ROLE_DEFAULT_ROUTE was the earlier bug:
+ * any role that satisfies SUPER_ROLES (e.g. "superadmin") short-circuited
+ * straight to SUPER_USER_DEFAULT_ROUTE and its ROLE_DEFAULT_ROUTE entry
+ * became unreachable dead code.
+ *
+ * Also: only routes with a real permission requirement are eligible to be
+ * returned from ROUTE_PERMISSION_MAP. Public/utility routes (e.g.
+ * /updates, /settings) are intentionally excluded from this map so a user
+ * with zero permissions lands on `fallback`, not an unrelated public page.
  */
 export function useFirstAccessibleRoute(fallback = "/status/403") {
   const { user } = useContext(AuthContext);
 
   const userRoles = (user?.roles ?? []).map((r) => String(r).toLowerCase());
-  const isSuperUser = userRoles.some((r) => SUPER_ROLES.includes(r));
   const userPermissions = user?.permissions ?? [];
 
-  if (isSuperUser) return SUPER_USER_DEFAULT_ROUTE;
-
+  // 1. Role-specific override — checked first, before any super-user shortcut.
   const roleOverride = ROLE_DEFAULT_ROUTE.find(
     ({ role, permission }) =>
-      userRoles.includes(role) && userPermissions.includes(permission),
+      userRoles.includes(String(role).toLowerCase()) &&
+      userPermissions.includes(permission),
   );
   if (roleOverride) return roleOverride.path;
 
-  // Only routes gated by an actual permission string count as valid
-  // redirect destinations. A falsy `permission` is never treated as
-  // "always accessible" here.
+  // 2. Generic super-user fallback (only reached if no explicit override matched).
+  const isSuperUser = userRoles.some((r) => SUPER_ROLES.includes(r));
+  if (isSuperUser) return SUPER_USER_DEFAULT_ROUTE;
+
+  // 3. Permission-gated routes for everyone else.
   const firstRoute = ROUTE_PERMISSION_MAP.find(
     ({ permission }) => permission && userPermissions.includes(permission),
   );
