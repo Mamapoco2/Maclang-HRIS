@@ -4,17 +4,22 @@ import {
   IconChartBar,
   IconDashboard,
   IconReport,
+  IconSettings,
   IconUsers,
   IconBriefcase,
+  IconPlane,
   IconUsersGroup,
   IconSchool,
   IconSpeakerphone,
+  IconUserCheck,
   IconTarget,
+  IconBuildingStore,
   IconFileText,
   IconInnerShadowTop,
   IconAward,
   IconWallet,
   IconSettings2,
+  IconCompass,
   IconBug,
   IconRocket,
 } from "@tabler/icons-react";
@@ -113,11 +118,7 @@ const NAV_MAIN = [
             url: "/leaveDashboard",
             permission: "leave.dashboard.view",
           },
-          {
-            title: "Approval",
-            url: "/leaveApproval",
-            permission: "leave.approval.view",
-          },
+
           {
             title: "Balance",
             url: "/leaveBalance",
@@ -306,6 +307,11 @@ const NAV_MAIN = [
         permission: "accounts.view",
       },
       {
+        title: "Role Management",
+        url: "/roles",
+        permission: "roles.view",
+      },
+      {
         title: "Departments",
         url: "/departments",
         permission: "departments.view",
@@ -414,10 +420,6 @@ function filterNav(navItems, userPermissions, isSuperUser) {
     const isContainer = Array.isArray(item.items);
 
     if (isContainer) {
-      if (!canSee(item, userPermissions, isSuperUser)) {
-        return acc;
-      }
-
       const visibleChildren = filterNav(
         item.items,
         userPermissions,

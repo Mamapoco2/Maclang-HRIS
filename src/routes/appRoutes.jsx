@@ -26,7 +26,7 @@ import LeaveCalendar from "../pages/leave/CalendarPage";
 import LeaveApproval from "../pages/leave/ApprovalsPage";
 import LeaveRequest from "../pages/leave/RequestsPage";
 import NewLeaveRequest from "../pages/leave/NewRequestPage";
-import Accounts from "../pages/accounts/components/accountsPage";
+import Accounts from "../pages/accounts/components/accountApprovalPage";
 import ManPower from "../pages/manpower/manPowerPage";
 import IPCRForm from "../pages/spms/ipcr/IPCRForm";
 import OPCRForm from "../pages/spms/OPCRPage";
@@ -63,6 +63,7 @@ import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding
 import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplicationsPage";
 import DTRPage from "../pages/dtr/dtrPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
+import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -464,7 +465,15 @@ function AppRoutes() {
               }
             />
 
-            {/* ── DTR ── */}
+            <Route
+              path="/roles"
+              element={
+                <PermissionRoute permission="roles.view">
+                  <RoleManagementPage />
+                </PermissionRoute>
+              }
+            />
+
             <Route
               path="/dtrRecords"
               element={

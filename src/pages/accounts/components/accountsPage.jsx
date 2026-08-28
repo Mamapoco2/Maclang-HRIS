@@ -3,11 +3,6 @@ import { UserCheck, ShieldCheck } from "lucide-react";
 import AccountApprovalPage from "./accountApprovalPage";
 import RoleManagementPage from "./roleManagementPage";
 
-const TABS = [
-  { id: "approval", label: "Account Approval", icon: UserCheck },
-  { id: "roles", label: "Role Management", icon: ShieldCheck },
-];
-
 export default function AccountsPage() {
   const [active, setActive] = useState("approval");
 
@@ -37,29 +32,10 @@ export default function AccountsPage() {
           </div>
 
           {/* Tab switcher */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-            {TABS.map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => setActive(id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  active === id
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       {/* ── Content ── */}
-      <div className="max-w-screen mx-auto px-4 sm:px-6 py-6">
-        {active === "approval" && <AccountApprovalPage />}
-        {active === "roles" && <RoleManagementPage />}
-      </div>
     </div>
   );
 }
