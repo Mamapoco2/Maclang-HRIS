@@ -44,6 +44,16 @@ export async function getApprovedUsers() {
   }
 }
 
+export async function getPermissionsCatalog() {
+  try {
+    const res = await api.get("/permissions");
+    return Array.isArray(res.data?.permissions) ? res.data.permissions : [];
+  } catch (err) {
+    console.error("getPermissionsCatalog:", err);
+    return [];
+  }
+}
+
 export async function updateUserPermissions(userId, permissions) {
   const res = await api.put(`/users/${userId}/permissions`, { permissions });
   return res.data;
