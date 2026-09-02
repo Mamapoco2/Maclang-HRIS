@@ -164,10 +164,15 @@ export const PERMISSION_GROUPS = [
     ],
   },
   // ─── Bug Reports ───────────────────────────────────────────
-  // {
-  //   group: "Bug Reports",
-  //   permissions: [{ key: "bug-reports.view", label: "View Bug Reports" }],
-  // },
+  {
+    group: "Bug Reports",
+    permissions: [{ key: "bug-reports.view", label: "View Bug Reports" }],
+  },
+  // ─── AI Assistant ───────────────────────────────────────────
+  {
+    group: "AI Assistant",
+    permissions: [{ key: "ai_chat.use", label: "Use AI Chat Assistant" }],
+  },
   // ─── Users ───────────────────────────────────────────
   {
     group: "Users",

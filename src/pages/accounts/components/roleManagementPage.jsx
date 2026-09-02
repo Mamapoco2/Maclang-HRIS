@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import {
   getApprovedUsers,
+  getPermissionsCatalog,
   updateUserPermissions,
   updateUserRole,
 } from "@/services/accountsService";
@@ -87,16 +88,19 @@ function StatCard({ icon: Icon, label, value, tone }) {
 }
 
 export default function RoleManagementPage() {
-  const { user: currentUser } = useContext(AuthContext);
+  const { user: currentUser, hasRole } = useContext(AuthContext);
+  const actorIsHrOrSuperAdmin = hasRole("HR") || hasRole("SuperAdmin");
   const [accounts, setAccounts] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [roleSaving, setRoleSaving] = useState({});
   const [search, setSearch] = useState("");
+  const [availablePermissions, setAvailablePermissions] = useState(null);
 
   useEffect(() => {
     loadAccounts();
+    getPermissionsCatalog().then(setAvailablePermissions);
   }, []);
 
   useEffect(() => {
@@ -422,6 +426,11 @@ export default function RoleManagementPage() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        availablePermissions={availablePermissions}
+        readOnly={
+          !actorIsHrOrSuperAdmin &&
+          !!selectedUser?.roles?.some((r) => r.toLowerCase() === "hr")
+        }
       />
     </div>
   );

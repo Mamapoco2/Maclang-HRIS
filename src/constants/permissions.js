@@ -100,6 +100,9 @@ export const PERMISSIONS = Object.freeze({
 
   // ── Bug Reports ──────────────────────────────────────────
   BUG_REPORTS_VIEW: "bug-reports.view",
+
+  // ── AI Assistant ─────────────────────────────────────────
+  AI_CHAT_USE: "ai_chat.use",
 });
 
 if (import.meta.env?.DEV) {
