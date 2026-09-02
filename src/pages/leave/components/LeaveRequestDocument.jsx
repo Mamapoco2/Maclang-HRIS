@@ -82,6 +82,23 @@ function actedOfficerName(step) {
   if (!step || step.status === "pending") return undefined;
   return step.approver?.formal_name ?? step.approver?.name;
 }
+function assignedOfficerName(step) {
+  if (!step) return undefined;
+  return step.approver?.formal_name ?? step.approver?.name;
+}
+
+// Adjust the field name(s) here to match wherever the e-signature image
+// actually lives on your approver/user record (e.g. signature_url,
+// signature_path, e_signature, etc.)
+function actedOfficerSignature(step) {
+  if (!step || step.status === "pending") return undefined;
+  return (
+    step.approver?.signature_url ??
+    step.approver?.signature_path ??
+    step.approver?.e_signature ??
+    undefined
+  );
+}
 
 export function normalizeLeaveRequest(raw) {
   if (!raw) return raw;
@@ -94,13 +111,40 @@ export function normalizeLeaveRequest(raw) {
   const hrStep = findStepByLabel(steps, "HR");
   const mccStep = findStepByLabel(steps, "MCC");
 
+  let resolvedLast = hasNameParts
+    ? raw.lastName
+    : (employee.lastName ?? splitName(raw.employeeName ?? employee.name).last);
+  let resolvedFirst = hasNameParts
+    ? raw.firstName
+    : (employee.firstName ??
+      splitName(raw.employeeName ?? employee.name).first);
+  let resolvedMiddle = hasNameParts
+    ? raw.middleName
+    : (employee.middleName ??
+      splitName(raw.employeeName ?? employee.name).middle);
+
+  // Defensive guard: some upstream sources set lastName/firstName/middleName
+  // to the exact same full-name string instead of actually splitting it
+  // (e.g. "MANCKIE" repeated in all three). If all three collapse to one
+  // identical, non-empty value, treat it as a single unsplit name instead
+  // of printing the same word three times on the form.
+  if (
+    resolvedLast &&
+    resolvedLast === resolvedFirst &&
+    resolvedFirst === resolvedMiddle
+  ) {
+    const split = splitName(resolvedLast);
+    resolvedLast = split.last;
+    resolvedFirst = split.first;
+    resolvedMiddle = split.middle;
+  }
+
   return {
     ...raw,
     office: raw.office ?? employee.department ?? raw.department ?? "",
-    lastName: hasNameParts ? raw.lastName : undefined,
-    firstName: hasNameParts ? raw.firstName : undefined,
-    middleName: hasNameParts ? raw.middleName : undefined,
-    displayName: hasNameParts ? undefined : (raw.employeeName ?? employee.name),
+    lastName: resolvedLast,
+    firstName: resolvedFirst,
+    middleName: resolvedMiddle,
     position: raw.position ?? employee.designation ?? raw.designation ?? "",
     dateFiled: raw.dateFiled ?? raw.appliedDate ?? raw.submitted_at,
     numberOfDays: raw.numberOfDays ?? raw.days ?? raw.total_days,
@@ -129,6 +173,7 @@ export function normalizeLeaveRequest(raw) {
                   : undefined,
             disapprovalReason: headStep.remarks,
             officerName: actedOfficerName(headStep),
+            signatureUrl: actedOfficerSignature(headStep),
           }
         : undefined),
 
@@ -140,10 +185,32 @@ export function normalizeLeaveRequest(raw) {
               mccStep.status === "approved" ? raw.total_days : undefined,
             disapprovedDue:
               mccStep.status === "rejected" ? mccStep.remarks : undefined,
-            officialName: actedOfficerName(mccStep),
+            officialName: assignedOfficerName(mccStep),
           }
         : undefined),
   };
+}
+
+// Best-effort fallback splitter for a single "Full Name" string when the
+// backend doesn't provide separate lastName/firstName/middleName fields.
+// Assumes "Last, First Middle" or "First Middle Last" — adjust to match
+// whatever convention your employee records actually use.
+function splitName(fullNameStr) {
+  if (!fullNameStr) return { last: "", first: "", middle: "" };
+  if (fullNameStr.includes(",")) {
+    const [last, rest = ""] = fullNameStr.split(",").map((s) => s.trim());
+    const [first, ...middleParts] = rest.split(" ").filter(Boolean);
+    return { last, first: first ?? "", middle: middleParts.join(" ") };
+  }
+  const parts = fullNameStr.trim().split(" ").filter(Boolean);
+  const last = parts.length > 1 ? parts[parts.length - 1] : "";
+  const first = parts[0] ?? "";
+  const middle = parts.slice(1, -1).join(" ");
+  return { last, first, middle };
+}
+
+function fullName(lr) {
+  return [lr.lastName, lr.firstName, lr.middleName].filter(Boolean).join(", ");
 }
 
 function formatDate(value) {
@@ -155,11 +222,6 @@ function formatDate(value) {
     month: "long",
     day: "numeric",
   });
-}
-
-function fullName(lr) {
-  if (lr.displayName) return lr.displayName;
-  return [lr.lastName, lr.firstName, lr.middleName].filter(Boolean).join(", ");
 }
 
 function Checkbox({ checked, children }) {
@@ -191,6 +253,40 @@ function Field({ label, value, className = "" }) {
   );
 }
 
+// Matches the reference form's "2. NAME:" row exactly — one shared label
+// followed by three separate underlined sub-fields, each captioned
+// (Last) / (First) / (Middle) directly beneath, the way CS Form No. 6
+// actually lays it out (not a single combined name string).
+function NameField({ lr }) {
+  return (
+    <div className="flex items-start gap-1">
+      <span className="whitespace-nowrap pt-[1px] text-[10px] font-semibold">
+        2. NAME:
+      </span>
+      <div className="flex flex-1 gap-2">
+        <div className="flex flex-1 flex-col items-center">
+          <span className="w-full truncate border-b border-black px-1 text-center text-[11px]">
+            {lr.lastName || "\u00A0"}
+          </span>
+          <span className="text-[9px] italic">(Last)</span>
+        </div>
+        <div className="flex flex-1 flex-col items-center">
+          <span className="w-full truncate border-b border-black px-1 text-center text-[11px]">
+            {lr.firstName || "\u00A0"}
+          </span>
+          <span className="text-[9px] italic">(First)</span>
+        </div>
+        <div className="flex flex-1 flex-col items-center">
+          <span className="w-full truncate border-b border-black px-1 text-center text-[11px]">
+            {lr.middleName || "\u00A0"}
+          </span>
+          <span className="text-[9px] italic">(Middle)</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FormBody({
   lr,
   details,
@@ -209,21 +305,22 @@ function FormBody({
         <div className="font-semibold">ANNEX A</div>
       </header>
 
-      <div className="mb-3 flex items-center justify-between gap-4 border-b border-black pb-2">
+      <div className="relative mb-3 flex items-center border-black pb-2">
         <img
           src={rmbghLogo}
           alt="Agency Logo"
-          className="size-16 shrink-0 rounded-full border border-black object-contain ml-15"
+          className="absolute left-40 size-20 shrink-0 rounded-full border border-black object-contain"
         />
-        <div className="flex-1 text-center text-[11px] font-semibold leading-tight">
+        <div className="mx-auto text-center text-[11px] font-semibold leading-tight">
           Republic of the Philippines
           <br />
-          <span className="italic">(Agency Name)</span>
+          <span className="italic">
+            Rosario Maclang Bautista General Hospital
+          </span>
           <br />
-          <span className="italic">(Agency Address)</span>
-        </div>
-        <div className="w-24 shrink-0 border border-black p-1 text-center text-[8px]">
-          Stamp of Date of Receipt
+          <span className="italic">
+            IBP Road, Brgy. Batasan Hills, Quezon City
+          </span>
         </div>
       </div>
 
@@ -232,10 +329,14 @@ function FormBody({
       </h1>
 
       {/* 1–5 */}
-      <div className="border border-black text-[11px]">
-        <div className="grid grid-cols-2 gap-2 border-b border-black p-1.5">
-          <Field label="1. OFFICE/DEPARTMENT" value={lr.office} />
-          <Field label="2. NAME:" value={fullName(lr)} />
+      <div className=" text-[11px]">
+        <div className="grid grid-cols-2 gap-4 border-b border-black p-1.5">
+          <Field
+            label="1. OFFICE/DEPARTMENT"
+            value={`${lr.office || ""}`.trim()}
+          />
+          <NameField lr={lr} />
+          <Field label="RMBGH/" value={`${lr.employee_number || ""}`.trim()} />
         </div>
         <div className="grid grid-cols-3 gap-2 border-b border-black p-1.5">
           <Field label="3. DATE OF FILING" value={formatDate(lr.dateFiled)} />
@@ -274,60 +375,55 @@ function FormBody({
               6.B DETAILS OF LEAVE
             </div>
 
-            {lr.leaveType === "vacation" ||
-            lr.leaveType === "special_privilege" ? (
-              <div className="mb-2">
-                <div className="italic">
-                  In case of Vacation/Special Privilege Leave:
-                </div>
-                <Checkbox checked={details.vacationLocation === "within"}>
-                  Within the Philippines
-                </Checkbox>
-                <Checkbox checked={details.vacationLocation === "abroad"}>
-                  Abroad (Specify){" "}
-                  {details.vacationLocation === "abroad"
-                    ? details.abroadSpecify
-                    : ""}
-                </Checkbox>
+            {/* These sub-sections are printed on the form regardless of
+                which leave type is selected — only the checkbox/blank
+                inside each gets filled in, so they always render. */}
+            <div className="mb-2">
+              <div className="italic">
+                In case of Vacation/Special Privilege Leave:
               </div>
-            ) : null}
+              <Checkbox checked={details.vacationLocation === "within"}>
+                Within the Philippines
+              </Checkbox>
+              <Checkbox checked={details.vacationLocation === "abroad"}>
+                Abroad (Specify){" "}
+                {details.vacationLocation === "abroad"
+                  ? details.abroadSpecify
+                  : ""}
+              </Checkbox>
+            </div>
 
-            {lr.leaveType === "sick" ? (
-              <div className="mb-2">
-                <div className="italic">In case of Sick Leave:</div>
-                <Checkbox checked={details.sickType === "hospital"}>
-                  In Hospital (Specify Illness){" "}
-                  {details.sickType === "hospital" ? details.illness : ""}
-                </Checkbox>
-                <Checkbox checked={details.sickType === "outpatient"}>
-                  Out Patient (Specify Illness){" "}
-                  {details.sickType === "outpatient" ? details.illness : ""}
-                </Checkbox>
-              </div>
-            ) : null}
+            <div className="mb-2">
+              <div className="italic">In case of Sick Leave:</div>
+              <Checkbox checked={details.sickType === "hospital"}>
+                In Hospital (Specify Illness){" "}
+                {details.sickType === "hospital" ? details.illness : ""}
+              </Checkbox>
+              <Checkbox checked={details.sickType === "outpatient"}>
+                Out Patient (Specify Illness){" "}
+                {details.sickType === "outpatient" ? details.illness : ""}
+              </Checkbox>
+            </div>
 
-            {lr.leaveType === "special_women" ? (
-              <div className="mb-2">
-                <div className="italic">
-                  In case of Special Leave Benefits for Women:
-                </div>
-                <div className="border-b border-black">
-                  (Specify Illness) {details.womenIllness}
-                </div>
+            <div className="mb-2">
+              <div className="italic">
+                In case of Special Leave Benefits for Women:
               </div>
-            ) : null}
+              <div className="border-b border-black">
+                (Specify Illness){" "}
+                {lr.leaveType === "special_women" ? details.womenIllness : ""}
+              </div>
+            </div>
 
-            {lr.leaveType === "study" ? (
-              <div className="mb-2">
-                <div className="italic">In case of Study Leave:</div>
-                <Checkbox checked={details.studyPurpose === "masters"}>
-                  Completion of Master&apos;s Degree
-                </Checkbox>
-                <Checkbox checked={details.studyPurpose === "bar_review"}>
-                  BAR/Board Examination Review
-                </Checkbox>
-              </div>
-            ) : null}
+            <div className="mb-2">
+              <div className="italic">In case of Study Leave:</div>
+              <Checkbox checked={details.studyPurpose === "masters"}>
+                Completion of Master&apos;s Degree
+              </Checkbox>
+              <Checkbox checked={details.studyPurpose === "bar_review"}>
+                BAR/Board Examination Review
+              </Checkbox>
+            </div>
 
             <div className="italic">Other purpose:</div>
             <Checkbox checked={Boolean(details.monetization)}>
@@ -366,6 +462,8 @@ function FormBody({
               Requested
             </Checkbox>
             <div className="mt-6 border-t border-black pt-1 text-center text-[9px]">
+              {fullName(lr) || "\u00A0"}
+              <br />
               (Signature of Applicant)
             </div>
           </div>
@@ -450,19 +548,34 @@ function FormBody({
                 ? lr.recommendation.disapprovalReason
                 : ""}
             </Checkbox>
-            <div className="mt-9 border-t border-black pt-1 text-center text-[9px]">
-              {hasRecommendation
-                ? (lr.recommendation.officerName ?? "\u00A0")
-                : "\u00A0"}
-              <br />
-              (Authorized Officer)
+
+            {/* Signature block — shows the approver's uploaded e-signature
+                image once they've acted, sitting right above their printed
+                name/title so it reads like a physically signed line. */}
+            <div className="mt-6 flex flex-col items-center">
+              {hasRecommendation && lr.recommendation.signatureUrl ? (
+                <img
+                  src={lr.recommendation.signatureUrl}
+                  alt={`Signature of ${lr.recommendation.officerName ?? "authorized officer"}`}
+                  className="csform6-signature h-10 max-w-[160px] object-contain"
+                />
+              ) : (
+                <div className="h-10" />
+              )}
+              <div className="w-full border-t border-black pt-1 text-center text-[9px]">
+                {hasRecommendation
+                  ? (lr.recommendation.officerName ?? "\u00A0")
+                  : "\u00A0"}
+                <br />
+                (Authorized Officer)
+              </div>
             </div>
           </div>
         </div>
 
         {/* 7.C / 7.D */}
-        <div className="grid grid-cols-2 border-b border-black">
-          <div className="border-r border-black p-2 text-[11px]">
+        <div className="grid grid-cols-2  border-black">
+          <div className=" border-black p-2 text-[11px]">
             <div className="mb-1 text-[10px] font-bold">7.C APPROVED FOR:</div>
             <div>
               {hasAction ? (lr.action.daysWithPay ?? "") : "\u00A0"} days with
@@ -487,9 +600,8 @@ function FormBody({
           </div>
         </div>
 
-        {/* Shared sign-off for 7.C/7.D — one official approves or disapproves the whole action */}
-        <div className="p-2 text-center text-[11px]">
-          <div className="mx-auto mt-2 w-64 border-t border-black pt-1 text-[9px]">
+        <div className="pt-5 mb-5 text-center text-[9px]">
+          <div className="mx-auto w-72 border-t border-black pt-1">
             {hasAction ? (lr.action.officialName ?? "\u00A0") : "\u00A0"}
             <br />
             (Authorized Official)
@@ -512,9 +624,11 @@ export default function LeaveRequestDocument({
 
   const portalRootId = `${printAreaId}-portal-root`;
 
-  const PRINT_MARGIN_TOP_MM = 6;
-  const PRINT_MARGIN_SIDE_MM = 4;
-  const PRINT_MARGIN_BOTTOM_MM = 4;
+  // Both axes now use a single value each so left === right and
+  // top === bottom by definition, instead of four independently
+  // tunable numbers that could silently drift apart.
+  const PRINT_MARGIN_VERTICAL_MM = 3;
+  const PRINT_MARGIN_HORIZONTAL_MM = 3;
   const printRef = useRef(null);
 
   useEffect(() => {
@@ -524,10 +638,10 @@ export default function LeaveRequestDocument({
     const PAGE_WIDTH_MM = 216; // legal
     const PAGE_HEIGHT_MM = 356; // legal
     const MM_TO_PX = 96 / 25.4;
-    const pageWidthPx = (PAGE_WIDTH_MM - PRINT_MARGIN_SIDE_MM * 2) * MM_TO_PX;
+    const pageWidthPx =
+      (PAGE_WIDTH_MM - PRINT_MARGIN_HORIZONTAL_MM * 2) * MM_TO_PX;
     const pageHeightPx =
-      (PAGE_HEIGHT_MM - PRINT_MARGIN_TOP_MM - PRINT_MARGIN_BOTTOM_MM) *
-      MM_TO_PX;
+      (PAGE_HEIGHT_MM - PRINT_MARGIN_VERTICAL_MM * 2) * MM_TO_PX;
 
     node.style.setProperty("--print-scale", "1");
     const naturalWidth = node.offsetWidth;
@@ -555,29 +669,39 @@ export default function LeaveRequestDocument({
 
       {createPortal(
         <div id={portalRootId}>
-          <div
-            id={`${printAreaId}-print-copy`}
-            ref={printRef}
-            className="csform6-print-copy w-[740px] border border-black bg-white p-5 text-black"
-            style={{ transform: "scale(var(--print-scale, 1))" }}
-          >
-            <FormBody
-              lr={lr}
-              details={details}
-              hasCertification={hasCertification}
-              hasRecommendation={hasRecommendation}
-              hasAction={hasAction}
-            />
+          {/* Printable-area wrapper: defines a box inset from the page
+              edges by equal margins on each axis (top===bottom via
+              PRINT_MARGIN_VERTICAL_MM, left===right via
+              PRINT_MARGIN_HORIZONTAL_MM) and centers the scaled form
+              inside it with flexbox. Because all four offsets are set
+              explicitly, the browser derives the box's width/height from
+              the page size minus those margins — so symmetry holds
+              regardless of how the scale-to-fit math rounds, and works
+              whether the content is width- or height-constrained. */}
+          <div id={`${printAreaId}-print-page`} className="csform6-print-page">
+            <div
+              id={`${printAreaId}-print-copy`}
+              ref={printRef}
+              className="csform6-print-copy w-[740px] border border-black bg-white p-5 text-black"
+              style={{ transform: "scale(var(--print-scale, 1))" }}
+            >
+              <FormBody
+                lr={lr}
+                details={details}
+                hasCertification={hasCertification}
+                hasRecommendation={hasRecommendation}
+                hasAction={hasAction}
+              />
+            </div>
           </div>
 
           <style>{`
-            .csform6-print-copy {
+            .csform6-print-page {
               position: fixed;
               top: 0;
               left: -100000px;
               visibility: hidden;
               pointer-events: none;
-              transform-origin: top left;
             }
 
             @media print {
@@ -592,18 +716,37 @@ export default function LeaveRequestDocument({
                 display: none !important;
               }
 
-              .csform6-print-copy {
+              .csform6-print-page {
                 position: fixed !important;
-                top: ${PRINT_MARGIN_TOP_MM}mm !important;
-                left: ${PRINT_MARGIN_SIDE_MM}mm !important;
+                top: ${PRINT_MARGIN_VERTICAL_MM}mm !important;
+                right: ${PRINT_MARGIN_HORIZONTAL_MM}mm !important;
+                bottom: ${PRINT_MARGIN_VERTICAL_MM}mm !important;
+                left: ${PRINT_MARGIN_HORIZONTAL_MM}mm !important;
+                width: auto !important;
+                height: auto !important;
                 visibility: visible !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+
+              .csform6-print-copy {
+                transform-origin: center center !important;
                 height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                border: none !important;
+                border: 1px solid black !important;
+                box-sizing: border-box !important;
               }
 
               .csform6-box {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+
+              .csform6-signature {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
               }
