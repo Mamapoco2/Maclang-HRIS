@@ -99,7 +99,6 @@ function actedOfficerSignature(step) {
 
 export function normalizeLeaveRequest(raw) {
   if (!raw) return raw;
-  console.log(raw.employee);
 
   const hasNameParts = raw.lastName || raw.firstName || raw.middleName;
   const employee = raw.employee ?? {};
@@ -109,17 +108,30 @@ export function normalizeLeaveRequest(raw) {
   const hrStep = findStepByLabel(steps, "HR");
   const mccStep = findStepByLabel(steps, "MCC");
 
-  let resolvedLast = hasNameParts
-    ? raw.lastName
-    : (employee.lastName ?? splitName(raw.employeeName ?? employee.name).last);
-  let resolvedFirst = hasNameParts
-    ? raw.firstName
-    : (employee.firstName ??
-      splitName(raw.employeeName ?? employee.name).first);
-  let resolvedMiddle = hasNameParts
-    ? raw.middleName
-    : (employee.middleName ??
-      splitName(raw.employeeName ?? employee.name).middle);
+  const hasEmployeeNameParts =
+    employee.lastName ||
+    employee.firstName ||
+    employee.first_name ||
+    employee.last_name;
+
+  let resolvedLast;
+  let resolvedFirst;
+  let resolvedMiddle;
+
+  if (hasNameParts) {
+    resolvedLast = raw.lastName;
+    resolvedFirst = raw.firstName;
+    resolvedMiddle = raw.middleName;
+  } else if (hasEmployeeNameParts) {
+    resolvedLast = employee.lastName ?? employee.last_name ?? "";
+    resolvedFirst = employee.firstName ?? employee.first_name ?? "";
+    resolvedMiddle = employee.middleName ?? employee.middle_name ?? "";
+  } else {
+    const split = splitName(raw.employeeName ?? employee.name);
+    resolvedLast = split.last;
+    resolvedFirst = split.first;
+    resolvedMiddle = split.middle;
+  }
 
   if (
     resolvedLast &&
@@ -139,7 +151,7 @@ export function normalizeLeaveRequest(raw) {
     firstName: resolvedFirst,
     middleName: resolvedMiddle,
     position: raw.position ?? employee.designation ?? raw.designation ?? "",
-    salary: raw.salary ?? employee.salary ?? "",
+    employeeNumber: raw.employeeNumber ?? employee.employee_number ?? "",
     salary: raw.salary ?? employee.salary ?? "",
     dateFiled: raw.dateFiled ?? raw.appliedDate ?? raw.submitted_at,
     numberOfDays: raw.numberOfDays ?? raw.days ?? raw.total_days,
@@ -213,6 +225,13 @@ function formatDate(value) {
     month: "long",
     day: "numeric",
   });
+}
+
+function stripEmployeeNumberPrefix(value) {
+  if (!value) return "";
+  return String(value)
+    .replace(/^RMBGH-?/i, "")
+    .trim();
 }
 
 function formatCurrency(value) {
@@ -329,10 +348,14 @@ function FormBody({
       <div className=" text-[11px]">
         <div className="grid grid-cols-[1fr_2fr] gap-4 border-b border-black p-1.5">
           <div className="grid grid-rows-2 gap-1">
-            <span className="whitespace-nowrap self-end text-[10px] font-semibold">
-              1. OFFICE/DEPARTMENT
-            </span>
-            <Field label="RMBGH /" value={`${lr.office || ""}`.trim()} />
+            <Field
+              label="1. OFFICE/DEPARTMENT"
+              value={`${lr.office || ""}`.trim()}
+            />
+            <Field
+              label="RMBGH /"
+              value={stripEmployeeNumberPrefix(lr.employeeNumber)}
+            />
           </div>
           <NameField lr={lr} />
         </div>
