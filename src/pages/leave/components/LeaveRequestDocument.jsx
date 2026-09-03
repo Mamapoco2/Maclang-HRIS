@@ -87,9 +87,6 @@ function assignedOfficerName(step) {
   return step.approver?.formal_name ?? step.approver?.name;
 }
 
-// Adjust the field name(s) here to match wherever the e-signature image
-// actually lives on your approver/user record (e.g. signature_url,
-// signature_path, e_signature, etc.)
 function actedOfficerSignature(step) {
   if (!step || step.status === "pending") return undefined;
   return (
@@ -102,6 +99,7 @@ function actedOfficerSignature(step) {
 
 export function normalizeLeaveRequest(raw) {
   if (!raw) return raw;
+  console.log(raw.employee);
 
   const hasNameParts = raw.lastName || raw.firstName || raw.middleName;
   const employee = raw.employee ?? {};
@@ -123,11 +121,6 @@ export function normalizeLeaveRequest(raw) {
     : (employee.middleName ??
       splitName(raw.employeeName ?? employee.name).middle);
 
-  // Defensive guard: some upstream sources set lastName/firstName/middleName
-  // to the exact same full-name string instead of actually splitting it
-  // (e.g. "MANCKIE" repeated in all three). If all three collapse to one
-  // identical, non-empty value, treat it as a single unsplit name instead
-  // of printing the same word three times on the form.
   if (
     resolvedLast &&
     resolvedLast === resolvedFirst &&
@@ -146,6 +139,8 @@ export function normalizeLeaveRequest(raw) {
     firstName: resolvedFirst,
     middleName: resolvedMiddle,
     position: raw.position ?? employee.designation ?? raw.designation ?? "",
+    salary: raw.salary ?? employee.salary ?? "",
+    salary: raw.salary ?? employee.salary ?? "",
     dateFiled: raw.dateFiled ?? raw.appliedDate ?? raw.submitted_at,
     numberOfDays: raw.numberOfDays ?? raw.days ?? raw.total_days,
     inclusiveDatesFrom:
@@ -172,7 +167,7 @@ export function normalizeLeaveRequest(raw) {
                   ? "disapproval"
                   : undefined,
             disapprovalReason: headStep.remarks,
-            officerName: actedOfficerName(headStep),
+            officerName: assignedOfficerName(headStep),
             signatureUrl: actedOfficerSignature(headStep),
           }
         : undefined),
@@ -191,10 +186,6 @@ export function normalizeLeaveRequest(raw) {
   };
 }
 
-// Best-effort fallback splitter for a single "Full Name" string when the
-// backend doesn't provide separate lastName/firstName/middleName fields.
-// Assumes "Last, First Middle" or "First Middle Last" — adjust to match
-// whatever convention your employee records actually use.
 function splitName(fullNameStr) {
   if (!fullNameStr) return { last: "", first: "", middle: "" };
   if (fullNameStr.includes(",")) {
@@ -221,6 +212,16 @@ function formatDate(value) {
     year: "numeric",
     month: "long",
     day: "numeric",
+  });
+}
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === "") return "";
+  const num = Number(value);
+  if (Number.isNaN(num)) return String(value);
+  return num.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
@@ -253,35 +254,29 @@ function Field({ label, value, className = "" }) {
   );
 }
 
-// Matches the reference form's "2. NAME:" row exactly — one shared label
-// followed by three separate underlined sub-fields, each captioned
-// (Last) / (First) / (Middle) directly beneath, the way CS Form No. 6
-// actually lays it out (not a single combined name string).
 function NameField({ lr }) {
   return (
-    <div className="flex items-start gap-1">
-      <span className="whitespace-nowrap pt-[1px] text-[10px] font-semibold">
-        2. NAME:
-      </span>
-      <div className="flex flex-1 gap-2">
-        <div className="flex flex-1 flex-col items-center">
-          <span className="w-full truncate border-b border-black px-1 text-center text-[11px]">
-            {lr.lastName || "\u00A0"}
-          </span>
-          <span className="text-[9px] italic">(Last)</span>
+    <div className="grid grid-rows-2 gap-1">
+      <div className="flex items-end gap-1">
+        <span className="whitespace-nowrap text-[10px] font-semibold">
+          2. NAME:
+        </span>
+        <div className="flex flex-1 gap-2">
+          <span className="flex-1 text-center text-[9px] italic">(Last)</span>
+          <span className="flex-1 text-center text-[9px] italic">(First)</span>
+          <span className="flex-1 text-center text-[9px] italic">(Middle)</span>
         </div>
-        <div className="flex flex-1 flex-col items-center">
-          <span className="w-full truncate border-b border-black px-1 text-center text-[11px]">
-            {lr.firstName || "\u00A0"}
-          </span>
-          <span className="text-[9px] italic">(First)</span>
-        </div>
-        <div className="flex flex-1 flex-col items-center">
-          <span className="w-full truncate border-b border-black px-1 text-center text-[11px]">
-            {lr.middleName || "\u00A0"}
-          </span>
-          <span className="text-[9px] italic">(Middle)</span>
-        </div>
+      </div>
+      <div className="flex gap-2 pl-[52px]">
+        <span className="w-full flex-1 truncate border-b border-black px-1 text-center text-[11px]">
+          {lr.lastName || "\u00A0"}
+        </span>
+        <span className="w-full flex-1 truncate border-b border-black px-1 text-center text-[11px]">
+          {lr.firstName || "\u00A0"}
+        </span>
+        <span className="w-full flex-1 truncate border-b border-black px-1 text-center text-[11px]">
+          {lr.middleName || "\u00A0"}
+        </span>
       </div>
     </div>
   );
@@ -328,20 +323,23 @@ function FormBody({
         APPLICATION FOR LEAVE
       </h1>
 
+      <div className="border-t border-black" />
+
       {/* 1–5 */}
       <div className=" text-[11px]">
-        <div className="grid grid-cols-2 gap-4 border-b border-black p-1.5">
-          <Field
-            label="1. OFFICE/DEPARTMENT"
-            value={`${lr.office || ""}`.trim()}
-          />
+        <div className="grid grid-cols-[1fr_2fr] gap-4 border-b border-black p-1.5">
+          <div className="grid grid-rows-2 gap-1">
+            <span className="whitespace-nowrap self-end text-[10px] font-semibold">
+              1. OFFICE/DEPARTMENT
+            </span>
+            <Field label="RMBGH /" value={`${lr.office || ""}`.trim()} />
+          </div>
           <NameField lr={lr} />
-          <Field label="RMBGH/" value={`${lr.employee_number || ""}`.trim()} />
         </div>
         <div className="grid grid-cols-3 gap-2 border-b border-black p-1.5">
           <Field label="3. DATE OF FILING" value={formatDate(lr.dateFiled)} />
           <Field label="4. POSITION" value={lr.position} />
-          <Field label="5. SALARY" value={lr.salary} />
+          <Field label="5. SALARY" value={formatCurrency(lr.salary)} />
         </div>
 
         <div className="border-b border-black text-center">
@@ -375,9 +373,6 @@ function FormBody({
               6.B DETAILS OF LEAVE
             </div>
 
-            {/* These sub-sections are printed on the form regardless of
-                which leave type is selected — only the checkbox/blank
-                inside each gets filled in, so they always render. */}
             <div className="mb-2">
               <div className="italic">
                 In case of Vacation/Special Privilege Leave:
@@ -549,9 +544,6 @@ function FormBody({
                 : ""}
             </Checkbox>
 
-            {/* Signature block — shows the approver's uploaded e-signature
-                image once they've acted, sitting right above their printed
-                name/title so it reads like a physically signed line. */}
             <div className="mt-6 flex flex-col items-center">
               {hasRecommendation && lr.recommendation.signatureUrl ? (
                 <img
@@ -624,9 +616,6 @@ export default function LeaveRequestDocument({
 
   const portalRootId = `${printAreaId}-portal-root`;
 
-  // Both axes now use a single value each so left === right and
-  // top === bottom by definition, instead of four independently
-  // tunable numbers that could silently drift apart.
   const PRINT_MARGIN_VERTICAL_MM = 3;
   const PRINT_MARGIN_HORIZONTAL_MM = 3;
   const printRef = useRef(null);
@@ -669,15 +658,6 @@ export default function LeaveRequestDocument({
 
       {createPortal(
         <div id={portalRootId}>
-          {/* Printable-area wrapper: defines a box inset from the page
-              edges by equal margins on each axis (top===bottom via
-              PRINT_MARGIN_VERTICAL_MM, left===right via
-              PRINT_MARGIN_HORIZONTAL_MM) and centers the scaled form
-              inside it with flexbox. Because all four offsets are set
-              explicitly, the browser derives the box's width/height from
-              the page size minus those margins — so symmetry holds
-              regardless of how the scale-to-fit math rounds, and works
-              whether the content is width- or height-constrained. */}
           <div id={`${printAreaId}-print-page`} className="csform6-print-page">
             <div
               id={`${printAreaId}-print-copy`}
