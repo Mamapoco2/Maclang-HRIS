@@ -114,6 +114,11 @@ const NAV_MAIN = [
         title: "Leave",
         items: [
           {
+            title: "Approval",
+            url: "/leaveApproval",
+            permission: "leave.approval.view",
+          },
+          {
             title: "Dashboard",
             url: "/leaveDashboard",
             permission: "leave.dashboard.view",
