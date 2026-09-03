@@ -124,6 +124,7 @@ export const PERMISSION_GROUPS = [
       { key: "plantilla_items.view", label: "View Plantilla Items" },
       { key: "plantilla_items.manage", label: "Manage Plantilla Items" },
       { key: "positions.view", label: "View Positions (COS / Consultant)" },
+      { key: "roles.view", label: "View Role Management" },
     ],
   },
   // ─── Rewards & Recognition ───────────────────────────────────────────
@@ -190,22 +191,14 @@ export const PERMISSION_GROUPS = [
     group: "Notifications",
     permissions: [{ key: "notifications.view", label: "View Notifications" }],
   },
+  // ─── DTR ───────────────────────────────────────────
+  {
+    group: "DTR",
+    permissions: [{ key: "dtr.view", label: "View DTR" }],
+  },
   // ─── Audit Logs ───────────────────────────────────────────
   {
     group: "Audit Logs",
     permissions: [{ key: "audit_logs.view", label: "View Audit Logs" }],
   },
-];
-
-export const ASSIGNABLE_ROLES = [
-  { value: "none", label: "No role" },
-  { value: "medical center chief", label: "Medical Center Chief" },
-  { value: "admin", label: "Admin" },
-  { value: "chairman", label: "Chairman" },
-  { value: "director", label: "Director" },
-  { value: "hr", label: "HR" },
-  { value: "officer in charge", label: "Officer In Charge" },
-  { value: "head", label: "Head" },
-  { value: "supervisor", label: "Supervisor" },
-  { value: "staff", label: "Staff" },
 ];

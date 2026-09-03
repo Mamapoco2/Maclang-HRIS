@@ -68,6 +68,7 @@ export const PERMISSIONS = Object.freeze({
   PLANTILLA_ITEMS_VIEW: "plantilla_items.view",
   PLANTILLA_ITEMS_MANAGE: "plantilla_items.manage",
   POSITIONS_VIEW: "positions.view",
+  ROLES_VIEW: "roles.view",
 
   // ── Rewards & Recognition ───────────────────────────────
   REWARDS_VIEW: "rewards.view",
@@ -98,6 +99,9 @@ export const PERMISSIONS = Object.freeze({
   // ── Audit Logs ──────────────────────────────────────────
   AUDIT_LOGS_VIEW: "audit_logs.view",
 
+  // ── DTR ──────────────────────────────────────────────────
+  DTR_VIEW: "dtr.view",
+
   // ── Bug Reports ──────────────────────────────────────────
   BUG_REPORTS_VIEW: "bug-reports.view",
 
@@ -118,7 +122,7 @@ if (import.meta.env?.DEV) {
 
 export const ASSIGNABLE_ROLES = Object.freeze([
   { value: "none", label: "No role" },
-  { value: "medical center chief", label: "Medical Center Chief" },
+  { value: "Medical Center Chief", label: "Medical Center Chief" },
   { value: "Admin", label: "Admin" },
   { value: "Chairman", label: "Chairman" },
   { value: "Director", label: "Director" },
