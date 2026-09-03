@@ -21,6 +21,85 @@
 import { useEffect, useCallback } from "react";
 import { X, Printer } from "lucide-react";
 import LeaveRequestDocument from "./LeaveRequestDocument";
+import LeaveRequestDocumentCOS from "./LeaveRequestDocumentCOS";
+
+// COS / Job Order / Consultant / Contractual staff use the simplified
+// "Application for Leave (for Consultant and Contractual)" form instead
+// of CS Form 6, which is reserved for regular (plantilla) employees.
+// COS / Job Order / Consultant / Contractual staff use the simplified
+// "Application for Leave (for Consultant and Contractual)" form instead
+// of CS Form 6, which is reserved for regular (plantilla) employees.
+const COS_KEYWORDS = [
+  "contract of service",
+  "cos",
+  "job order",
+  "consultant",
+  "contractual",
+];
+
+const EMPLOYMENT_TYPE_KEYS = [
+  "employment_type",
+  "employmentType",
+  "appointment_type",
+  "appointmentType",
+  "appointment_status",
+  "appointmentStatus",
+  "nature_of_appointment",
+  "natureOfAppointment",
+  "personnel_type",
+  "personnelType",
+  "employee_type",
+  "employeeType",
+  "staff_type",
+  "staffType",
+  "contract_type",
+  "contractType",
+  "type_of_employment",
+  "typeOfEmployment",
+];
+
+function readEmploymentTypeField(obj) {
+  if (!obj || typeof obj !== "object") return undefined;
+  for (const key of EMPLOYMENT_TYPE_KEYS) {
+    if (obj[key]) return obj[key];
+  }
+  return undefined;
+}
+
+function isCosOrConsultant(request) {
+  const candidates = [
+    readEmploymentTypeField(request),
+    readEmploymentTypeField(request?.employee),
+    readEmploymentTypeField(request?.personnel),
+    readEmploymentTypeField(request?.staff),
+  ].filter(Boolean);
+
+  const nested = request?.employee ?? request?.personnel ?? request?.staff;
+  if (nested && typeof nested === "object") {
+    Object.values(nested).forEach((v) => {
+      if (typeof v === "string") candidates.push(v);
+      if (Array.isArray(v))
+        v.forEach((x) => typeof x === "string" && candidates.push(x));
+    });
+  }
+
+  const match = candidates.find((raw) => {
+    const value = String(raw).toLowerCase().trim();
+    return value && COS_KEYWORDS.some((k) => value.includes(k));
+  });
+
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.debug(
+      "[LeaveRequestModal] employment type candidates:",
+      candidates,
+      "-> matched:",
+      match ?? "(none — showing CS Form 6)",
+    );
+  }
+
+  return Boolean(match);
+}
 
 export function LeaveRequestModal({ request, onClose }) {
   const handleKeyDown = useCallback(
@@ -76,10 +155,17 @@ export function LeaveRequestModal({ request, onClose }) {
           className="flex flex-1 min-h-0 justify-center overflow-y-auto bg-[var(--muted)]/30 p-4 print:static print:block print:h-auto print:min-h-0 print:overflow-visible print:bg-transparent print:p-0"
           style={{ transform: "translateZ(0)", willChange: "transform" }}
         >
-          <LeaveRequestDocument
-            leaveRequest={request}
-            printAreaId="csform6-modal-print-area"
-          />
+          {isCosOrConsultant(request) ? (
+            <LeaveRequestDocumentCOS
+              leaveRequest={request}
+              printAreaId="csform6cos-modal-print-area"
+            />
+          ) : (
+            <LeaveRequestDocument
+              leaveRequest={request}
+              printAreaId="csform6-modal-print-area"
+            />
+          )}
         </div>
       </div>
     </div>
