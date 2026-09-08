@@ -71,6 +71,7 @@ export const PERMISSION_GROUPS = [
       { key: "leave.request.manage", label: "Submit New Leave Request" },
       { key: "leave.holidays.manage", label: "Manage Leave Holidays" },
       { key: "leave.types.manage", label: "Manage Leave Types" },
+      { key: "leave.suspensions.manage", label: "Declare Work Suspensions" },
       { key: "employees.view", label: "View Employees" },
       { key: "employees.manage", label: "Manage Employees" },
       { key: "renewals.view", label: "View Renewal Management" },

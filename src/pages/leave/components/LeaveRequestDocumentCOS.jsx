@@ -1,13 +1,3 @@
-// src/pages/leave/LeaveRequestDocumentCOS.jsx
-//
-// Printable "APPLICATION FOR LEAVE (for Consultant and Contractual)"
-// document — the COS/Consultant counterpart of CS Form 6. Same data
-// shape as LeaveRequestDocument (normalizeLeaveRequest), different,
-// simpler layout that mirrors the agency's paper form.
-//
-// USAGE
-//   <LeaveRequestDocumentCOS leaveRequest={record} />
-
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { normalizeLeaveRequest } from "./LeaveRequestDocument";
@@ -78,7 +68,7 @@ function DatePartCell({ value }) {
   );
 }
 
-function FormBody({ lr, details, hasRecommendation, hasAction }) {
+function FormBody({ lr, details, hasRecommendation }) {
   const COS_LEAVE_TYPES = ["vacation", "sick", "maternity", "paternity"];
   const isOthers = !COS_LEAVE_TYPES.includes(lr.leaveType);
   const from = formatDateParts(lr.inclusiveDatesFrom);
@@ -302,10 +292,11 @@ function FormBody({ lr, details, hasRecommendation, hasAction }) {
                 </div>
               </div>
 
-              <div className="mt-6 border-t-2 border-black pt-1 text-center text-[9px]">
-                {fullName(lr) || "\u00A0"}
-                <br />
-                (Signature of Applicant)
+              <div className="mt-6 text-center text-[9px]">
+                <div className="border-b-2 border-black pb-1">
+                  {fullName(lr) || "\u00A0"}
+                </div>
+                <div className="pt-1">(Signature of Applicant)</div>
               </div>
             </div>
           </div>
@@ -348,24 +339,24 @@ function FormBody({ lr, details, hasRecommendation, hasAction }) {
               7. c) APPROVED FOR:
             </div>
             <div className="min-h-[110px]">
-              {hasAction ? lr.action.approvedForText : ""}
+              {hasRecommendation ? lr.recommendation.remarks : ""}
             </div>
             <div className="flex flex-col items-center pb-2">
-              {hasAction && lr.action.signatureUrl ? (
+              {hasRecommendation && lr.recommendation.signatureUrl ? (
                 <img
-                  src={lr.action.signatureUrl}
-                  alt={`Signature of ${lr.action.officialName ?? "authorized official"}`}
+                  src={lr.recommendation.signatureUrl}
+                  alt={`Signature of ${lr.recommendation.officerName ?? "authorized official"}`}
                   className="csform6cos-signature h-10 max-w-[160px] object-contain"
                 />
               ) : (
                 <div className="h-10" />
               )}
-              <div className="w-72 border-t-2 border-black pt-1 text-center text-[10px]">
-                {hasAction ? (lr.action.officialName ?? "\u00A0") : "\u00A0"}
+              <div className="w-72 border-b-2 border-black pb-1 text-center text-[10px]">
+                {hasRecommendation
+                  ? (lr.recommendation.officerName ?? "\u00A0")
+                  : "\u00A0"}
               </div>
-              <div className="text-center text-[9px]">
-                Signature
-                <br />
+              <div className="pt-1 text-center text-[9px]">
                 (Authorized Official)
               </div>
             </div>
@@ -383,7 +374,6 @@ export default function LeaveRequestDocumentCOS({
   const lr = normalizeLeaveRequest(leaveRequest);
   const details = lr.details ?? {};
   const hasRecommendation = Boolean(lr.recommendation);
-  const hasAction = Boolean(lr.action);
 
   const portalRootId = `${printAreaId}-portal-root`;
 
@@ -422,7 +412,6 @@ export default function LeaveRequestDocumentCOS({
           lr={lr}
           details={details}
           hasRecommendation={hasRecommendation}
-          hasAction={hasAction}
         />
       </div>
 
@@ -442,7 +431,6 @@ export default function LeaveRequestDocumentCOS({
                 lr={lr}
                 details={details}
                 hasRecommendation={hasRecommendation}
-                hasAction={hasAction}
               />
             </div>
           </div>

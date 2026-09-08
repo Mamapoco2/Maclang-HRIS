@@ -179,6 +179,7 @@ export function normalizeLeaveRequest(raw) {
                   ? "disapproval"
                   : undefined,
             disapprovalReason: headStep.remarks,
+            remarks: headStep.remarks,
             officerName: assignedOfficerName(headStep),
             signatureUrl: actedOfficerSignature(headStep),
           }
@@ -193,6 +194,7 @@ export function normalizeLeaveRequest(raw) {
             disapprovedDue:
               mccStep.status === "rejected" ? mccStep.remarks : undefined,
             officialName: assignedOfficerName(mccStep),
+            signatureUrl: actedOfficerSignature(mccStep),
           }
         : undefined),
   };
@@ -479,10 +481,11 @@ function FormBody({
             <Checkbox checked={lr.commutation === "requested"}>
               Requested
             </Checkbox>
-            <div className="mt-6 border-t border-black pt-1 text-center text-[9px]">
-              {fullName(lr) || "\u00A0"}
-              <br />
-              (Signature of Applicant)
+            <div className="mt-6 text-center text-[9px]">
+              <div className="border-b border-black pb-1">
+                {fullName(lr) || "\u00A0"}
+              </div>
+              <div className="pt-1">(Signature of Applicant)</div>
             </div>
           </div>
         </div>
@@ -537,12 +540,13 @@ function FormBody({
                 ))}
               </tbody>
             </table>
-            <div className="mt-6 border-t border-black pt-1 text-center text-[9px]">
-              {hasCertification
-                ? (lr.certification.officerName ?? "\u00A0")
-                : "\u00A0"}
-              <br />
-              (Authorized Officer)
+            <div className="mt-6 text-center text-[9px]">
+              <div className="border-b border-black pb-1">
+                {hasCertification
+                  ? (lr.certification.officerName ?? "\u00A0")
+                  : "\u00A0"}
+              </div>
+              <div className="pt-1">(Authorized Officer)</div>
             </div>
           </div>
 
@@ -577,12 +581,13 @@ function FormBody({
               ) : (
                 <div className="h-10" />
               )}
-              <div className="w-full border-t border-black pt-1 text-center text-[9px]">
-                {hasRecommendation
-                  ? (lr.recommendation.officerName ?? "\u00A0")
-                  : "\u00A0"}
-                <br />
-                (Authorized Officer)
+              <div className="w-full text-center text-[9px]">
+                <div className="border-b border-black pb-1">
+                  {hasRecommendation
+                    ? (lr.recommendation.officerName ?? "\u00A0")
+                    : "\u00A0"}
+                </div>
+                <div className="pt-1">(Authorized Officer)</div>
               </div>
             </div>
           </div>
@@ -615,12 +620,20 @@ function FormBody({
           </div>
         </div>
 
-        <div className="pt-5 mb-5 text-center text-[9px]">
-          <div className="mx-auto w-72 border-t border-black pt-1">
+        <div className="pt-5 mb-5 flex flex-col items-center text-[9px]">
+          {hasAction && lr.action.signatureUrl ? (
+            <img
+              src={lr.action.signatureUrl}
+              alt={`Signature of ${lr.action.officialName ?? "authorized official"}`}
+              className="csform6-signature h-10 max-w-[160px] object-contain"
+            />
+          ) : (
+            <div className="h-10" />
+          )}
+          <div className="mx-auto w-72 border-b border-black pb-1 text-center">
             {hasAction ? (lr.action.officialName ?? "\u00A0") : "\u00A0"}
-            <br />
-            (Authorized Official)
           </div>
+          <div className="pt-1">(Authorized Official)</div>
         </div>
       </div>
     </>

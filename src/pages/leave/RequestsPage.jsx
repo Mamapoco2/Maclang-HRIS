@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/Card";
 import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
 import LeaveApi from "@/services/leaveApiService";
 import { LeaveRequestModal } from "./components/LeaveRequestModal";
+import { CancelRequestModal } from "./components/CancelRequestModal";
+import { ChangeDateModal } from "./components/ChangeDateModal";
 import { ApprovalStepsInline } from "./components/ApprovalTrail";
 import { LEAVE_TYPES } from "./leavePolicy";
 import { formatDate, downloadCSV } from "./utils";
@@ -26,6 +28,8 @@ import {
   Eye,
   Columns3,
   MessageSquareWarning,
+  XCircle,
+  CalendarClock,
 } from "lucide-react";
 
 function mapRequestToRow(r) {
@@ -55,6 +59,9 @@ function mapRequestToRow(r) {
     documents: r.documents,
     approvalSteps: r.approval_steps ?? [],
     currentStepOrder: r.current_step_order,
+    cancellationReason: r.cancellation_reason ?? null,
+    rescheduledTo: r.rescheduled_to ?? null,
+    rescheduledFrom: r.rescheduled_from ?? null,
   };
 }
 
@@ -68,6 +75,10 @@ export default function RequestsPage({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+  const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
   const loadRequests = useCallback(() => {
     setLoading(true);
@@ -87,6 +98,59 @@ export default function RequestsPage({ onNavigate }) {
   useEffect(() => {
     loadRequests();
   }, [loadRequests]);
+
+  const handleCancelSubmit = useCallback(
+    (reason) => {
+      if (!cancelTarget) return;
+      setActionSubmitting(true);
+      setActionError(null);
+      LeaveApi.cancelRequest(cancelTarget.id, reason)
+        .then(() => {
+          setCancelTarget(null);
+          loadRequests();
+        })
+        .catch((err) => {
+          setActionError(
+            err?.response?.data?.message ||
+              "Failed to cancel this leave request.",
+          );
+        })
+        .finally(() => setActionSubmitting(false));
+    },
+    [cancelTarget, loadRequests],
+  );
+
+  const handleRescheduleSubmit = useCallback(
+    ({ startDate, endDate, reason }) => {
+      if (!rescheduleTarget) return;
+      setActionSubmitting(true);
+      setActionError(null);
+      LeaveApi.rescheduleRequest(rescheduleTarget.id, {
+        startDate,
+        endDate,
+        reason,
+      })
+        .then(() => {
+          setRescheduleTarget(null);
+          loadRequests();
+        })
+        .catch((err) => {
+          setActionError(
+            err?.response?.data?.message ||
+              "Failed to change the date on this leave request.",
+          );
+        })
+        .finally(() => setActionSubmitting(false));
+    },
+    [rescheduleTarget, loadRequests],
+  );
+
+  // Cancel/Change Date only make sense while the request hasn't already
+  // been cancelled or rejected — this mirrors the backend's own check.
+  const canModify = useCallback(
+    (status) => status === "pending" || status === "approved",
+    [],
+  );
 
   const filteredData = useMemo(() => {
     return requests.filter((r) => {
@@ -190,11 +254,29 @@ export default function RequestsPage({ onNavigate }) {
             >
               <Eye className="w-4 h-4" />
             </button>
+            {canModify(row.original.status) && (
+              <>
+                <button
+                  onClick={() => setRescheduleTarget(row.original)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors"
+                  title="Change Date"
+                >
+                  <CalendarClock className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCancelTarget(row.original)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                  title="Cancel"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </div>
         ),
       },
     ],
-    [],
+    [canModify],
   );
 
   const table = useReactTable({
@@ -479,6 +561,39 @@ export default function RequestsPage({ onNavigate }) {
           request={viewTarget}
           onClose={() => setViewTarget(null)}
         />
+      )}
+
+      {cancelTarget && (
+        <CancelRequestModal
+          request={cancelTarget}
+          submitting={actionSubmitting}
+          onClose={() => {
+            setCancelTarget(null);
+            setActionError(null);
+          }}
+          onSave={handleCancelSubmit}
+        />
+      )}
+
+      {rescheduleTarget && (
+        <ChangeDateModal
+          request={rescheduleTarget}
+          submitting={actionSubmitting}
+          onClose={() => {
+            setRescheduleTarget(null);
+            setActionError(null);
+          }}
+          onSave={handleRescheduleSubmit}
+        />
+      )}
+
+      {actionError && (
+        <div
+          className="fixed bottom-4 right-4 z-[60] max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-lg"
+          role="alert"
+        >
+          {actionError}
+        </div>
       )}
     </div>
   );

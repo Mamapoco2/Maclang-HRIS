@@ -144,6 +144,11 @@ const NAV_MAIN = [
             url: "/newLeaveRequest",
             permission: "leave.request.manage",
           },
+          {
+            title: "Work Suspensions",
+            url: "/leaveSuspensions",
+            permission: "leave.suspensions.manage",
+          },
         ],
       },
       {

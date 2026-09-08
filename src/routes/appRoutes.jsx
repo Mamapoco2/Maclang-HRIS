@@ -25,6 +25,7 @@ import LeaveBalance from "../pages/leave/BalancesPage";
 import LeaveCalendar from "../pages/leave/CalendarPage";
 import LeaveApproval from "../pages/leave/ApprovalsPage";
 import LeaveRequest from "../pages/leave/RequestsPage";
+import SuspensionsPage from "../pages/leave/SuspensionsPage";
 import NewLeaveRequest from "../pages/leave/NewRequestPage";
 import Accounts from "../pages/accounts/components/accountApprovalPage";
 import ManPower from "../pages/manpower/manPowerPage";
@@ -250,6 +251,14 @@ function AppRoutes() {
               element={
                 <PermissionRoute permission="leave.request.manage">
                   <NewLeaveRequest />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/leaveSuspensions"
+              element={
+                <PermissionRoute permission="leave.suspensions.manage">
+                  <SuspensionsPage />
                 </PermissionRoute>
               }
             />

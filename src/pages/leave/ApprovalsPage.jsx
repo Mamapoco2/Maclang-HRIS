@@ -17,6 +17,7 @@ import { formatDate } from "./utils";
 import {
   CheckCircle,
   XCircle,
+  Ban,
   MessageSquare,
   Clock,
   Filter,
@@ -32,6 +33,11 @@ function mapToRow(r) {
     .find((s) => s.status !== "pending");
   const approverStep = pendingStep ?? lastActedStep;
 
+  const remarks =
+    r.status === "cancelled"
+      ? (r.cancellation_reason ?? null)
+      : (lastActedStep?.remarks ?? null);
+
   return {
     id: r.id,
     employeeName: r.employee?.name ?? "—",
@@ -44,7 +50,10 @@ function mapToRow(r) {
     reason: r.reason,
     appliedDate: r.submitted_at ?? r.created_at,
     approverName: approverStep?.approver?.name ?? "—",
-    remarks: lastActedStep?.remarks ?? null,
+    remarks,
+    cancellationReason: r.cancellation_reason ?? null,
+    rescheduledTo: r.rescheduled_to ?? null,
+    rescheduledFrom: r.rescheduled_from ?? null,
   };
 }
 
@@ -305,11 +314,15 @@ export default function ApprovalsPage() {
                           className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 relative z-10 ${
                             req.status === "approved"
                               ? "bg-emerald-100 dark:bg-emerald-950/40"
-                              : "bg-red-100 dark:bg-red-950/40"
+                              : req.status === "cancelled"
+                                ? "bg-slate-100 dark:bg-slate-800/40"
+                                : "bg-red-100 dark:bg-red-950/40"
                           }`}
                         >
                           {req.status === "approved" ? (
                             <CheckCircle className="w-4 h-4 text-emerald-600" />
+                          ) : req.status === "cancelled" ? (
+                            <Ban className="w-4 h-4 text-slate-500" />
                           ) : (
                             <XCircle className="w-4 h-4 text-red-600" />
                           )}
@@ -332,6 +345,17 @@ export default function ApprovalsPage() {
                                 "{req.remarks}"
                               </p>
                             </div>
+                          )}
+                          {req.rescheduledTo && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              → Moved to{" "}
+                              {formatDate(req.rescheduledTo.start_date)}
+                              {req.rescheduledTo.end_date !==
+                              req.rescheduledTo.start_date
+                                ? ` – ${formatDate(req.rescheduledTo.end_date)}`
+                                : ""}{" "}
+                              ({req.rescheduledTo.request_number})
+                            </p>
                           )}
                         </div>
                       </div>

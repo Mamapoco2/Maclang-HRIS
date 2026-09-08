@@ -6,6 +6,20 @@ export const LeaveApi = {
     return api.get("/leave/types", { params }).then((r) => r.data.data);
   },
 
+  // ─── Work Suspensions (HR) ──────────────────────────────────────────
+  listSuspensions() {
+    return api.get("/leave/suspensions").then((r) => r.data.data);
+  },
+  declareSuspension({ startDate, endDate, reason }) {
+    return api
+      .post("/leave/suspensions", {
+        start_date: startDate,
+        end_date: endDate,
+        reason,
+      })
+      .then((r) => r.data);
+  },
+
   // ─── Requests ─────────────────────────────────────────────────────
   listRequests(params) {
     return api.get("/leave/requests", { params }).then((r) => r.data);
@@ -17,10 +31,6 @@ export const LeaveApi = {
   submitRequest(fields, files = {}, multiFiles = []) {
     const formData = new FormData();
 
-    // Fields whose value must be serialized as Laravel's "boolean" rule
-    // expects on a multipart/form-data request: '1' / '0', NOT the
-    // JS-stringified "true" / "false" (which Laravel's boolean rule
-    // rejects outright, even though it looks like a valid boolean).
     const BOOLEAN_FIELDS = new Set(["is_half_day"]);
 
     Object.entries(fields).forEach(([key, value]) => {
@@ -63,6 +73,15 @@ export const LeaveApi = {
   cancelRequest(id, reason) {
     return api
       .post(`/leave/requests/${id}/cancel`, { reason })
+      .then((r) => r.data);
+  },
+  rescheduleRequest(id, { startDate, endDate, reason }) {
+    return api
+      .post(`/leave/requests/${id}/reschedule`, {
+        start_date: startDate,
+        end_date: endDate,
+        reason,
+      })
       .then((r) => r.data);
   },
   async downloadDocument(requestId, documentId, filename) {
