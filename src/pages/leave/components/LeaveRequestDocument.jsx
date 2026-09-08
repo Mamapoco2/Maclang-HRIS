@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import rmbghLogo from "../../../assets/rmbghlogo.png";
+import { useAuthenticatedImage } from "@/hooks/useAuthenticatedImage";
 
 export const LEAVE_TYPES = [
   {
@@ -309,6 +310,8 @@ function FormBody({
   hasCertification,
   hasRecommendation,
   hasAction,
+  recommendationSignatureUrl,
+  actionSignatureUrl,
 }) {
   return (
     <>
@@ -572,11 +575,11 @@ function FormBody({
             </Checkbox>
 
             <div className="mt-6 flex flex-col items-center">
-              {hasRecommendation && lr.recommendation.signatureUrl ? (
+              {hasRecommendation && recommendationSignatureUrl ? (
                 <img
-                  src={lr.recommendation.signatureUrl}
+                  src={recommendationSignatureUrl}
                   alt={`Signature of ${lr.recommendation.officerName ?? "authorized officer"}`}
-                  className="csform6-signature h-10 max-w-[160px] object-contain"
+                  className="csform6-signature h-10 max-w-[250px] object-contain"
                 />
               ) : (
                 <div className="h-10" />
@@ -621,9 +624,9 @@ function FormBody({
         </div>
 
         <div className="pt-5 mb-5 flex flex-col items-center text-[9px]">
-          {hasAction && lr.action.signatureUrl ? (
+          {hasAction && actionSignatureUrl ? (
             <img
-              src={lr.action.signatureUrl}
+              src={actionSignatureUrl}
               alt={`Signature of ${lr.action.officialName ?? "authorized official"}`}
               className="csform6-signature h-10 max-w-[160px] object-contain"
             />
@@ -649,6 +652,11 @@ export default function LeaveRequestDocument({
   const hasCertification = Boolean(lr.certification);
   const hasRecommendation = Boolean(lr.recommendation);
   const hasAction = Boolean(lr.action);
+
+  const recommendationSignature = useAuthenticatedImage(
+    lr.recommendation?.signatureUrl,
+  );
+  const actionSignature = useAuthenticatedImage(lr.action?.signatureUrl);
 
   const portalRootId = `${printAreaId}-portal-root`;
 
@@ -689,6 +697,8 @@ export default function LeaveRequestDocument({
           hasCertification={hasCertification}
           hasRecommendation={hasRecommendation}
           hasAction={hasAction}
+          recommendationSignatureUrl={recommendationSignature.url}
+          actionSignatureUrl={actionSignature.url}
         />
       </div>
 
@@ -707,6 +717,8 @@ export default function LeaveRequestDocument({
                 hasCertification={hasCertification}
                 hasRecommendation={hasRecommendation}
                 hasAction={hasAction}
+                recommendationSignatureUrl={recommendationSignature.url}
+                actionSignatureUrl={actionSignature.url}
               />
             </div>
           </div>

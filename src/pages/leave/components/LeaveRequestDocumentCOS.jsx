@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { normalizeLeaveRequest } from "./LeaveRequestDocument";
+import { useAuthenticatedImage } from "@/hooks/useAuthenticatedImage";
 
 function formatDate(value) {
   if (!value) return "";
@@ -68,7 +69,12 @@ function DatePartCell({ value }) {
   );
 }
 
-function FormBody({ lr, details, hasRecommendation }) {
+function FormBody({
+  lr,
+  details,
+  hasRecommendation,
+  recommendationSignatureUrl,
+}) {
   const COS_LEAVE_TYPES = ["vacation", "sick", "maternity", "paternity"];
   const isOthers = !COS_LEAVE_TYPES.includes(lr.leaveType);
   const from = formatDateParts(lr.inclusiveDatesFrom);
@@ -342,9 +348,9 @@ function FormBody({ lr, details, hasRecommendation }) {
               {hasRecommendation ? lr.recommendation.remarks : ""}
             </div>
             <div className="flex flex-col items-center pb-2">
-              {hasRecommendation && lr.recommendation.signatureUrl ? (
+              {hasRecommendation && recommendationSignatureUrl ? (
                 <img
-                  src={lr.recommendation.signatureUrl}
+                  src={recommendationSignatureUrl}
                   alt={`Signature of ${lr.recommendation.officerName ?? "authorized official"}`}
                   className="csform6cos-signature h-10 max-w-[160px] object-contain"
                 />
@@ -374,6 +380,11 @@ export default function LeaveRequestDocumentCOS({
   const lr = normalizeLeaveRequest(leaveRequest);
   const details = lr.details ?? {};
   const hasRecommendation = Boolean(lr.recommendation);
+
+  // Signature URLs are behind bearer-token auth — see LeaveRequestDocument.jsx.
+  const recommendationSignature = useAuthenticatedImage(
+    lr.recommendation?.signatureUrl,
+  );
 
   const portalRootId = `${printAreaId}-portal-root`;
 
