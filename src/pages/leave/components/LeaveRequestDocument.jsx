@@ -160,6 +160,19 @@ export function normalizeLeaveRequest(raw) {
       raw.inclusiveDatesFrom ?? raw.startDate ?? raw.start_date,
     inclusiveDatesTo: raw.inclusiveDatesTo ?? raw.endDate ?? raw.end_date,
 
+    // Applicant's own e-signature (for the Commutation / signature-of-applicant box).
+    // Adjust the raw field names below to match whatever your API actually returns.
+    signatureUrl:
+      raw.signatureUrl ??
+      raw.applicantSignatureUrl ??
+      raw.signature_url ??
+      raw.signature_path ??
+      raw.e_signature ??
+      employee.signature_url ??
+      employee.signature_path ??
+      employee.e_signature ??
+      undefined,
+
     certification:
       raw.certification ??
       (hrStep
@@ -312,6 +325,7 @@ function FormBody({
   hasAction,
   recommendationSignatureUrl,
   actionSignatureUrl,
+  applicantSignatureUrl,
 }) {
   return (
     <>
@@ -484,8 +498,17 @@ function FormBody({
             <Checkbox checked={lr.commutation === "requested"}>
               Requested
             </Checkbox>
-            <div className="mt-6 text-center text-[9px]">
-              <div className="border-b border-black pb-1">
+            <div className="mt-6 flex flex-col items-center text-[9px]">
+              {applicantSignatureUrl ? (
+                <img
+                  src={applicantSignatureUrl}
+                  alt={`Signature of ${fullName(lr) || "applicant"}`}
+                  className="csform6-signature h-10 max-w-[160px] object-contain"
+                />
+              ) : (
+                <div className="h-10" />
+              )}
+              <div className="w-full border-b border-black pb-1 text-center">
                 {fullName(lr) || "\u00A0"}
               </div>
               <div className="pt-1">(Signature of Applicant)</div>
@@ -653,6 +676,7 @@ export default function LeaveRequestDocument({
   const hasRecommendation = Boolean(lr.recommendation);
   const hasAction = Boolean(lr.action);
 
+  const applicantSignature = useAuthenticatedImage(lr.signatureUrl);
   const recommendationSignature = useAuthenticatedImage(
     lr.recommendation?.signatureUrl,
   );
@@ -699,6 +723,7 @@ export default function LeaveRequestDocument({
           hasAction={hasAction}
           recommendationSignatureUrl={recommendationSignature.url}
           actionSignatureUrl={actionSignature.url}
+          applicantSignatureUrl={applicantSignature.url}
         />
       </div>
 
@@ -719,6 +744,7 @@ export default function LeaveRequestDocument({
                 hasAction={hasAction}
                 recommendationSignatureUrl={recommendationSignature.url}
                 actionSignatureUrl={actionSignature.url}
+                applicantSignatureUrl={applicantSignature.url}
               />
             </div>
           </div>

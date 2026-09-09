@@ -22,6 +22,7 @@ import {
   formatFileSize,
   formatTimestamp,
 } from "@/utils/signatureValidation";
+import { normalizeSignatureImage } from "@/utils/normalizeSignatureImage";
 import { toast } from "sonner";
 
 const STATUS_LABELS = {
@@ -43,6 +44,7 @@ export function SignatureUploadCard({
 }) {
   const fileRef = useRef(null);
   const [error, setError] = useState(null);
+  const [processing, setProcessing] = useState(false);
 
   const uploadedAt = signature?.uploadedAt ?? null;
   const fileSize = signature?.fileSize ?? null;
@@ -61,8 +63,26 @@ export function SignatureUploadCard({
 
     setError(null);
 
+    let fileToUpload = file;
+
+    // Trim transparent padding and normalize to a consistent size so
+    // small/large signature drawings all come out legible and uniform
+    // once placed on the leave form.
     try {
-      await onUpload?.(file);
+      setProcessing(true);
+      fileToUpload = await normalizeSignatureImage(file);
+    } catch (err) {
+      // If normalization fails for any reason (unsupported image data,
+      // canvas errors, etc.), fall back to uploading the original file
+      // rather than blocking the user entirely.
+      console.error("Signature normalization failed, using original file", err);
+      fileToUpload = file;
+    } finally {
+      setProcessing(false);
+    }
+
+    try {
+      await onUpload?.(fileToUpload);
       toast.success(`${label} saved`, { description: file.name });
     } catch (err) {
       const message =
@@ -94,11 +114,13 @@ export function SignatureUploadCard({
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const isBusy = isUploading || isDeleting || processing;
+
   const displayStatus = error
     ? "error"
     : signature
       ? "success"
-      : isUploading
+      : isUploading || processing
         ? "uploading"
         : "idle";
 
@@ -142,10 +164,12 @@ export function SignatureUploadCard({
               backgroundColor: "#f8fafc",
             }}
           >
-            {isUploading ? (
+            {isUploading || processing ? (
               <div className="text-center text-muted-foreground">
                 <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
-                <p className="text-sm">Uploading…</p>
+                <p className="text-sm">
+                  {processing ? "Processing…" : "Uploading…"}
+                </p>
               </div>
             ) : previewUrl ? (
               <img
@@ -181,7 +205,7 @@ export function SignatureUploadCard({
           </div>
         )}
 
-        {signature && !error && !isUploading && (
+        {signature && !error && !isUploading && !processing && (
           <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
             Signature saved successfully
@@ -193,7 +217,7 @@ export function SignatureUploadCard({
             variant="outline"
             size="sm"
             className="gap-2"
-            disabled={isUploading || isDeleting}
+            disabled={isBusy}
             onClick={() => fileRef.current?.click()}
           >
             {signature ? (
@@ -213,7 +237,7 @@ export function SignatureUploadCard({
               variant="ghost"
               size="sm"
               className="gap-2 text-destructive hover:text-destructive"
-              disabled={isUploading || isDeleting}
+              disabled={isBusy}
               onClick={handleDelete}
             >
               {isDeleting ? (
