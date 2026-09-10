@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { PageHeader } from "./PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FormField, Input, Textarea, Select } from "./FormField";
-import { useToast } from "./Toast";
 import { useAuth } from "@/hooks/useAuth";
 import LeaveApi from "@/services/leaveApiService";
 import {
@@ -38,7 +38,6 @@ function extractErrorMessage(err, fallback) {
 
 export default function NewRequestPage({ onNavigate }) {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
   const employee = user?.employee ?? null;
 
@@ -166,19 +165,15 @@ export default function NewRequestPage({ onNavigate }) {
 
   const onSubmit = async (formValues) => {
     if (!employee?.id) {
-      toast({
-        title: "No linked employee record",
+      toast.error("No linked employee record", {
         description: "Your account isn't linked to an employee profile yet.",
-        variant: "error",
       });
       return;
     }
 
     if (!serverType) {
-      toast({
-        title: "Select a leave type",
+      toast.error("Select a leave type", {
         description: "Please choose a valid, active leave type.",
-        variant: "error",
       });
       return;
     }
@@ -204,23 +199,19 @@ export default function NewRequestPage({ onNavigate }) {
     setLoading(true);
     try {
       await LeaveApi.submitRequest(fields, uploads, vawcFiles);
-      toast({
-        title: "Leave Request Submitted",
+      toast.success("Leave Request Submitted", {
         description: "Your request is pending approval.",
-        variant: "success",
       });
       reset();
       setUploads({});
       setVawcFiles([]);
       goTo("requests");
     } catch (err) {
-      toast({
-        title: "Submission Failed",
+      toast.error("Submission Failed", {
         description: extractErrorMessage(
           err,
           "Something went wrong while submitting your request.",
         ),
-        variant: "error",
       });
     } finally {
       setLoading(false);
