@@ -122,6 +122,11 @@ export const employeeService = {
     return res.data;
   },
 
+  async getDepartmentOptions() {
+    const res = await api.get("/departments/options");
+    return res.data;
+  },
+
   async getDepartmentById(id) {
     const res = await api.get(`/departments/${id}`);
     return res.data;

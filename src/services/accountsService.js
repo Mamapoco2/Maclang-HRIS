@@ -15,7 +15,9 @@ export async function getPendingCount() {
     const res = await api.get("/pending-users/count");
     return res.data.count ?? 0;
   } catch (err) {
-    console.error("getPendingCount:", err);
+    if (err?.response?.status !== 403) {
+      console.error("getPendingCount:", err);
+    }
     return 0;
   }
 }

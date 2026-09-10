@@ -122,6 +122,9 @@ export const LeaveApi = {
   },
 
   // ─── Balances ─────────────────────────────────────────────────────
+  getBalancesRoster() {
+    return api.get("/leave/balances/roster").then((r) => r.data.data);
+  },
   getMyBalances(employeeId, year) {
     return api
       .get(`/leave/employees/${employeeId}/balances`, { params: { year } })

@@ -571,9 +571,8 @@ export default function BalancesPage() {
     setEmpLoading(true);
     setEmpError(null);
     try {
-      const res = await employeeService.getAll({ per_page: 9999 });
-      const list = Array.isArray(res) ? res : (res.data ?? res.employees ?? []);
-      setEmployees(list);
+      const list = await LeaveApi.getBalancesRoster();
+      setEmployees(Array.isArray(list) ? list : []);
     } catch (err) {
       setEmpError(err?.message ?? "Failed to load employees.");
     } finally {
@@ -583,7 +582,7 @@ export default function BalancesPage() {
 
   const fetchDepartments = useCallback(async () => {
     try {
-      const res = await employeeService.getDepartments();
+      const res = await employeeService.getDepartmentOptions();
       const list = Array.isArray(res) ? res : (res.data ?? []);
       setDepartments(list);
     } catch {}
