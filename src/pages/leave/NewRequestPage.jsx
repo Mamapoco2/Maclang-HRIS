@@ -117,7 +117,6 @@ export default function NewRequestPage({ onNavigate }) {
       leaveType: "",
       startDate: "",
       endDate: "",
-      isHalfDay: false,
       reason: "",
       destination: "within_ph",
       locationType: "within_ph",
@@ -127,7 +126,6 @@ export default function NewRequestPage({ onNavigate }) {
   const leaveType = watch("leaveType");
   const startDate = watch("startDate");
   const endDate = watch("endDate");
-  const isHalfDay = watch("isHalfDay");
   const reason = watch("reason") || "";
   const hideDates = HIDE_DATE_SELECTION.has(leaveType);
 
@@ -144,9 +142,7 @@ export default function NewRequestPage({ onNavigate }) {
     startDate &&
     endDate &&
     new Date(endDate) >= new Date(startDate)
-      ? isHalfDay
-        ? 0.5
-        : daysBetween(startDate, endDate)
+      ? daysBetween(startDate, endDate)
       : hideDates && leaveType === "monetization"
         ? watch("creditsToMonetize") || "—"
         : 0;
@@ -201,7 +197,6 @@ export default function NewRequestPage({ onNavigate }) {
       leave_type_id: serverType.id,
       start_date: hideDates ? undefined : formValues.startDate,
       end_date: hideDates ? undefined : formValues.endDate,
-      is_half_day: hideDates ? undefined : !!formValues.isHalfDay,
       reason: formValues.reason,
       details,
     };
@@ -374,15 +369,6 @@ export default function NewRequestPage({ onNavigate }) {
                       />
                     </FormField>
                   </div>
-
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      {...register("isHalfDay")}
-                      className="accent-[var(--primary)]"
-                    />
-                    Half-day leave
-                  </label>
 
                   <FormField
                     label="Number of Days"

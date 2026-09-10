@@ -66,11 +66,11 @@ export function InterviewDialog({ application, onClose, onSaved }) {
         application.id,
         payload,
       );
-      toast?.success?.("Na-save ang interview.");
+      toast?.success?.("Interview saved.");
       onSaved();
     } catch (err) {
       toast?.error?.(
-        err?.response?.data?.message ?? "Hindi na-save ang interview.",
+        err?.response?.data?.message ?? "Failed to save interview.",
       );
     } finally {
       setSaving(false);
@@ -208,9 +208,9 @@ export function InterviewDialog({ application, onClose, onSaved }) {
             placeholder="Select overall status"
           />
           <p className="mt-1.5 text-[11px] text-slate-400">
-            Dapat maging{" "}
-            <span className="font-medium text-slate-600">Completed</span> ito
-            bago maaprubahan ang application na ito.
+            This must be{" "}
+            <span className="font-medium text-slate-600">Completed</span> before
+            this application can be approved.
           </p>
         </FormSection>
       </div>

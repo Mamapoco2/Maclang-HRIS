@@ -270,7 +270,7 @@ function CommentsPanel({ documentId, canManage }) {
         if (!cancelled) setComments(res.data ?? []);
       })
       .catch(() => {
-        if (!cancelled) toast.error("Hindi ma-load ang mga komento.");
+        if (!cancelled) toast.error("Failed to load comments.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -292,7 +292,7 @@ function CommentsPanel({ documentId, canManage }) {
       setComments((prev) => [...prev, res.data]);
       setNewComment("");
     } catch (err) {
-      toast.error(err?.response?.data?.message ?? "Hindi na-save ang komento.");
+      toast.error(err?.response?.data?.message ?? "Failed to save comment.");
     } finally {
       setSubmitting(false);
     }
@@ -309,7 +309,7 @@ function CommentsPanel({ documentId, canManage }) {
         prev.map((c) => (c.id === comment.id ? res.data : c)),
       );
     } catch (err) {
-      toast.error("Hindi na-update ang status.");
+      toast.error("Failed to update status.");
     } finally {
       setBusyId(null);
     }
@@ -321,7 +321,7 @@ function CommentsPanel({ documentId, canManage }) {
       await api.delete(plantillaPostingService.documentCommentUrl(comment.id));
       setComments((prev) => prev.filter((c) => c.id !== comment.id));
     } catch (err) {
-      toast.error("Hindi na-delete ang komento.");
+      toast.error("Failed to delete comment.");
     } finally {
       setBusyId(null);
     }
@@ -344,7 +344,7 @@ function CommentsPanel({ documentId, canManage }) {
           </div>
         ) : comments.length === 0 ? (
           <p className="py-4 text-center text-xs text-gray-400">
-            Wala pang komento sa file na ito.
+            No comments on this file yet.
           </p>
         ) : (
           <ul className="space-y-3">

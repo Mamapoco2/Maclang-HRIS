@@ -69,9 +69,6 @@ export default function PsbApplicantsCalendar({ applications, onRefresh }) {
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
 
   const { hasRole } = useContext(AuthContext);
-  // Reschedule action is HR/Admin-only — Staff/employee side of the
-  // calendar should only be able to view scheduled interviews, hindi
-  // maka-reschedule ng kanilang sariling PSB interview date.
   const canReschedule =
     hasRole("SuperAdmin") || hasRole("Admin") || hasRole("HR");
 

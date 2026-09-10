@@ -38,13 +38,13 @@ export function ReviewApplicationDialog({ application, onClose, onSaved }) {
         status,
         remarks,
       });
-      toast?.success?.("Na-update ang application.");
+      toast?.success?.("Application updated.");
       onSaved();
     } catch (err) {
       const message =
         err?.response?.data?.errors?.status?.[0] ||
         err?.response?.data?.message ||
-        "Hindi na-update ang application.";
+        "Failed to update application.";
       setError(message);
       toast?.error?.(message);
     } finally {
@@ -95,9 +95,9 @@ export function ReviewApplicationDialog({ application, onClose, onSaved }) {
           <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              Hindi pa COMPLETED ang interview ng application na ito. Hindi ito
-              maaaprubahan ng backend hangga't hindi na-mamark as Completed sa
-              Interview dialog.
+              The interview for this application is not yet COMPLETED. The
+              backend will not approve this until it is marked as Completed in
+              the Interview dialog.
             </span>
           </div>
         )}

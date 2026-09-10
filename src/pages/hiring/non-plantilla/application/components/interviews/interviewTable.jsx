@@ -90,7 +90,7 @@ export default function InterviewTable() {
       setInterviews(list.map(normalizeInterview));
     } catch (err) {
       console.error("loadData (interviews) failed:", err);
-      toast.error("HINDI MA-LOAD ANG MGA INTERVIEW.");
+      toast.error("FAILED TO LOAD INTERVIEWS.");
       setInterviews([]);
     } finally {
       setLoading(false);

@@ -55,8 +55,6 @@ function Checkbox({ checked, children }) {
   );
 }
 
-// Plain (checkbox-less) line item, used under 6.d) where the paper form
-// does not print a checkbox square — just the label and an underline.
 function PlainItem({ children }) {
   return <div className="py-0.5 text-[11px] leading-tight">{children}</div>;
 }
@@ -74,6 +72,7 @@ function FormBody({
   details,
   hasRecommendation,
   recommendationSignatureUrl,
+  applicantSignatureUrl,
 }) {
   const COS_LEAVE_TYPES = ["vacation", "sick", "maternity", "paternity"];
   const isOthers = !COS_LEAVE_TYPES.includes(lr.leaveType);
@@ -98,7 +97,6 @@ function FormBody({
       <div className="mb-3 text-center text-[21px]">
         (for Consultant and Contractual)
       </div>
-      {/* 1–5 — bordered box starts here; header/title above stays unboxed */}
       <div className="text-[11px] pt-5">
         <table className="w-full border-collapse text-[11px]">
           <tbody>
@@ -298,8 +296,17 @@ function FormBody({
                 </div>
               </div>
 
-              <div className="mt-6 text-center text-[9px]">
-                <div className="border-b-2 border-black pb-1">
+              <div className="mt-6 flex flex-col items-center text-[9px]">
+                {applicantSignatureUrl ? (
+                  <img
+                    src={applicantSignatureUrl}
+                    alt={`Signature of ${fullName(lr) || "applicant"}`}
+                    className="csform6cos-signature h-10 max-w-[160px] object-contain"
+                  />
+                ) : (
+                  <div className="h-10" />
+                )}
+                <div className="w-full border-b-2 border-black pb-1 text-center">
                   {fullName(lr) || "\u00A0"}
                 </div>
                 <div className="pt-1">(Signature of Applicant)</div>
@@ -381,7 +388,7 @@ export default function LeaveRequestDocumentCOS({
   const details = lr.details ?? {};
   const hasRecommendation = Boolean(lr.recommendation);
 
-  // Signature URLs are behind bearer-token auth — see LeaveRequestDocument.jsx.
+  const applicantSignature = useAuthenticatedImage(lr.signatureUrl);
   const recommendationSignature = useAuthenticatedImage(
     lr.recommendation?.signatureUrl,
   );
@@ -396,8 +403,8 @@ export default function LeaveRequestDocumentCOS({
     const node = printRef.current;
     if (!node) return;
 
-    const PAGE_WIDTH_MM = 216; // letter
-    const PAGE_HEIGHT_MM = 279; // letter
+    const PAGE_WIDTH_MM = 216;
+    const PAGE_HEIGHT_MM = 279;
     const MM_TO_PX = 96 / 25.4;
     const pageWidthPx =
       (PAGE_WIDTH_MM - PRINT_MARGIN_HORIZONTAL_MM * 2) * MM_TO_PX;
@@ -423,6 +430,8 @@ export default function LeaveRequestDocumentCOS({
           lr={lr}
           details={details}
           hasRecommendation={hasRecommendation}
+          recommendationSignatureUrl={recommendationSignature.url}
+          applicantSignatureUrl={applicantSignature.url}
         />
       </div>
 
@@ -442,6 +451,8 @@ export default function LeaveRequestDocumentCOS({
                 lr={lr}
                 details={details}
                 hasRecommendation={hasRecommendation}
+                recommendationSignatureUrl={recommendationSignature.url}
+                applicantSignatureUrl={applicantSignature.url}
               />
             </div>
           </div>

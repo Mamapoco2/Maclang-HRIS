@@ -74,7 +74,6 @@ export default function ContractGenerationTab({ onContractSaved }) {
   const [saving, setSaving] = useState(false);
   const [existingContract, setExistingContract] = useState(null);
 
-  // FIX: useRef para palaging fresh ang contracts value sa loob ng closures
   const contractsRef = useRef([]);
 
   useEffect(() => {
@@ -91,7 +90,6 @@ export default function ContractGenerationTab({ onContractSaved }) {
 
       const arr = extractArray(contractRes);
 
-      // FIX: i-update ang ref kasabay ng state para laging fresh ang value
       contractsRef.current = arr;
       setContracts(arr);
       setHiredApplicants(applicantsRes.data ?? []);
@@ -114,8 +112,6 @@ export default function ContractGenerationTab({ onContractSaved }) {
       (a) => String(a.id) === String(applicantId),
     );
 
-    // FIX: gamitin ang contractsRef.current para laging fresh ang value
-    // Hindi na stale kahit kailan pa tinawag ito
     const found = contractsRef.current.find(
       (c) => String(c.applicant_id) === String(applicantId),
     );

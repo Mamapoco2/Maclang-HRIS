@@ -22,12 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, X } from "lucide-react";
 import { toast } from "sonner";
 
-const TYPE_OPTIONS = [
-  { value: "DEPARTMENT", label: "DEPARTMENT" },
-  { value: "UNIT", label: "UNIT" },
-  { value: "SECTION", label: "SECTION" },
-];
-
 const HEAD_ROLES = [
   "CHIEF",
   "DIRECTOR",
@@ -35,6 +29,7 @@ const HEAD_ROLES = [
   "OFFICER IN CHARGE",
   "CHAIRMAN",
   "HEAD",
+  "CLUSTER HEAD",
   "SUPERVISOR",
 ];
 
@@ -47,6 +42,7 @@ const TYPE_BADGE = {
   DEPARTMENT: "bg-blue-100 text-blue-700",
   UNIT: "bg-emerald-100 text-emerald-700",
   SECTION: "bg-violet-100 text-violet-700",
+  CLUSTER: "bg-amber-100 text-amber-700",
 };
 
 const fetchAllEmployees = async () => {
@@ -70,6 +66,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
   const [allDepartments, setAllDepartments] = useState([]);
   const [allDivisions, setAllDivisions] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [typeOptions, setTypeOptions] = useState([]);
   const [loadingDivisions, setLoadingDivisions] = useState(false);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -104,6 +101,11 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
       )
       .catch(() => toast.error("Failed to load divisions."))
       .finally(() => setLoadingDivisions(false));
+
+    api
+      .get("/departments/types")
+      .then((res) => setTypeOptions(Array.isArray(res.data) ? res.data : []))
+      .catch(() => toast.error("Failed to load department types."));
 
     setLoadingDepartments(true);
     Promise.all([api.get("/departments"), api.get("/divisions")])
@@ -247,8 +249,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
     }
   };
 
-  const typeLabel =
-    TYPE_OPTIONS.find((o) => o.value === form.type)?.label ?? "";
+  const typeLabel = typeOptions.find((o) => o.value === form.type)?.label ?? "";
 
   return (
     <Dialog
@@ -317,7 +318,7 @@ export default function AddDepartmentModal({ open, onClose, onSuccess }) {
                 <SelectValue placeholder="SELECT TYPE" />
               </SelectTrigger>
               <SelectContent>
-                {TYPE_OPTIONS.map((opt) => (
+                {typeOptions.map((opt) => (
                   <SelectItem
                     key={opt.value}
                     value={opt.value}
