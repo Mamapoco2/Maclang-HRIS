@@ -53,7 +53,10 @@ export function CreatePostingDialog({
 
   if (!open) return <Modal open={false} onClose={onClose} />;
 
-  const selectableVacantItems = filterSelectableVacantItems(vacantItems);
+  const selectableVacantItems = filterSelectableVacantItems(
+    vacantItems,
+    postedBaseItemNumbers,
+  );
 
   const applyVacantItem = (baseItemNumber) => {
     const vi = vacantItems.find((v) => v.base_item_number === baseItemNumber);

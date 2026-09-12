@@ -160,6 +160,15 @@ export default function PlantillaPostingPage() {
     }
   }, []);
 
+  const loadVacantItems = useCallback(async () => {
+    try {
+      const items = await plantillaPostingService.getVacantItems();
+      setVacantItems(items);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     loadPostings(controller.signal);
@@ -210,16 +219,13 @@ export default function PlantillaPostingPage() {
       });
 
     if (isAdmin) {
-      plantillaPostingService
-        .getVacantItems()
-        .then(setVacantItems)
-        .catch(console.error);
+      loadVacantItems();
 
       const controller = new AbortController();
       loadPostedBaseItemNumbers(controller.signal);
       return () => controller.abort();
     }
-  }, [isAdmin, loadPostedBaseItemNumbers]);
+  }, [isAdmin, loadPostedBaseItemNumbers, loadVacantItems]);
 
   const sorted = useMemo(() => {
     const list = [...items];
@@ -286,6 +292,7 @@ export default function PlantillaPostingPage() {
         setIsCreateOpen(false);
         loadPostings();
         loadPostedBaseItemNumbers();
+        loadVacantItems();
       } catch (err) {
         toast?.error?.(
           err?.response?.data?.message ?? "An error occurred while saving.",
@@ -293,7 +300,7 @@ export default function PlantillaPostingPage() {
         throw err;
       }
     },
-    [loadPostings, loadPostedBaseItemNumbers],
+    [loadPostings, loadPostedBaseItemNumbers, loadVacantItems],
   );
 
   const handleUpdate = useCallback(
@@ -322,6 +329,7 @@ export default function PlantillaPostingPage() {
       setDeleteItem(null);
       loadPostings();
       loadPostedBaseItemNumbers();
+      loadVacantItems();
     } catch (err) {
       toast?.error?.(
         err?.response?.data?.message ?? "Failed to delete posting.",
@@ -329,7 +337,13 @@ export default function PlantillaPostingPage() {
     } finally {
       setDeleting(false);
     }
-  }, [deleting, deleteItem, loadPostings, loadPostedBaseItemNumbers]);
+  }, [
+    deleting,
+    deleteItem,
+    loadPostings,
+    loadPostedBaseItemNumbers,
+    loadVacantItems,
+  ]);
 
   return (
     <div className="min-h-full w-full min-w-0 max-w-full overflow-x-hidden bg-slate-50 font-sans text-slate-900 antialiased [contain:inline-size]">

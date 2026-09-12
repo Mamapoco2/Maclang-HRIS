@@ -55,16 +55,32 @@ export function formatPositionSlotNumbers(item) {
 // ── Create-mode vacant item filtering ───────────────────────────────────
 
 export function extractPostedBaseItemNumbers(postings) {
+  const today = getTodayDateString();
   return new Set(
     (postings ?? [])
+      .filter((p) => {
+        const status = p.status;
+        const closingDate = p.closing_date ?? p.closingDate;
+        const isClosed = status === "Closed";
+        const isExpired = closingDate ? closingDate < today : false;
+        return !isClosed && !isExpired;
+      })
       .map((p) => p.base_item_number ?? p.baseItemNumber)
       .filter(Boolean),
   );
 }
 
-export function filterSelectableVacantItems(vacantItems) {
+export function filterSelectableVacantItems(
+  vacantItems,
+  postedBaseItemNumbers,
+) {
   return (vacantItems ?? [])
     .filter((v) => getSelectableSlots(v).length > 0)
+    .filter(
+      (v) =>
+        !postedBaseItemNumbers ||
+        !postedBaseItemNumbers.has(v.base_item_number),
+    )
     .slice()
     .sort((a, b) =>
       (a.title || "").localeCompare(b.title || "", undefined, {
