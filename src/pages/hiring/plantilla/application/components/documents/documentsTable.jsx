@@ -397,7 +397,7 @@ function CommentsPanel({ documentId, canManage }) {
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Ano ang mali sa file na ito?"
+            placeholder="What's wrong with this file?"
             rows={3}
             maxLength={2000}
             className="w-full resize-none rounded-md border border-gray-200 p-2 text-xs text-gray-800 outline-none focus:border-indigo-400"
@@ -591,12 +591,7 @@ function DocumentViewerModal({
 
 export default function DocumentsTable({ applications }) {
   const { hasRole } = useContext(AuthContext) || {};
-  // UI-level gating only — the real security boundary is enforced server
-  // side via the `hiring.plantilla.applications.manage` permission on the
-  // comment write endpoints. This just decides whether to show the
-  // "add comment" box at all.
-  const canManageComments =
-    hasRole("SuperAdmin") || hasRole("Admin") || hasRole("HR");
+  const canManageComments = hasRole("SuperAdmin") || hasRole("HR");
 
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [viewerDoc, setViewerDoc] = useState(null);
@@ -605,8 +600,6 @@ export default function DocumentsTable({ applications }) {
   const [viewerMimeType, setViewerMimeType] = useState(null);
   const [viewerLoading, setViewerLoading] = useState(false);
 
-  // Group into the three sections instead of a single sorted list —
-  // each section is a plain-language answer to "who needs my attention?"
   const groups = useMemo(() => {
     const empty = [];
     const partial = [];
