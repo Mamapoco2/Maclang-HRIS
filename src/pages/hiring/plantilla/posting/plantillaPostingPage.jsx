@@ -47,6 +47,7 @@ export default function PlantillaPostingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const isAdmin = hasPermission(user, PERMISSIONS.PLANTILLA_POSTINGS_MANAGE);
+  const canViewClosingDate = !!(hasRole?.("HR") || hasRole?.("SuperAdmin"));
   const canViewSummary =
     hasRole("SuperAdmin") || hasRole("Admin") || hasRole("HR");
 
@@ -408,6 +409,7 @@ export default function PlantillaPostingPage() {
               <PostingTable
                 items={sorted}
                 isAdmin={isAdmin}
+                canViewClosingDate={canViewClosingDate}
                 onView={setViewItem}
                 onEdit={openEditDialog}
                 onDelete={setDeleteItem}
@@ -418,6 +420,7 @@ export default function PlantillaPostingPage() {
               <PostingMobileCards
                 items={sorted}
                 isAdmin={isAdmin}
+                canViewClosingDate={canViewClosingDate}
                 onView={setViewItem}
                 onEdit={openEditDialog}
                 onDelete={setDeleteItem}
@@ -442,6 +445,7 @@ export default function PlantillaPostingPage() {
         item={viewItem}
         onClose={() => setViewItem(null)}
         isAdmin={isAdmin}
+        canViewClosingDate={canViewClosingDate}
         onApply={() => {
           setApplyItem(viewItem);
           setViewItem(null);

@@ -46,6 +46,7 @@ export const EMPTY_FORM = {
   qualification_eligibility: "",
   qualification_competency: "",
   date_posted: "",
+  application_deadline: "",
   closing_date: "",
   expected_appointment_date: "",
   status: "Open",

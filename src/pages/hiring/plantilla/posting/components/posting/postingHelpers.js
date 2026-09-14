@@ -23,6 +23,22 @@ export function computeClosingDate(postingDateStr) {
   return addMonths(postingDateStr, 9);
 }
 
+export function addDays(dateStr, days) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return toDateString(date);
+}
+
+// Public-facing deadline for applicants to submit an application — always
+// 15 days after the posting date. Separate from `closing_date`, which is
+// the internal (HR/SuperAdmin-only) reservation window.
+export const APPLICATION_DEADLINE_DAYS = 15;
+
+export function computeApplicationDeadline(postingDateStr) {
+  return addDays(postingDateStr, APPLICATION_DEADLINE_DAYS);
+}
+
 export function formatDateSlash(dateStr) {
   if (!dateStr) return "—";
   const [y, m, d] = dateStr.split("-");
@@ -54,6 +70,14 @@ export function formatPositionSlotNumbers(item) {
 
 // ── Create-mode vacant item filtering ───────────────────────────────────
 
+/**
+ * Base item numbers with a currently-ACTIVE posting — mirrors the backend's
+ * `PlantillaPostingRepository::activePostingSlotIds()` definition: an
+ * active posting is one that isn't soft-deleted, isn't status "Closed",
+ * and hasn't passed its closing date. Postings the backend already treats
+ * as re-postable (Closed, or past closing_date) must NOT show up here,
+ * or this set would block items the backend would otherwise allow.
+ */
 export function extractPostedBaseItemNumbers(postings) {
   const today = getTodayDateString();
   return new Set(
@@ -70,6 +94,16 @@ export function extractPostedBaseItemNumbers(postings) {
   );
 }
 
+/**
+ * Vacant items eligible to be selected in the "New Posting" dropdown.
+ *
+ * `postedBaseItemNumbers` is an optional defensive filter: it's a snapshot
+ * of base item numbers with a currently-active posting, fetched
+ * independently of `vacantItems`. Since `vacantItems` is only refetched
+ * after create/delete actions (not on every dialog open), this guards
+ * against a stale `vacantItems` list momentarily showing an item that
+ * another admin just posted in the meantime.
+ */
 export function filterSelectableVacantItems(
   vacantItems,
   postedBaseItemNumbers,
@@ -156,7 +190,7 @@ export function deriveMonthlyFromAnnual(raw) {
 
 // ── Validation ───────────────────────────────────────────────────────────
 
-export function validatePostingForm(form, { mode }) {
+export function validatePostingForm(form, { mode, canViewClosingDate = true }) {
   const errors = {};
   if (!form.base_item_number?.trim())
     errors.base_item_number = "Position is required.";
@@ -170,13 +204,29 @@ export function validatePostingForm(form, { mode }) {
   if (mode === "create" && form.plantilla_position_ids?.length !== 1)
     errors.position_slot_names = "Select exactly one item number to post.";
   if (!form.date_posted) errors.date_posted = "Posting date is required.";
-  if (!form.closing_date) errors.closing_date = "Closing date is required.";
+  if (!form.application_deadline)
+    errors.application_deadline = "Application deadline is required.";
   if (
     form.date_posted &&
-    form.closing_date &&
-    new Date(form.closing_date) < new Date(form.date_posted)
+    form.application_deadline &&
+    new Date(form.application_deadline) < new Date(form.date_posted)
   )
-    errors.closing_date = "Closing date cannot be earlier than posting date.";
+    errors.application_deadline =
+      "Application deadline cannot be earlier than posting date.";
+
+  // Closing Date is only ever rendered (and therefore only ever
+  // user-facing) for HR/SuperAdmin — skip validating it for anyone else,
+  // since the field isn't on their form and the backend preserves the
+  // existing value server-side for them regardless.
+  if (canViewClosingDate) {
+    if (!form.closing_date) errors.closing_date = "Closing date is required.";
+    if (
+      form.date_posted &&
+      form.closing_date &&
+      new Date(form.closing_date) < new Date(form.date_posted)
+    )
+      errors.closing_date = "Closing date cannot be earlier than posting date.";
+  }
   return errors;
 }
 
@@ -279,7 +329,14 @@ export function buildEditFormFromRecord(d) {
     qualification_eligibility: d.qualifications.eligibility,
     qualification_competency: d.qualifications.competency,
     date_posted: d.datePosted,
-    closing_date: d.closingDate,
+    application_deadline:
+      d.applicationDeadline || computeApplicationDeadline(d.datePosted),
+    // Falls back to a freshly-computed default when the current user can't
+    // see the real value (backend hides it for non-HR/SuperAdmin) — the
+    // Closing Date field itself is hidden from them in the form too, and
+    // the backend ignores this value for their role anyway (see
+    // PlantillaPostingService::update()).
+    closing_date: d.closingDate || computeClosingDate(d.datePosted),
     expected_appointment_date: d.expectedAppointmentDate || "",
     status: d.status,
     required_documents: { ...d.requiredDocuments },

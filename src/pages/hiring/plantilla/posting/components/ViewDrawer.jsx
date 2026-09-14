@@ -44,7 +44,13 @@ export function InfoGrid({ rows, stacked }) {
   );
 }
 
-export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
+export function ViewDrawer({
+  item,
+  onClose,
+  isAdmin,
+  canViewClosingDate = false,
+  onApply,
+}) {
   if (!item) return <DrawerPanel open={false} onClose={onClose} />;
   const docsRequired = DOC_KEYS.filter((d) => item.requiredDocuments[d.key]);
   const applyDisabled =
@@ -144,7 +150,14 @@ export function ViewDrawer({ item, onClose, isAdmin, onApply }) {
               ["Current Applicants", item.applicants],
               ["Remaining Slots", item.remainingVacancies ?? item.vacantSlots],
               ["Posting Date", formatDate(item.datePosted)],
-              ["Closing Date", formatDate(item.closingDate)],
+              [
+                canViewClosingDate ? "Closing Date" : "Application Deadline",
+                formatDate(
+                  canViewClosingDate
+                    ? item.closingDate
+                    : item.applicationDeadline,
+                ),
+              ],
               // [
               //   "Expected Appointment Date",
               //   formatDate(item.expectedAppointmentDate),

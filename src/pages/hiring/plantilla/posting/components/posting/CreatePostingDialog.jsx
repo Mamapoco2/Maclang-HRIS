@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { Button, Label, Select, FieldError, Modal } from "../ui";
 import { FormSection, PostingForm } from "./PostingForm";
 import { EMPTY_FORM } from "../constants";
+import { AuthContext } from "@/context/authContext";
 import {
   filterSelectableVacantItems,
   getSelectableSlots,
@@ -14,6 +15,7 @@ import {
   formatSalaryNumber,
   getTodayDateString,
   computeClosingDate,
+  computeApplicationDeadline,
 } from "./postingHelpers";
 
 function buildInitialForm() {
@@ -22,6 +24,7 @@ function buildInitialForm() {
     ...EMPTY_FORM,
     status: "Open",
     date_posted: datePosted,
+    application_deadline: computeApplicationDeadline(datePosted),
     closing_date: computeClosingDate(datePosted),
   };
 }
@@ -36,6 +39,9 @@ export function CreatePostingDialog({
   vacantItems,
   postedBaseItemNumbers,
 }) {
+  const { hasRole } = useContext(AuthContext) || {};
+  const canViewClosingDate = !!(hasRole?.("HR") || hasRole?.("SuperAdmin"));
+
   const [form, setForm] = useState(buildInitialForm());
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -167,7 +173,10 @@ export function CreatePostingDialog({
 
   const handleSave = async () => {
     if (saving) return;
-    const nextErrors = validatePostingForm(form, { mode: "create" });
+    const nextErrors = validatePostingForm(form, {
+      mode: "create",
+      canViewClosingDate,
+    });
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -237,6 +246,7 @@ export function CreatePostingDialog({
           onMonthlySalaryBlur={handleMonthlySalaryBlur}
           onAnnualSalaryBlur={handleAnnualSalaryBlur}
           onDocChange={handleDocChange}
+          canViewClosingDate={canViewClosingDate}
         />
       </div>
 

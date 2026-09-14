@@ -8,6 +8,7 @@ import { formatPositionSlotNumbers } from "./postingHelpers";
 export function PostingMobileCards({
   items,
   isAdmin,
+  canViewClosingDate = false,
   onView,
   onEdit,
   onDelete,
@@ -43,7 +44,12 @@ export function PostingMobileCards({
               {formatCurrency(it.monthlySalary)} / mo
             </div>
             <div>Vacancies: {it.vacantSlots ?? it.vacancies}</div>
-            <div>Closes: {formatDate(it.closingDate)}</div>
+            <div>
+              {canViewClosingDate ? "Closes" : "Deadline"}:{" "}
+              {formatDate(
+                canViewClosingDate ? it.closingDate : it.applicationDeadline,
+              )}
+            </div>
           </div>
           <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
             <Button

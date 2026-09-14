@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { Button, Modal } from "../ui";
 import { PostingForm } from "./PostingForm";
 import { EMPTY_FORM } from "../constants";
+import { AuthContext } from "@/context/authContext";
 import {
   buildEditFormFromRecord,
   validatePostingForm,
@@ -21,6 +22,9 @@ export function EditPostingDialog({
   divisions,
   salaryGrades,
 }) {
+  const { hasRole } = useContext(AuthContext) || {};
+  const canViewClosingDate = !!(hasRole?.("HR") || hasRole?.("SuperAdmin"));
+
   const open = !!posting;
   const [form, setForm] = useState(EMPTY_FORM);
   const [stepLabel, setStepLabel] = useState("—");
@@ -80,7 +84,10 @@ export function EditPostingDialog({
 
   const handleSave = async () => {
     if (saving) return;
-    const nextErrors = validatePostingForm(form, { mode: "edit" });
+    const nextErrors = validatePostingForm(form, {
+      mode: "edit",
+      canViewClosingDate,
+    });
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -127,6 +134,7 @@ export function EditPostingDialog({
           onMonthlySalaryBlur={handleMonthlySalaryBlur}
           onAnnualSalaryBlur={handleAnnualSalaryBlur}
           onDocChange={handleDocChange}
+          canViewClosingDate={canViewClosingDate}
         />
       </div>
 

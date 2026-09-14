@@ -48,6 +48,9 @@ export function normalisePosting(p) {
     vacantSlots: p.vacant_slots,
     remainingVacancies: p.remaining_vacancies,
     datePosted: p.date_posted,
+    applicationDeadline: p.application_deadline,
+    // Undefined for anyone who isn't HR/SuperAdmin — the backend strips
+    // this field from the response entirely for other roles.
     closingDate: p.closing_date,
     expectedAppointmentDate: p.expected_appointment_date,
     status: p.effective_status || p.status,

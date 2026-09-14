@@ -6,6 +6,7 @@ import { formatPositionSlotNumbers } from "./postingHelpers";
 export function PostingTable({
   items,
   isAdmin,
+  canViewClosingDate = false,
   onView,
   onEdit,
   onDelete,
@@ -26,7 +27,7 @@ export function PostingTable({
               <Th>Salary Grade</Th>
               <Th>Monthly Salary</Th>
               <Th>Date Posted</Th>
-              <Th>Closing Date</Th>
+              <Th>{canViewClosingDate ? "Closing Date" : "Deadline"}</Th>
               <Th>Applicants</Th>
               <Th>Status</Th>
               <Th className="text-right">Actions</Th>
@@ -51,7 +52,11 @@ export function PostingTable({
                   {formatDate(it.datePosted)}
                 </Td>
                 <Td className="whitespace-nowrap text-slate-500">
-                  {formatDate(it.closingDate)}
+                  {formatDate(
+                    canViewClosingDate
+                      ? it.closingDate
+                      : it.applicationDeadline,
+                  )}
                 </Td>
                 <Td>{it.applicants}</Td>
                 <Td>

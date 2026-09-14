@@ -60,6 +60,7 @@ export function PostingForm({
   onMonthlySalaryBlur,
   onAnnualSalaryBlur,
   onDocChange,
+  canViewClosingDate = false,
 }) {
   const divisionName =
     divisions.find((d) => String(d.id) === String(form.display_division_id))
@@ -207,13 +208,27 @@ export function PostingForm({
             </p>
           </div>
           <div>
-            <Label required>Closing Date</Label>
-            <ReadOnlyField>{formatDateSlash(form.closing_date)}</ReadOnlyField>
+            <Label required>Application Deadline</Label>
+            <ReadOnlyField>
+              {formatDateSlash(form.application_deadline)}
+            </ReadOnlyField>
             <p className="mt-1 text-[11px] text-slate-400">
-              Automatically set to 9 months after the Posting Date — not
-              editable.
+              Automatically set to 15 days after the Posting Date — not
+              editable. This is the deadline shown to applicants.
             </p>
           </div>
+          {canViewClosingDate && (
+            <div>
+              <Label required>Closing Date</Label>
+              <ReadOnlyField>
+                {formatDateSlash(form.closing_date)}
+              </ReadOnlyField>
+              <p className="mt-1 text-[11px] text-slate-400">
+                Automatically set to 9 months after the Posting Date — not
+                editable. Internal only; visible to HR and SuperAdmin.
+              </p>
+            </div>
+          )}
         </div>
       </FormSection>
 
