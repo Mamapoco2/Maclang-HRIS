@@ -73,6 +73,7 @@ export const APPLICATION_STATUS_STYLES = {
   "Under Review": "bg-amber-50 text-amber-700 ring-amber-600/20",
   Approved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   Rejected: "bg-rose-50 text-rose-700 ring-rose-600/20",
+  "Posting Cancelled": "bg-slate-100 text-slate-500 ring-slate-400/20",
 };
 
 export const APPLICATION_STATUS_DOT = {
@@ -80,6 +81,7 @@ export const APPLICATION_STATUS_DOT = {
   "Under Review": "bg-amber-500",
   Approved: "bg-emerald-500",
   Rejected: "bg-rose-500",
+  "Posting Cancelled": "bg-slate-400",
 };
 
 export const INTERVIEW_STAGE_STATUS_OPTIONS = [

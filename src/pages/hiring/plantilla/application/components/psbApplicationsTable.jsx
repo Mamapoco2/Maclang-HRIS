@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -22,98 +22,58 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  IconLoader2,
-  IconFileText,
-  IconDownload,
-  IconNotes,
-} from "@tabler/icons-react";
+import { IconNotes } from "@tabler/icons-react";
 import { toast } from "sonner";
-import api from "@/api/api";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
-import { getEcho } from "@/lib/echo";
-import { SummaryCard } from "./overview/summaryCard";
+import { SummaryCard } from "./summaryCard";
 import {
   candidateName,
-  formatLabel,
-  STAGE_STATUS,
-  OVERALL_STATUS,
   APPLICATION_STATUS_OPTIONS,
-  STAGE_COLORS,
   APPLICATION_STATUS_BG,
+  formatLabel,
 } from "../psbUtils";
 
-const IN_PROGRESS_STATUSES = APPLICATION_STATUS_OPTIONS.filter(
-  (s) =>
-    s !== "Initial Review/Evaluation" && s !== "Completed" && s !== "Rejected",
-);
+const POSTING_CANCELLED_STATUS = "Posting Cancelled";
 
-export default function PsbApplicationsTable() {
-  const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
+const IN_PROGRESS_STATUSES = [
+  "Initial Review/Evaluation",
+  "For Initial Deliberation",
+  "Scheduled for Interview",
+  "For HRMPSB Compliance",
+  "For HRMPSB Deliberation",
+];
+
+function interviewBadgeClass(status) {
+  const s = status?.toUpperCase() ?? "";
+  if (!s) return "border-gray-200 bg-gray-50 text-gray-400";
+  if (s.includes("COMPLETE"))
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (s.includes("REJECT") || s.includes("FAIL"))
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  if (
+    s.includes("PROGRESS") ||
+    s.includes("SCHEDULE") ||
+    s.includes("ONGOING")
+  ) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-gray-200 bg-gray-50 text-gray-500";
+}
+
+export default function ApplicationsTable({
+  applications,
+  onUpdate,
+  showSummary = true,
+}) {
   const [remarksDraft, setRemarksDraft] = useState({});
-  const channelRef = useRef(null);
-
-  useEffect(() => {
-    loadData();
-
-    const echo = getEcho();
-    channelRef.current = echo
-      .channel("plantilla-application-interviews")
-      .listen(".plantilla_application_interview.updated", (e) => {
-        const updated = e.interview;
-        setApplications((prev) =>
-          prev.map((a) =>
-            a.id === updated.plantilla_posting_application_id
-              ? { ...a, interview: updated }
-              : a,
-          ),
-        );
-      });
-
-    return () => {
-      channelRef.current?.stopListening(
-        ".plantilla_application_interview.updated",
-      );
-      echo.leave("plantilla-application-interviews");
-    };
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    const data = await plantillaPostingService.getAllApplications();
-    setApplications(data);
-    setLoading(false);
-  };
 
   const summary = {
     total: applications.length,
-    initialReview: applications.filter(
-      (a) => a.status === "Initial Review/Evaluation",
-    ).length,
+    pending: applications.filter((a) => a.status === "Pending").length,
     inProgress: applications.filter((a) =>
       IN_PROGRESS_STATUSES.includes(a.status),
     ).length,
     completed: applications.filter((a) => a.status === "Completed").length,
-  };
-
-  const handleInterviewFieldChange = async (application, field, value) => {
-    try {
-      const updated = await plantillaPostingService.saveApplicationInterview(
-        application.id,
-        { [field]: value },
-      );
-      setApplications((prev) =>
-        prev.map((a) =>
-          a.id === application.id ? { ...a, interview: updated } : a,
-        ),
-      );
-      toast.success("Interview updated.");
-    } catch (err) {
-      toast.error(
-        err?.response?.data?.message ?? "Failed to update interview.",
-      );
-    }
   };
 
   const handleStatusChange = async (application, status) => {
@@ -122,9 +82,7 @@ export default function PsbApplicationsTable() {
         application.id,
         { status, remarks: application.remarks ?? null },
       );
-      setApplications((prev) =>
-        prev.map((a) => (a.id === application.id ? updated : a)),
-      );
+      onUpdate(application.id, updated);
       toast.success("Application updated.");
     } catch (err) {
       const message =
@@ -142,64 +100,39 @@ export default function PsbApplicationsTable() {
         application.id,
         { status: application.status, remarks },
       );
-      setApplications((prev) =>
-        prev.map((a) => (a.id === application.id ? updated : a)),
-      );
+      onUpdate(application.id, updated);
       toast.success("Remarks saved.");
     } catch (err) {
       toast.error(err?.response?.data?.message ?? "Failed to save remarks.");
     }
   };
 
-  const handleDownload = async (doc) => {
-    try {
-      const res = await api.get(
-        plantillaPostingService.documentDownloadUrl(doc.id),
-        { responseType: "blob" },
-      );
-      const url = URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = doc.original_filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Failed to download file.");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <IconLoader2 size={24} className="animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
   return (
-    <div className="grid gap-6 p-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <SummaryCard
-          title="Total Applications"
-          value={summary.total}
-          status="All PSB applications"
-        />
-        <SummaryCard
-          title="Initial Review"
-          value={summary.initialReview}
-          status="Awaiting initial review"
-        />
-        <SummaryCard
-          title="In Progress"
-          value={summary.inProgress}
-          status="Deliberation or interview stage"
-        />
-        <SummaryCard
-          title="Completed"
-          value={summary.completed}
-          status="Successfully completed"
-        />
-      </div>
+    <div className="grid gap-6">
+      {showSummary && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <SummaryCard
+            title="Total Applications"
+            value={summary.total}
+            status="All PSB applications"
+          />
+          <SummaryCard
+            title="Pending"
+            value={summary.pending}
+            status="Awaiting initial review"
+          />
+          <SummaryCard
+            title="In Progress"
+            value={summary.inProgress}
+            status="Somewhere in the review pipeline"
+          />
+          <SummaryCard
+            title="Completed"
+            value={summary.completed}
+            status="Successfully completed"
+          />
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0">
@@ -207,15 +140,11 @@ export default function PsbApplicationsTable() {
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead>Candidate</TableHead>
+                <TableHead>Item No.</TableHead>
                 <TableHead>Position</TableHead>
-                <TableHead>Plantilla Item No.</TableHead>
                 <TableHead>Submitted</TableHead>
-                <TableHead>HR</TableHead>
-                <TableHead>Head</TableHead>
-                <TableHead>Final</TableHead>
-                <TableHead>Overall</TableHead>
+                <TableHead>Interview</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Documents</TableHead>
                 <TableHead>Remarks</TableHead>
               </TableRow>
             </TableHeader>
@@ -223,7 +152,7 @@ export default function PsbApplicationsTable() {
               {applications.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
+                    colSpan={7}
                     className="py-14 text-center text-sm text-gray-400"
                   >
                     No PSB applications found.
@@ -231,9 +160,11 @@ export default function PsbApplicationsTable() {
                 </TableRow>
               ) : (
                 applications.map((application) => {
-                  const interview = application.interview;
                   const canComplete =
-                    interview?.overall_status?.toUpperCase() === "COMPLETED";
+                    application.interview?.overall_status?.toUpperCase() ===
+                    "COMPLETED";
+                  const isCancelled =
+                    application.status === POSTING_CANCELLED_STATUS;
                   return (
                     <TableRow key={application.id}>
                       <TableCell className="font-medium">
@@ -246,115 +177,70 @@ export default function PsbApplicationsTable() {
                       <TableCell>
                         {application.submitted_at?.slice(0, 10) ?? "—"}
                       </TableCell>
-
-                      {["hr_status", "head_status", "final_status"].map(
-                        (field) => (
-                          <TableCell key={field}>
-                            <Select
-                              value={interview?.[field]?.toUpperCase() ?? ""}
-                              onValueChange={(val) =>
-                                handleInterviewFieldChange(
-                                  application,
-                                  field,
-                                  val,
-                                )
-                              }
-                            >
-                              <SelectTrigger className="h-7 w-32 border-0 p-0 text-xs shadow-none focus:ring-0">
-                                <SelectValue placeholder="—">
-                                  <span
-                                    className={`text-xs font-medium ${STAGE_COLORS[interview?.[field]?.toUpperCase()] ?? "text-gray-400"}`}
-                                  >
-                                    {formatLabel(interview?.[field]) || "—"}
-                                  </span>
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STAGE_STATUS.map((s) => (
-                                  <SelectItem
-                                    key={s}
-                                    value={s}
-                                    className="text-xs"
-                                  >
-                                    {formatLabel(s)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        ),
-                      )}
-
                       <TableCell>
-                        <Select
-                          value={interview?.overall_status?.toUpperCase() ?? ""}
-                          onValueChange={(val) =>
-                            handleInterviewFieldChange(
-                              application,
-                              "overall_status",
-                              val,
-                            )
-                          }
+                        <span
+                          className={`inline-block w-fit whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${interviewBadgeClass(application.interview?.overall_status)}`}
                         >
-                          <SelectTrigger className="h-7 w-32 border-0 p-0 text-xs shadow-none focus:ring-0">
-                            <SelectValue placeholder="—">
-                              <span
-                                className={`text-xs font-medium ${STAGE_COLORS[interview?.overall_status?.toUpperCase()] ?? "text-gray-400"}`}
-                              >
-                                {formatLabel(interview?.overall_status) || "—"}
-                              </span>
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {OVERALL_STATUS.map((s) => (
-                              <SelectItem key={s} value={s} className="text-xs">
-                                {formatLabel(s)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          {formatLabel(application.interview?.overall_status) ||
+                            "No interview"}
+                        </span>
                       </TableCell>
-
-                      <TableCell>
-                        <Select
-                          value={application.status}
-                          onValueChange={(val) =>
-                            handleStatusChange(application, val)
-                          }
-                        >
-                          <SelectTrigger className="h-7 w-40 border-0 p-0 text-xs shadow-none focus:ring-0">
-                            <SelectValue>
-                              <span
-                                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG["Initial Review/Evaluation"]}`}
-                              >
-                                {application.status}
-                              </span>
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {APPLICATION_STATUS_OPTIONS.map((s) => (
-                              <SelectItem
-                                key={s}
-                                value={s}
-                                disabled={s === "Completed" && !canComplete}
-                                className="text-xs"
-                              >
-                                {s}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {application.status !== "Completed" &&
-                          application.status !== "Rejected" &&
+                      <TableCell className="min-w-[13rem]">
+                        {isCancelled ? (
+                          <>
+                            <span
+                              className={`inline-block whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG.Pending}`}
+                            >
+                              {application.status}
+                            </span>
+                            <p className="mt-1 text-[10px] text-gray-400">
+                              Posting was deleted/cancelled — closed
+                              automatically, not editable.
+                            </p>
+                          </>
+                        ) : (
+                          <Select
+                            value={application.status}
+                            onValueChange={(val) =>
+                              handleStatusChange(application, val)
+                            }
+                          >
+                            <SelectTrigger className="h-7 w-fit min-w-[11rem] max-w-full border-0 p-0 text-xs shadow-none focus:ring-0">
+                              <SelectValue>
+                                <span
+                                  className={`inline-block whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_BG[application.status] ?? APPLICATION_STATUS_BG.Pending}`}
+                                >
+                                  {application.status}
+                                </span>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {APPLICATION_STATUS_OPTIONS.map((s) => (
+                                <SelectItem
+                                  key={s}
+                                  value={s}
+                                  className="text-xs whitespace-nowrap"
+                                >
+                                  {s}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {!isCancelled &&
+                          application.status !== "Completed" &&
                           !canComplete && (
                             <p className="mt-1 text-[10px] text-gray-400">
-                              Needs completed interview to mark complete
+                              Needs completed interview to mark as Completed
                             </p>
                           )}
                       </TableCell>
-
                       <TableCell>
-                        {application.documents?.length > 0 ? (
+                        {isCancelled ? (
+                          <span className="text-xs whitespace-pre-wrap text-gray-500">
+                            {application.remarks || "—"}
+                          </span>
+                        ) : (
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
@@ -362,73 +248,32 @@ export default function PsbApplicationsTable() {
                                 variant="ghost"
                                 className="h-7 gap-1 px-2 text-xs"
                               >
-                                <IconFileText size={13} />
-                                {application.documents.length} Doc
-                                {application.documents.length > 1 ? "s" : ""}
+                                <IconNotes size={13} />
+                                {application.remarks ? "View" : "Add"}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-64 p-1" align="start">
-                              {application.documents.map((doc) => (
-                                <button
-                                  key={doc.id}
-                                  onClick={() => handleDownload(doc)}
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50"
-                                >
-                                  <IconFileText
-                                    size={13}
-                                    className="shrink-0 text-gray-400"
-                                  />
-                                  <span className="truncate">
-                                    {doc.original_filename}
-                                  </span>
-                                  <IconDownload
-                                    size={13}
-                                    className="ml-auto shrink-0 text-gray-400"
-                                  />
-                                </button>
-                              ))}
+                            <PopoverContent className="w-72 p-3" align="start">
+                              <Textarea
+                                rows={3}
+                                defaultValue={application.remarks ?? ""}
+                                onChange={(e) =>
+                                  setRemarksDraft((d) => ({
+                                    ...d,
+                                    [application.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder="Remarks for the employee"
+                              />
+                              <Button
+                                size="sm"
+                                className="mt-2 w-full"
+                                onClick={() => handleSaveRemarks(application)}
+                              >
+                                Save remarks
+                              </Button>
                             </PopoverContent>
                           </Popover>
-                        ) : (
-                          <span className="text-xs italic text-gray-400">
-                            None
-                          </span>
                         )}
-                      </TableCell>
-
-                      <TableCell>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 gap-1 px-2 text-xs"
-                            >
-                              <IconNotes size={13} />
-                              {application.remarks ? "View" : "Add"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-72 p-3" align="start">
-                            <Textarea
-                              rows={3}
-                              defaultValue={application.remarks ?? ""}
-                              onChange={(e) =>
-                                setRemarksDraft((d) => ({
-                                  ...d,
-                                  [application.id]: e.target.value,
-                                }))
-                              }
-                              placeholder="Remarks for the employee"
-                            />
-                            <Button
-                              size="sm"
-                              className="mt-2 w-full"
-                              onClick={() => handleSaveRemarks(application)}
-                            >
-                              Save remarks
-                            </Button>
-                          </PopoverContent>
-                        </Popover>
                       </TableCell>
                     </TableRow>
                   );
