@@ -1,4 +1,10 @@
 // src/pages/login/components/EcgTrace.jsx
+//
+// Identity motif, not decoration: a hospital staff portal borrows the one
+// visual language every clinician already reads at a glance — a monitor
+// trace. It runs continuously on purpose (a monitor doesn't pause), but it
+// is the ONLY moving thing on the page besides the digital clock it's
+// paired with. See loginPage.jsx MOTION dial note.
 export default function EcgTrace() {
   return (
     <svg

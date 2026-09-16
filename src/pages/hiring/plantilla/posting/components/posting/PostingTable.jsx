@@ -1,6 +1,14 @@
 import React from "react";
 
-import { Th, Td, StatusBadge, RowActions } from "../TableParts";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { StatusBadge, RowActions } from "../TableParts";
 import { formatCurrency, formatDate } from "../utils";
 import { formatPositionSlotNumbers } from "./postingHelpers";
 
@@ -18,73 +26,76 @@ export function PostingTable({
   return (
     <div className="hidden min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
       <div className="max-h-[560px] w-full max-w-full overflow-x-auto overflow-y-auto">
-        <table className="w-full min-w-[1050px] border-collapse text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500">
-            <tr>
-              <Th>Item Number</Th>
-              <Th>Position Title</Th>
-              <Th>Office</Th>
-              <Th>Division</Th>
-              <Th>Salary Grade</Th>
-              <Th>Monthly Salary</Th>
-              <Th>Date Posted</Th>
+        <Table className="w-full min-w-[1050px] border-collapse text-left text-sm">
+          <TableHeader className="sticky top-0 z-10 bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500">
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Item Number</TableHead>
+              <TableHead>Position Title</TableHead>
+              <TableHead>Office</TableHead>
+              <TableHead>Division</TableHead>
+              <TableHead>Salary Grade</TableHead>
+              <TableHead>Monthly Salary</TableHead>
+              <TableHead>Date Posted</TableHead>
 
               {/* Closing Date */}
-              {canViewClosingDate && <Th>Closing Date</Th>}
+              {canViewClosingDate && <TableHead>Closing Date</TableHead>}
 
               {/* Deadline */}
-              <Th>Deadline</Th>
+              <TableHead>Deadline</TableHead>
 
-              <Th>Applicants</Th>
-              <Th>Status</Th>
-              <Th className="text-right">Actions</Th>
-            </tr>
-          </thead>
+              <TableHead>Applicants</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
 
-          <tbody className="divide-y divide-slate-100">
+          <TableBody className="divide-y divide-slate-100">
             {items.map((it) => (
-              <tr key={it.id} className="transition-colors hover:bg-slate-50">
-                <Td className="font-medium text-slate-700">
+              <TableRow
+                key={it.id}
+                className="transition-colors hover:bg-slate-50"
+              >
+                <TableCell className="font-medium text-slate-700">
                   {formatPositionSlotNumbers(it)}
-                </Td>
+                </TableCell>
 
-                <Td className="max-w-[220px] truncate font-medium text-slate-900">
+                <TableCell className="max-w-[220px] truncate font-medium text-slate-900">
                   {it.positionTitle}
-                </Td>
+                </TableCell>
 
-                <Td className="text-slate-500">{it.office}</Td>
+                <TableCell className="text-slate-500">{it.office}</TableCell>
 
-                <Td className="text-slate-500">{it.division}</Td>
+                <TableCell className="text-slate-500">{it.division}</TableCell>
 
-                <Td>{it.salaryGrade}</Td>
+                <TableCell>{it.salaryGrade}</TableCell>
 
-                <Td className="whitespace-nowrap">
+                <TableCell className="whitespace-nowrap">
                   {formatCurrency(it.monthlySalary)}
-                </Td>
+                </TableCell>
 
-                <Td className="whitespace-nowrap text-slate-500">
+                <TableCell className="whitespace-nowrap text-slate-500">
                   {formatDate(it.datePosted)}
-                </Td>
+                </TableCell>
 
                 {/* Closing Date */}
                 {canViewClosingDate && (
-                  <Td className="whitespace-nowrap text-slate-500">
+                  <TableCell className="whitespace-nowrap text-slate-500">
                     {formatDate(it.closingDate)}
-                  </Td>
+                  </TableCell>
                 )}
 
                 {/* Deadline */}
-                <Td className="whitespace-nowrap text-slate-500">
+                <TableCell className="whitespace-nowrap text-slate-500">
                   {formatDate(it.applicationDeadline)}
-                </Td>
+                </TableCell>
 
-                <Td>{it.applicants}</Td>
+                <TableCell>{it.applicants}</TableCell>
 
-                <Td>
+                <TableCell>
                   <StatusBadge status={it.status} />
-                </Td>
+                </TableCell>
 
-                <Td className="text-right">
+                <TableCell className="text-right">
                   <RowActions
                     item={it}
                     isAdmin={isAdmin}
@@ -95,11 +106,11 @@ export function PostingTable({
                     onViewApplications={() => onViewApplications(it)}
                     editLoading={editLoadingId === it.id}
                   />
-                </Td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

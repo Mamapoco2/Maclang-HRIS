@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, FileText, MessageSquare } from "lucide-react";
+import { LayoutDashboard, FileText, MessageSquare, Scale } from "lucide-react";
 import { IconLoader2 } from "@tabler/icons-react";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { getEcho } from "@/lib/echo";
 import ApplicationsPage from "./overview/applicationsPage";
 import DocumentsPage from "./documents/documentsPage";
 import InterviewPage from "./interviews/interviewPage";
+import ComparativeAssessmentPage from "./comparativeAssessment/comparativeAssessmentPage";
 
 export default function ApplicationPage() {
   const [applications, setApplications] = useState([]);
@@ -74,6 +75,13 @@ export default function ApplicationPage() {
           <MessageSquare className="h-4 w-4" />
           Interviews
         </TabsTrigger>
+        <TabsTrigger
+          value="comparativeAssessment"
+          className="flex items-center gap-2"
+        >
+          <Scale className="h-4 w-4" />
+          Comparative Assessment
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview">
@@ -92,6 +100,10 @@ export default function ApplicationPage() {
           applications={applications}
           onUpdate={updateApplication}
         />
+      </TabsContent>
+
+      <TabsContent value="comparativeAssessment">
+        <ComparativeAssessmentPage applications={applications} />
       </TabsContent>
     </Tabs>
   );

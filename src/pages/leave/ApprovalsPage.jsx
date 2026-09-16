@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "./PageHeader";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "./Dialog";
 import { useToast } from "./Toast";
+import { useAuth } from "@/hooks/useAuth";
 import { useLeaveApprovals } from "@/hooks/useLeaveApprovals";
 import { formatDate } from "./utils";
 import {
@@ -22,7 +23,22 @@ import {
   Clock,
   Filter,
   CheckCheck,
+  Eye,
 } from "lucide-react";
+
+// Roles that can act on requests. Employees without one of these get a
+// read-only view of the same list.
+const APPROVER_ROLES = new Set(["admin", "hr", "manager", "supervisor"]);
+
+function canUserApprove(user) {
+  return user?.employee?.is_approver === true || APPROVER_ROLES.has(user?.role);
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
 
 function mapToRow(r) {
   const pendingStep = r.approval_steps?.find(
@@ -59,6 +75,9 @@ function mapToRow(r) {
 
 export default function ApprovalsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canManageApprovals = canUserApprove(user);
+
   const {
     pending: pendingRaw,
     recentDecisions: recentRaw,
@@ -70,8 +89,24 @@ export default function ApprovalsPage() {
     bulkApprove,
   } = useLeaveApprovals();
 
-  const pending = pendingRaw.map(mapToRow);
-  const recent = recentRaw.map(mapToRow).slice(0, 5);
+  const pending = useMemo(() => pendingRaw.map(mapToRow), [pendingRaw]);
+  const recent = useMemo(
+    () => recentRaw.map(mapToRow).slice(0, 5),
+    [recentRaw],
+  );
+
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState("all");
+  const leaveTypeOptions = useMemo(
+    () => Array.from(new Set(pending.map((r) => r.leaveType))).sort(),
+    [pending],
+  );
+  const filteredPending = useMemo(
+    () =>
+      leaveTypeFilter === "all"
+        ? pending
+        : pending.filter((r) => r.leaveType === leaveTypeFilter),
+    [pending, leaveTypeFilter],
+  );
 
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -143,16 +178,28 @@ export default function ApprovalsPage() {
 
   const toggleSelectAll = () => {
     setSelectedIds(
-      selectedIds.length === pending.length ? [] : pending.map((r) => r.id),
+      selectedIds.length === filteredPending.length
+        ? []
+        : filteredPending.map((r) => r.id),
     );
   };
 
+  const openDetail = (req) => {
+    setSelected(req);
+    setDetailOpen(true);
+  };
+
   return (
-    <div className="p-5">
+    <div className="p-4 sm:p-5">
       <PageHeader
         title="Approval Workflow"
-        description="Review and manage leave request approvals"
+        description={
+          canManageApprovals
+            ? "Review and manage leave request approvals"
+            : "View the status of leave requests awaiting approval"
+        }
         actions={
+          canManageApprovals &&
           selectedIds.length > 0 && (
             <Button onClick={handleBulkApprove} size="sm" disabled={submitting}>
               <CheckCheck className="w-4 h-4" />
@@ -163,11 +210,11 @@ export default function ApprovalsPage() {
       />
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400 flex items-center justify-between">
+        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400 flex items-center justify-between gap-3">
           <span>Failed to load approvals.</span>
           <button
             onClick={refetch}
-            className="text-xs font-medium underline hover:no-underline"
+            className="text-xs font-medium underline hover:no-underline whitespace-nowrap"
           >
             Retry
           </button>
@@ -176,28 +223,61 @@ export default function ApprovalsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-[var(--foreground)]">
               Pending Approvals
               <span className="ml-2 px-2 py-0.5 text-xs bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 rounded-full">
-                {pending.length}
+                {filteredPending.length}
               </span>
             </h2>
-            {pending.length > 0 && (
-              <label className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.length === pending.length}
-                  onChange={toggleSelectAll}
-                  className="rounded"
-                />
-                Select all
-              </label>
-            )}
+
+            <div className="flex items-center gap-3">
+              {leaveTypeOptions.length > 1 && (
+                <label className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+                  <Filter className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span className="sr-only">Filter by leave type</span>
+                  <select
+                    value={leaveTypeFilter}
+                    onChange={(e) => {
+                      setLeaveTypeFilter(e.target.value);
+                      setSelectedIds([]);
+                    }}
+                    className="bg-transparent border border-[var(--border)] rounded-md px-2 py-1 text-xs text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                  >
+                    <option value="all">All types</option>
+                    {leaveTypeOptions.map((code) => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {canManageApprovals && filteredPending.length > 0 && (
+                <label className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedIds.length === filteredPending.length &&
+                      filteredPending.length > 0
+                    }
+                    onChange={toggleSelectAll}
+                    className="rounded"
+                    aria-label="Select all pending requests"
+                  />
+                  Select all
+                </label>
+              )}
+            </div>
           </div>
 
           {loading ? (
-            <div className="space-y-3">
+            <div
+              className="space-y-3"
+              role="status"
+              aria-label="Loading approvals"
+            >
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
@@ -205,7 +285,7 @@ export default function ApprovalsPage() {
                 />
               ))}
             </div>
-          ) : pending.length === 0 ? (
+          ) : filteredPending.length === 0 ? (
             <Card>
               <CardContent className="py-16 text-center">
                 <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
@@ -213,84 +293,112 @@ export default function ApprovalsPage() {
                   All caught up!
                 </p>
                 <p className="text-sm text-[var(--muted-foreground)] mt-1">
-                  No pending approvals at this time.
+                  {pending.length === 0
+                    ? "No pending approvals at this time."
+                    : "No pending approvals match this filter."}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            pending.map((req) => (
-              <Card key={req.id} hover className="animate-fade-in">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(req.id)}
-                      onChange={() => toggleSelect(req.id)}
-                      className="mt-1 rounded"
-                    />
-                    <Avatar name={req.employeeName} size="md" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-bold text-[var(--foreground)]">
-                          {req.employeeName}
+            filteredPending.map((req) => {
+              const pendingDays = daysSince(req.appliedDate);
+              return (
+                <Card key={req.id} hover className="animate-fade-in">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      {canManageApprovals && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(req.id)}
+                          onChange={() => toggleSelect(req.id)}
+                          className="mt-1 rounded"
+                          aria-label={`Select request from ${req.employeeName}`}
+                        />
+                      )}
+                      <Avatar name={req.employeeName} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-[var(--foreground)]">
+                            {req.employeeName}
+                          </p>
+                          <span className="text-xs text-[var(--muted-foreground)]">
+                            ·
+                          </span>
+                          <span className="text-xs text-[var(--muted-foreground)]">
+                            {req.department}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <LeaveTypeBadge type={req.leaveType} />
+                          <span className="text-xs text-[var(--muted-foreground)]">
+                            {formatDate(req.startDate)} →{" "}
+                            {formatDate(req.endDate)} · {req.days} days
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--muted-foreground)] mt-2 line-clamp-1">
+                          {req.reason}
                         </p>
-                        <span className="text-xs text-[var(--muted-foreground)]">
-                          ·
-                        </span>
-                        <span className="text-xs text-[var(--muted-foreground)]">
-                          {req.department}
-                        </span>
+                        <p className="text-[10px] text-[var(--muted-foreground)] mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3" aria-hidden="true" />
+                          Applied {formatDate(req.appliedDate)}
+                          {pendingDays !== null && pendingDays > 0 && (
+                            <span
+                              className={
+                                pendingDays >= 3
+                                  ? "text-amber-600 dark:text-amber-400 font-medium"
+                                  : ""
+                              }
+                            >
+                              · {pendingDays}d pending
+                            </span>
+                          )}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <LeaveTypeBadge type={req.leaveType} />
-                        <span className="text-xs text-[var(--muted-foreground)]">
-                          {formatDate(req.startDate)} →{" "}
-                          {formatDate(req.endDate)} · {req.days} days
-                        </span>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openDetail(req)}
+                            className="p-2 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors text-xs border border-[var(--border)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                            aria-label={`View details for ${req.employeeName}`}
+                          >
+                            <Eye className="w-3.5 h-3.5 sm:hidden" />
+                            <span className="hidden sm:inline">View</span>
+                          </button>
+                          {canManageApprovals && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  setActionDialog({
+                                    id: req.id,
+                                    action: "approved",
+                                  })
+                                }
+                                className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                                aria-label={`Approve request from ${req.employeeName}`}
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setActionDialog({
+                                    id: req.id,
+                                    action: "rejected",
+                                  })
+                                }
+                                className="p-2 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                                aria-label={`Reject request from ${req.employeeName}`}
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-[var(--muted-foreground)] mt-2 line-clamp-1">
-                        {req.reason}
-                      </p>
-                      <p className="text-[10px] text-[var(--muted-foreground)] mt-1">
-                        Applied {formatDate(req.appliedDate)}
-                      </p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            setSelected(req);
-                            setDetailOpen(true);
-                          }}
-                          className="p-2 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors text-xs border border-[var(--border)]"
-                          title="View Details"
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() =>
-                            setActionDialog({ id: req.id, action: "approved" })
-                          }
-                          className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition-colors"
-                          title="Approve"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() =>
-                            setActionDialog({ id: req.id, action: "rejected" })
-                          }
-                          className="p-2 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 transition-colors"
-                          title="Reject"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
 
@@ -331,7 +439,7 @@ export default function ApprovalsPage() {
                           <p className="text-sm font-semibold text-[var(--foreground)]">
                             {req.employeeName}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <LeaveTypeBadge type={req.leaveType} />
                             <StatusBadge status={req.status} size="sm" />
                           </div>
@@ -368,70 +476,84 @@ export default function ApprovalsPage() {
         </div>
       </div>
 
-      <Dialog
-        open={!!actionDialog}
-        onClose={() => setActionDialog(null)}
-        className="max-w-md"
-      >
-        <DialogHeader onClose={() => setActionDialog(null)}>
-          <DialogTitle>
-            {actionDialog?.action === "approved"
-              ? "Approve Leave Request"
-              : "Reject Leave Request"}
-          </DialogTitle>
-        </DialogHeader>
-        <DialogBody className="space-y-4">
-          <p className="text-sm text-[var(--muted-foreground)]">
-            {actionDialog?.action === "approved"
-              ? "Are you sure you want to approve this leave request?"
-              : "Please provide a reason for rejecting this request."}
-          </p>
-          <div>
-            <label className="text-sm font-medium text-[var(--foreground)] block mb-1.5">
-              Remarks{" "}
-              {actionDialog?.action === "rejected" && (
-                <span className="text-red-500">*</span>
-              )}
-            </label>
-            <textarea
-              rows={3}
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder={
-                actionDialog?.action === "approved"
-                  ? "Optional note to employee..."
-                  : "Reason for rejection..."
+      {canManageApprovals && (
+        <Dialog
+          open={!!actionDialog}
+          onClose={() => setActionDialog(null)}
+          className="max-w-md"
+        >
+          <DialogHeader onClose={() => setActionDialog(null)}>
+            <DialogTitle>
+              {actionDialog?.action === "approved"
+                ? "Approve Leave Request"
+                : "Reject Leave Request"}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <p className="text-sm text-[var(--muted-foreground)]">
+              {actionDialog?.action === "approved"
+                ? "Are you sure you want to approve this leave request?"
+                : "Please provide a reason for rejecting this request."}
+            </p>
+            <div>
+              <label
+                htmlFor="approval-remarks"
+                className="text-sm font-medium text-[var(--foreground)] block mb-1.5"
+              >
+                Remarks{" "}
+                {actionDialog?.action === "rejected" && (
+                  <span className="text-red-500">*</span>
+                )}
+              </label>
+              <textarea
+                id="approval-remarks"
+                rows={3}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder={
+                  actionDialog?.action === "approved"
+                    ? "Optional note to employee..."
+                    : "Reason for rejection..."
+                }
+                className="w-full px-3 py-2.5 text-sm bg-[var(--background)] border border-[var(--border)] rounded-lg outline-none focus:ring-2 focus:ring-[var(--ring)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] resize-none"
+              />
+              {actionDialog?.action === "rejected" &&
+                isRemarksEmpty(remarks) && (
+                  <p className="text-xs text-red-500 mt-1">
+                    A reason is required to reject a request.
+                  </p>
+                )}
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setActionDialog(null)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={
+                actionDialog?.action === "approved" ? "success" : "destructive"
               }
-              className="w-full px-3 py-2.5 text-sm bg-[var(--background)] border border-[var(--border)] rounded-lg outline-none focus:ring-2 focus:ring-[var(--ring)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] resize-none"
-            />
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setActionDialog(null)}
-            disabled={submitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant={
-              actionDialog?.action === "approved" ? "success" : "destructive"
-            }
-            onClick={() => handleAction(actionDialog?.id, actionDialog?.action)}
-            disabled={
-              submitting ||
-              (actionDialog?.action === "rejected" && trimRemarksEmpty(remarks))
-            }
-          >
-            {submitting
-              ? "Processing…"
-              : actionDialog?.action === "approved"
-                ? "Approve"
-                : "Reject"}
-          </Button>
-        </DialogFooter>
-      </Dialog>
+              onClick={() =>
+                handleAction(actionDialog?.id, actionDialog?.action)
+              }
+              disabled={
+                submitting ||
+                (actionDialog?.action === "rejected" && isRemarksEmpty(remarks))
+              }
+            >
+              {submitting
+                ? "Processing…"
+                : actionDialog?.action === "approved"
+                  ? "Approve"
+                  : "Reject"}
+            </Button>
+          </DialogFooter>
+        </Dialog>
+      )}
 
       {selected && (
         <Dialog
@@ -490,7 +612,7 @@ export default function ApprovalsPage() {
             </div>
           </DialogBody>
           <DialogFooter>
-            {selected.status === "pending" && (
+            {canManageApprovals && selected.status === "pending" && (
               <>
                 <Button
                   variant="destructive"
@@ -524,6 +646,6 @@ export default function ApprovalsPage() {
   );
 }
 
-function trimRemarksEmpty(remarks) {
+function isRemarksEmpty(remarks) {
   return !remarks || remarks.trim() === "";
 }

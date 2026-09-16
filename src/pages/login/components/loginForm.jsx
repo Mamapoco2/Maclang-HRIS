@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/lib/validation";
 import { AuthContext } from "@/context/authContext";
@@ -37,8 +37,12 @@ export default function LoginForm() {
     handleSubmit,
     setError,
     watch,
+    control,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(loginSchema) });
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { rememberMe: false },
+  });
 
   const username = watch("username");
   // On mount / whenever the username changes, check localStorage for an
@@ -92,7 +96,9 @@ export default function LoginForm() {
 
     setServerError("");
 
-    const res = await login(data.username, data.password);
+    // rememberMe is forwarded to the auth layer (e.g. to extend session
+    // length) rather than left unwired on the checkbox.
+    const res = await login(data.username, data.password, data.rememberMe);
 
     if (res.success) {
       attempts.current = 0;
@@ -153,7 +159,7 @@ export default function LoginForm() {
       <div className="space-y-1.5">
         <Label
           htmlFor="username"
-          className="text-xs font-medium uppercase tracking-wide text-[#5A7188]"
+          className="text-xs font-medium uppercase tracking-wide text-[#4A5D70]"
         >
           Username<span className="text-[#E8A33D]">*</span>
         </Label>
@@ -164,7 +170,7 @@ export default function LoginForm() {
           placeholder="Enter your username"
           aria-invalid={!!errors.username}
           className={cn(
-            "h-11 rounded-lg border bg-white text-[#16324A] placeholder:text-[#9BAAB8]",
+            "h-11 rounded-lg border bg-white text-[#16324A] placeholder:text-[#4A5D70]/70",
             errors.username
               ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30"
               : "border-[#D7E0E8] focus-visible:border-[#6FA3D8] focus-visible:ring-[#6FA3D8]/30",
@@ -180,7 +186,7 @@ export default function LoginForm() {
       <div className="space-y-1.5">
         <Label
           htmlFor="password"
-          className="text-xs font-medium uppercase tracking-wide text-[#5A7188]"
+          className="text-xs font-medium uppercase tracking-wide text-[#4A5D70]"
         >
           Password<span className="text-[#E8A33D]">*</span>
         </Label>
@@ -192,7 +198,7 @@ export default function LoginForm() {
             placeholder="••••••••••••••••"
             aria-invalid={!!errors.password}
             className={cn(
-              "h-11 rounded-lg border bg-white pr-10 text-[#16324A] placeholder:text-[#9BAAB8]",
+              "h-11 rounded-lg border bg-white pr-10 text-[#16324A] placeholder:text-[#4A5D70]/70",
               errors.password
                 ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30"
                 : "border-[#D7E0E8] focus-visible:border-[#6FA3D8] focus-visible:ring-[#6FA3D8]/30",
@@ -204,7 +210,8 @@ export default function LoginForm() {
             variant="ghost"
             size="icon"
             onClick={() => setIsPasswordVisible((prev) => !prev)}
-            className="absolute inset-y-0 right-0 rounded-l-none text-[#7C93A8] hover:bg-transparent hover:text-[#16324A]"
+            aria-pressed={isPasswordVisible}
+            className="absolute inset-y-0 right-0 rounded-l-none text-[#4A5D70] hover:bg-transparent hover:text-[#16324A]"
           >
             {isPasswordVisible ? (
               <EyeOffIcon size={18} />
@@ -221,15 +228,25 @@ export default function LoginForm() {
         )}
       </div>
 
-      {/* Remember me */}
+      {/* Remember me — wired into the form so it's real submitted state,
+          not a decorative checkbox. shadcn's Checkbox is Radix-based, so it
+          needs Controller rather than a plain register() ref. */}
       <div className="flex items-center gap-2.5">
-        <Checkbox
-          id="rememberMe"
-          className="size-4 border-[#B7C5D2] data-[state=checked]:border-[#6FA3D8] data-[state=checked]:bg-[#6FA3D8]"
+        <Controller
+          name="rememberMe"
+          control={control}
+          render={({ field: { value, onChange } }) => (
+            <Checkbox
+              id="rememberMe"
+              checked={value}
+              onCheckedChange={onChange}
+              className="size-4 border-[#B7C5D2] data-[state=checked]:border-[#16324A] data-[state=checked]:bg-[#16324A]"
+            />
+          )}
         />
         <Label
           htmlFor="rememberMe"
-          className="text-sm font-normal text-[#5A7188]"
+          className="text-sm font-normal text-[#4A5D70]"
         >
           Remember me
         </Label>

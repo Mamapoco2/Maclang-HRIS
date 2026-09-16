@@ -1,11 +1,17 @@
 // src/pages/login/components/LoginPage.jsx
+//
+// Dials (antislop): ENERGY 2 — calm, trustworthy, not sterile.
+// RHYTHM 2 — two deliberately different panels (identity vs. form), not a
+// repeated section template.
+// MOTION 2 — one continuous motif (the EKG trace + its paired clock) as a
+// live-monitor conceit; nothing else on the page animates on a loop.
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
 import logo from "../../../assets/rmbghlogo.png";
 import LoginForm from "./loginForm";
 import LoginFooter from "./loginFooter";
-import EcgTrace from "../../register/components/EcgTrace";
+import EcgTrace from "./EcgTrace";
 import { useCurrentTime } from "./useLogin";
 
 export default function LoginPage() {
@@ -49,7 +55,7 @@ export default function LoginPage() {
 
       {/* LEFT — identity panel */}
       <aside className="relative hidden w-[42%] flex-col justify-between overflow-hidden bg-[#16324A] px-12 py-12 text-[#F1F4F7] lg:flex">
-        {/* faint chart-paper grid texture */}
+        {/* faint chart-paper grid texture — echoes the monitor-paper motif, not a generic tech backdrop */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.07]"
           style={{
@@ -70,7 +76,7 @@ export default function LoginPage() {
             alt="RMBGH"
             className="h-11 w-11 rounded-full object-cover ring-2 ring-[#6FA3D8]/40"
           />
-          <span className="font-['IBM_Plex_Mono',monospace] text-[11px] uppercase tracking-[0.2em] text-[#7C93A8]">
+          <span className="font-['IBM_Plex_Mono',monospace] text-[11px] uppercase tracking-[0.2em] text-[#9FB4C8]">
             Staff Portal Access
           </span>
         </motion.div>
@@ -94,7 +100,7 @@ export default function LoginPage() {
         {/* signature element */}
         <div className="relative z-10">
           <EcgTrace />
-          <div className="mt-6 flex items-center justify-between font-['IBM_Plex_Mono',monospace] text-xs text-[#7C93A8]">
+          <div className="mt-6 flex items-center justify-between font-['IBM_Plex_Mono',monospace] text-xs text-[#9FB4C8]">
             <span>{formattedDate}</span>
             <span className="ecg-pulse text-[#6FA3D8]">{formattedTime}</span>
           </div>
@@ -120,7 +126,7 @@ export default function LoginPage() {
               <p className="font-['Petrona',serif] text-base font-semibold text-[#16324A]">
                 RMBGH Portal
               </p>
-              <p className="font-['IBM_Plex_Mono',monospace] text-[10px] uppercase tracking-[0.2em] text-[#7C93A8]">
+              <p className="font-['IBM_Plex_Mono',monospace] text-[10px] uppercase tracking-[0.2em] text-[#4A5D70]">
                 Staff Portal Access
               </p>
             </div>
@@ -132,7 +138,7 @@ export default function LoginPage() {
           <h2 className="mt-2 font-['Petrona',serif] text-3xl font-semibold text-[#16324A]">
             Welcome back
           </h2>
-          <p className="mt-2 text-sm text-[#5A7188]">
+          <p className="mt-2 text-sm text-[#4A5D70]">
             Enter your credentials to continue to your dashboard.
           </p>
 
@@ -140,7 +146,7 @@ export default function LoginPage() {
             <LoginForm />
           </div>
 
-          <p className="mt-6 text-center text-sm text-[#5A7188]">
+          <p className="mt-6 text-center text-sm text-[#4A5D70]">
             Don't have an account?{" "}
             <Link
               to="/register"

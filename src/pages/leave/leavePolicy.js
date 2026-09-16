@@ -412,3 +412,27 @@ export const LEAVE_UPLOAD_FIELDS = {
     { id: "pre_adoptive_placement", label: "Pre-Adoptive Placement Authority" },
   ],
 };
+
+export const LEAVE_STATUSES = {
+  DRAFT: "draft",
+  FOR_HR_REVIEW: "for_hr_review",
+  PENDING_APPROVAL: "pending_approval",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  RETURNED_FOR_REVISION: "returned_for_revision",
+  RETRACTED: "retracted",
+  CANCELLED: "cancelled",
+
+  // Display labels, used for CSV export and anywhere StatusBadge can't be
+  // reused (e.g. plain-text contexts).
+  LABELS: {
+    draft: "Draft",
+    for_hr_review: "For HR Review",
+    pending_approval: "Pending Approval",
+    approved: "Approved",
+    rejected: "Rejected/Disapproved",
+    returned_for_revision: "Returned for Clarification/Revision",
+    retracted: "Retracted",
+    cancelled: "Cancelled",
+  },
+};

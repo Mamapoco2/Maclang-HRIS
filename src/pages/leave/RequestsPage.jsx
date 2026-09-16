@@ -13,9 +13,9 @@ import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
 import LeaveApi from "@/services/leaveApiService";
 import { LeaveRequestModal } from "./components/LeaveRequestModal";
 import { CancelRequestModal } from "./components/CancelRequestModal";
-import { ChangeDateModal } from "./components/ChangeDateModal";
+import { RetractRequestModal } from "./components/RetractRequestModal";
 import { ApprovalStepsInline } from "./components/ApprovalTrail";
-import { LEAVE_TYPES } from "./leavePolicy";
+import { LEAVE_TYPES, LEAVE_STATUSES } from "./leavePolicy";
 import { formatDate, downloadCSV } from "./utils";
 import {
   Search,
@@ -29,8 +29,20 @@ import {
   Columns3,
   MessageSquareWarning,
   XCircle,
-  CalendarClock,
+  Undo2,
 } from "lucide-react";
+
+// Statuses where the request is still in the HR/approval pipeline and the
+// employee can still withdraw it outright. Once it reaches final MCC
+// approval, withdrawal becomes a Retract action instead (see RETRACTABLE_STATUSES).
+const CANCELLABLE_STATUSES = [
+  LEAVE_STATUSES.FOR_HR_REVIEW,
+  LEAVE_STATUSES.PENDING_APPROVAL,
+  LEAVE_STATUSES.RETURNED_FOR_REVISION,
+];
+
+// Only a fully MCC-approved request can be retracted.
+const RETRACTABLE_STATUSES = [LEAVE_STATUSES.APPROVED];
 
 function mapRequestToRow(r) {
   const pendingStep = r.approval_steps?.find(
@@ -50,8 +62,10 @@ function mapRequestToRow(r) {
     days: r.total_days,
     status: r.status,
     rejectionReason:
-      r.status === "rejected" ? (lastActedStep?.remarks ?? null) : undefined,
-    appliedDate: r.submitted_at ?? r.created_at,
+      r.status === LEAVE_STATUSES.REJECTED
+        ? (lastActedStep?.remarks ?? null)
+        : undefined,
+    dateFiled: r.submitted_at ?? r.created_at,
     approverName: approverStep?.approver?.name ?? "—",
     reason: r.reason,
     details: r.details,
@@ -60,8 +74,7 @@ function mapRequestToRow(r) {
     approvalSteps: r.approval_steps ?? [],
     currentStepOrder: r.current_step_order,
     cancellationReason: r.cancellation_reason ?? null,
-    rescheduledTo: r.rescheduled_to ?? null,
-    rescheduledFrom: r.rescheduled_from ?? null,
+    retractionReason: r.retraction_reason ?? null,
   };
 }
 
@@ -76,7 +89,7 @@ export default function RequestsPage({ onNavigate }) {
   const [error, setError] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
-  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+  const [retractTarget, setRetractTarget] = useState(null);
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [actionError, setActionError] = useState(null);
 
@@ -120,35 +133,34 @@ export default function RequestsPage({ onNavigate }) {
     [cancelTarget, loadRequests],
   );
 
-  const handleRescheduleSubmit = useCallback(
-    ({ startDate, endDate, reason }) => {
-      if (!rescheduleTarget) return;
+  const handleRetractSubmit = useCallback(
+    (reason) => {
+      if (!retractTarget) return;
       setActionSubmitting(true);
       setActionError(null);
-      LeaveApi.rescheduleRequest(rescheduleTarget.id, {
-        startDate,
-        endDate,
-        reason,
-      })
+      LeaveApi.retractRequest(retractTarget.id, reason)
         .then(() => {
-          setRescheduleTarget(null);
+          setRetractTarget(null);
           loadRequests();
         })
         .catch((err) => {
           setActionError(
             err?.response?.data?.message ||
-              "Failed to change the date on this leave request.",
+              "Failed to retract this leave request.",
           );
         })
         .finally(() => setActionSubmitting(false));
     },
-    [rescheduleTarget, loadRequests],
+    [retractTarget, loadRequests],
   );
 
-  // Cancel/Change Date only make sense while the request hasn't already
-  // been cancelled or rejected — this mirrors the backend's own check.
-  const canModify = useCallback(
-    (status) => status === "pending" || status === "approved",
+  const canCancel = useCallback(
+    (status) => CANCELLABLE_STATUSES.includes(status),
+    [],
+  );
+
+  const canRetract = useCallback(
+    (status) => RETRACTABLE_STATUSES.includes(status),
     [],
   );
 
@@ -206,21 +218,22 @@ export default function RequestsPage({ onNavigate }) {
         cell: ({ row, getValue }) => (
           <div className="flex flex-col items-center gap-1">
             <StatusBadge status={getValue()} />
-            {getValue() === "rejected" && row.original.rejectionReason && (
-              <span
-                title={row.original.rejectionReason}
-                className="flex items-center gap-1 text-xs text-red-600 max-w-[160px] truncate"
-              >
-                <MessageSquareWarning className="w-3 h-3 shrink-0" />
-                {row.original.rejectionReason}
-              </span>
-            )}
+            {getValue() === LEAVE_STATUSES.REJECTED &&
+              row.original.rejectionReason && (
+                <span
+                  title={row.original.rejectionReason}
+                  className="flex items-center gap-1 text-xs text-red-600 max-w-[160px] truncate"
+                >
+                  <MessageSquareWarning className="w-3 h-3 shrink-0" />
+                  {row.original.rejectionReason}
+                </span>
+              )}
           </div>
         ),
       },
       {
-        accessorKey: "appliedDate",
-        header: "Applied",
+        accessorKey: "dateFiled",
+        header: "Date Filed",
         cell: ({ getValue }) => (
           <div className="flex justify-center">
             <span className="text-sm text-[var(--muted-foreground)]">
@@ -254,29 +267,29 @@ export default function RequestsPage({ onNavigate }) {
             >
               <Eye className="w-4 h-4" />
             </button>
-            {canModify(row.original.status) && (
-              <>
-                <button
-                  onClick={() => setRescheduleTarget(row.original)}
-                  className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors"
-                  title="Change Date"
-                >
-                  <CalendarClock className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCancelTarget(row.original)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
-                  title="Cancel"
-                >
-                  <XCircle className="w-4 h-4" />
-                </button>
-              </>
+            {canCancel(row.original.status) && (
+              <button
+                onClick={() => setCancelTarget(row.original)}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                title="Cancel"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            )}
+            {canRetract(row.original.status) && (
+              <button
+                onClick={() => setRetractTarget(row.original)}
+                className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
+                title="Retract"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
             )}
           </div>
         ),
       },
     ],
-    [canModify],
+    [canCancel, canRetract],
   );
 
   const table = useReactTable({
@@ -297,13 +310,33 @@ export default function RequestsPage({ onNavigate }) {
       "Start Date": r.startDate,
       "End Date": r.endDate,
       Days: r.days,
-      Status: r.status,
+      Status: LEAVE_STATUSES.LABELS[r.status] ?? r.status,
       "Rejection Reason": r.rejectionReason ?? "",
-      Applied: r.appliedDate,
+      "Date Filed": r.dateFiled,
       "Current Approver": r.approverName,
     }));
     downloadCSV(data, "my-leave-requests.csv");
   };
+
+  // Status filter pills reflect the standardized pipeline stages one-for-one
+  // (rather than grouping them) so employees can tell "For HR Review" apart
+  // from "Pending Approval" at a glance.
+  const statusPills = [
+    { label: "All", value: "all" },
+    { label: "For HR Review", value: LEAVE_STATUSES.FOR_HR_REVIEW },
+    { label: "Pending Approval", value: LEAVE_STATUSES.PENDING_APPROVAL },
+    { label: "Returned", value: LEAVE_STATUSES.RETURNED_FOR_REVISION },
+    { label: "Approved", value: LEAVE_STATUSES.APPROVED },
+    { label: "Rejected", value: LEAVE_STATUSES.REJECTED },
+    { label: "Retracted", value: LEAVE_STATUSES.RETRACTED },
+    { label: "Cancelled", value: LEAVE_STATUSES.CANCELLED },
+  ].map((p) => ({
+    ...p,
+    count:
+      p.value === "all"
+        ? requests.length
+        : requests.filter((r) => r.status === p.value).length,
+  }));
 
   return (
     <div className="p-5">
@@ -326,24 +359,7 @@ export default function RequestsPage({ onNavigate }) {
 
       {/* Summary pills */}
       <div className="flex gap-3 mb-5 flex-wrap">
-        {[
-          { label: "All", value: "all", count: requests.length },
-          {
-            label: "Pending",
-            value: "pending",
-            count: requests.filter((r) => r.status === "pending").length,
-          },
-          {
-            label: "Approved",
-            value: "approved",
-            count: requests.filter((r) => r.status === "approved").length,
-          },
-          {
-            label: "Rejected",
-            value: "rejected",
-            count: requests.filter((r) => r.status === "rejected").length,
-          },
-        ].map((s) => (
+        {statusPills.map((s) => (
           <button
             key={s.value}
             onClick={() => setStatusFilter(s.value)}
@@ -575,15 +591,15 @@ export default function RequestsPage({ onNavigate }) {
         />
       )}
 
-      {rescheduleTarget && (
-        <ChangeDateModal
-          request={rescheduleTarget}
+      {retractTarget && (
+        <RetractRequestModal
+          request={retractTarget}
           submitting={actionSubmitting}
           onClose={() => {
-            setRescheduleTarget(null);
+            setRetractTarget(null);
             setActionError(null);
           }}
-          onSave={handleRescheduleSubmit}
+          onSave={handleRetractSubmit}
         />
       )}
 
