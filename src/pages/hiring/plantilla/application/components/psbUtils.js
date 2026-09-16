@@ -16,11 +16,6 @@ export function formatLabel(str) {
     .join(" ");
 }
 
-// Matches the interview status list from the notes:
-// Pending -> Scheduled -> In Progress -> Passed / Failed, with
-// Cancelled (+ reason) and No Show as exit states at any point.
-// "SKIPPED" is kept for now since other stages/screens may already
-// depend on it — remove it if it's no longer used anywhere.
 export const STAGE_STATUS = [
   "PENDING",
   "SCHEDULED",
@@ -33,10 +28,6 @@ export const STAGE_STATUS = [
 
 export const OVERALL_STATUS = ["PENDING", "IN PROGRESS", "COMPLETED"];
 
-// Application review pipeline, from the notes. "Completed" is the
-// positive outcome (approved); "Rejected" can happen from any stage,
-// so it's kept as its own always-available exit option rather than
-// slotted into the sequence.
 export const APPLICATION_STATUS_OPTIONS = [
   "Initial Review/Evaluation",
   "For Initial Deliberation",
@@ -67,6 +58,6 @@ export const APPLICATION_STATUS_BG = {
   "For HRMPSB Deliberation": "bg-orange-50 text-orange-700 border-orange-200",
   Completed: "bg-green-50 text-green-700 border-green-200",
   Rejected: "bg-red-50 text-red-700 border-red-200",
-  // Kept for any records still holding the old "Pending" value.
+  "Posting Cancelled": "bg-slate-100 text-slate-600 border-slate-300",
   Pending: "bg-gray-100 text-gray-600 border-gray-200",
 };
