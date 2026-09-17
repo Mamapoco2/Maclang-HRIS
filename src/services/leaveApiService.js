@@ -75,6 +75,14 @@ export const LeaveApi = {
       .post(`/leave/requests/${id}/cancel`, { reason })
       .then((r) => r.data);
   },
+  retractRequest(id, reason) {
+    return api
+      .post(`/leave/requests/${id}/retract`, { reason })
+      .then((r) => r.data);
+  },
+  resubmitRequest(id) {
+    return api.post(`/leave/requests/${id}/resubmit`).then((r) => r.data);
+  },
   rescheduleRequest(id, { startDate, endDate, reason }) {
     return api
       .post(`/leave/requests/${id}/reschedule`, {

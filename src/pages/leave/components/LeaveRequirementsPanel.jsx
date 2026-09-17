@@ -1,16 +1,28 @@
-import { CheckCircle2, Circle, AlertCircle, FileText } from "lucide-react";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/Card";
-import { LEAVE_REQUIREMENTS, LEAVE_TYPE_MAP } from "../leavePolicy";
+  CheckCircle2,
+  Circle,
+  AlertCircle,
+  FileText,
+  Info,
+} from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import {
+  LEAVE_REQUIREMENTS,
+  LEAVE_TYPE_MAP,
+  LEAVE_DESCRIPTIONS,
+  LEAVE_INFO_NOTICES,
+} from "../leavePolicy";
 import { cn } from "@/lib/utils";
 
-export function LeaveRequirementsPanel({ leaveType, uploadedFiles = {} }) {
+export function LeaveRequirementsPanel({
+  leaveType,
+  uploadedFiles = {},
+  serverType = null,
+}) {
   const requirements = LEAVE_REQUIREMENTS[leaveType] || [];
   const typeConfig = LEAVE_TYPE_MAP[leaveType];
+  const description = serverType?.description || LEAVE_DESCRIPTIONS[leaveType];
+  const notice = LEAVE_INFO_NOTICES[leaveType];
 
   if (!leaveType) {
     return (
@@ -20,16 +32,15 @@ export function LeaveRequirementsPanel({ leaveType, uploadedFiles = {} }) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Select a leave type to view required documents and filing guidelines.
+            Select a leave type to view its description, filing guidelines, and
+            required documents.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  const fulfilledCount = requirements.filter(
-    (r) => uploadedFiles[r.id],
-  ).length;
+  const fulfilledCount = requirements.filter((r) => uploadedFiles[r.id]).length;
 
   return (
     <Card className="sticky top-5">
@@ -49,56 +60,98 @@ export function LeaveRequirementsPanel({ leaveType, uploadedFiles = {} }) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {requirements.length === 0 ? (
-          <div className="flex items-start gap-2 text-sm text-[var(--muted-foreground)]">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>No additional documents required for this leave type.</span>
+        {/* ── Description / Purpose ─────────────────────────────────── */}
+        {description && (
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[var(--muted)]/40">
+            <Info className="w-4 h-4 text-[var(--primary)] flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-[var(--foreground)] leading-relaxed">
+              {description}
+            </p>
           </div>
-        ) : (
-          <ul className="space-y-2.5" aria-label="Document requirements checklist">
-            {requirements.map((req) => {
-              const uploaded = uploadedFiles[req.id];
-              return (
-                <li
-                  key={req.id}
-                  className={cn(
-                    "flex items-start gap-2.5 p-2.5 rounded-lg transition-colors",
-                    uploaded
-                      ? "bg-emerald-50/80 dark:bg-emerald-950/20"
-                      : "bg-[var(--muted)]/40",
-                  )}
-                >
-                  {uploaded ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <Circle className="w-4 h-4 text-[var(--muted-foreground)] flex-shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={cn(
-                        "text-sm",
-                        uploaded
-                          ? "text-emerald-800 dark:text-emerald-200 font-medium"
-                          : "text-[var(--foreground)]",
-                      )}
-                    >
-                      {req.label}
-                      {req.required && !uploaded && (
-                        <span className="text-red-500 ml-1">*</span>
-                      )}
-                    </p>
-                    {uploaded && (
-                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1 truncate">
-                        <FileText className="w-3 h-3 flex-shrink-0" />
-                        {uploaded.name}
-                      </p>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
         )}
+
+        {/* ── Filing Guidelines / Conditions ────────────────────────── */}
+        {notice && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wide font-semibold text-[var(--muted-foreground)] mb-2">
+              Filing Guidelines
+            </p>
+            <div
+              className={cn(
+                "p-3 rounded-lg text-xs leading-relaxed border",
+                notice.variant === "warning" &&
+                  "bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-100",
+                notice.variant === "confidential" &&
+                  "bg-red-50 border-red-300 text-red-900 dark:bg-red-950/40 dark:border-red-800 dark:text-red-100",
+                (!notice.variant || notice.variant === "info") &&
+                  "bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-100",
+              )}
+            >
+              <p className="font-semibold mb-0.5">{notice.title}</p>
+              <p className="opacity-90">{notice.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Required Supporting Documents ─────────────────────────── */}
+        <div>
+          <p className="text-[10px] uppercase tracking-wide font-semibold text-[var(--muted-foreground)] mb-2">
+            Required Documents
+          </p>
+          {requirements.length === 0 ? (
+            <div className="flex items-start gap-2 text-sm text-[var(--muted-foreground)]">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>No additional documents required for this leave type.</span>
+            </div>
+          ) : (
+            <ul
+              className="space-y-2.5"
+              aria-label="Document requirements checklist"
+            >
+              {requirements.map((req) => {
+                const uploaded = uploadedFiles[req.id];
+                return (
+                  <li
+                    key={req.id}
+                    className={cn(
+                      "flex items-start gap-2.5 p-2.5 rounded-lg transition-colors",
+                      uploaded
+                        ? "bg-emerald-50/80 dark:bg-emerald-950/20"
+                        : "bg-[var(--muted)]/40",
+                    )}
+                  >
+                    {uploaded ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle className="w-4 h-4 text-[var(--muted-foreground)] flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={cn(
+                          "text-sm",
+                          uploaded
+                            ? "text-emerald-800 dark:text-emerald-200 font-medium"
+                            : "text-[var(--foreground)]",
+                        )}
+                      >
+                        {req.label}
+                        {req.required && !uploaded && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                      </p>
+                      {uploaded && (
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1 truncate">
+                          <FileText className="w-3 h-3 flex-shrink-0" />
+                          {uploaded.name}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
         <div className="pt-3 border-t border-[var(--border)]">
           <p className="text-[10px] uppercase tracking-wide font-semibold text-[var(--muted-foreground)] mb-2">
@@ -111,7 +164,8 @@ export function LeaveRequirementsPanel({ leaveType, uploadedFiles = {} }) {
             </li>
             <li className="flex items-start gap-1.5">
               <span className="w-1 h-1 rounded-full bg-[var(--muted-foreground)] mt-1.5 flex-shrink-0" />
-              Clearance required for leave of 30+ calendar days and terminal leave.
+              Clearance required for leave of 30+ calendar days and terminal
+              leave.
             </li>
           </ul>
         </div>

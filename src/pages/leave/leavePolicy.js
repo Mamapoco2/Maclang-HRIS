@@ -14,6 +14,8 @@ import {
   Coins,
   LogOut,
   Home,
+  Leaf,
+  Timer,
 } from "lucide-react";
 
 export const LEAVE_TYPES = [
@@ -123,26 +125,81 @@ export const LEAVE_TYPES = [
     bg: "#f0f9ff",
     icon: Home,
   },
+  {
+    value: "wellness",
+    label: "Wellness Leave",
+    color: "#22c55e",
+    bg: "#f0fdf4",
+    icon: Leaf,
+  },
+  {
+    value: "compensatory_off",
+    label: "Compensatory Off",
+    color: "#a855f7",
+    bg: "#faf5ff",
+    icon: Timer,
+  },
+];
+
+export const CREDITS_PANEL_LEAVE_CODES = [
+  "sick",
+  "vacation",
+  "special_privilege",
+  "wellness",
+  "compensatory_off",
 ];
 
 export const LEAVE_TYPE_MAP = Object.fromEntries(
   LEAVE_TYPES.map((t) => [t.value, t]),
 );
 
+export const LEAVE_STATUSES = {
+  FOR_HR_REVIEW: "for_hr_review",
+  PENDING_APPROVAL: "pending_approval",
+  RETURNED_FOR_REVISION: "returned_for_revision",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  RETRACTED: "retracted",
+  CANCELLED: "cancelled",
+  LABELS: {
+    for_hr_review: "For HR Review",
+    pending_approval: "Pending Approval",
+    returned_for_revision: "Returned for Revision",
+    approved: "Approved",
+    rejected: "Rejected",
+    retracted: "Retracted",
+    cancelled: "Cancelled",
+  },
+};
+
 export const STATUS_CONFIG = {
+  for_hr_review: {
+    label: "For HR Review",
+    color: "text-sky-700",
+    bg: "bg-sky-50",
+    border: "border-sky-200",
+    dot: "bg-sky-500",
+  },
+  pending_approval: {
+    label: "Pending Approval",
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    dot: "bg-amber-500",
+  },
+  returned_for_revision: {
+    label: "Returned for Revision",
+    color: "text-orange-700",
+    bg: "bg-orange-50",
+    border: "border-orange-200",
+    dot: "bg-orange-500",
+  },
   approved: {
     label: "Approved",
     color: "text-emerald-700",
     bg: "bg-emerald-50",
     border: "border-emerald-200",
     dot: "bg-emerald-500",
-  },
-  pending: {
-    label: "Pending",
-    color: "text-amber-700",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    dot: "bg-amber-500",
   },
   rejected: {
     label: "Rejected",
@@ -151,12 +208,26 @@ export const STATUS_CONFIG = {
     border: "border-red-200",
     dot: "bg-red-500",
   },
+  retracted: {
+    label: "Retracted",
+    color: "text-purple-700",
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+    dot: "bg-purple-500",
+  },
   cancelled: {
     label: "Cancelled",
     color: "text-gray-600",
     bg: "bg-gray-50",
     border: "border-gray-200",
     dot: "bg-gray-400",
+  },
+  pending: {
+    label: "Pending",
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    dot: "bg-amber-500",
   },
 };
 
@@ -178,6 +249,41 @@ export const LEAVE_DETAIL_FIELDS = {
   monetization: ["creditsToMonetize", "monetizationJustification"],
   terminal: ["separationType"],
   adoption: ["childName", "placementDate", "adoptionAgency"],
+};
+
+export const LEAVE_DESCRIPTIONS = {
+  vacation:
+    "For planned personal time off — travel, rest, or attending to personal matters. Earned monthly and accumulates if unused.",
+  mandatory_forced:
+    "A required 5-day annual leave every employee must take from their vacation leave credits to promote employee wellness. Forfeited if not availed within the year.",
+  sick: "For absences due to illness, injury, or a medical/dental consultation, whether for the employee or requiring their personal attention.",
+  maternity:
+    "Paid leave for childbirth or pregnancy-related conditions, granted regardless of civil status or number of children.",
+  paternity:
+    "For a married male employee to support his legitimate spouse during childbirth or pregnancy-related complications.",
+  special_privilege:
+    "For personal milestones and circumstances — birthday, wedding anniversary, or other personal/family occasions.",
+  solo_parent:
+    "For qualified solo parents to attend to parental duties and responsibilities.",
+  study:
+    "For completing a course of study or taking a board/bar examination relevant to the employee's work.",
+  vawc: "For women employees who are victims of violence, to attend to medical, legal, and related concerns. Handled with strict confidentiality.",
+  rehabilitation:
+    "For recovery from injuries sustained in the actual performance of official duty.",
+  special_women:
+    "For women employees who undergo surgery for gynecological disorders, to allow for recovery.",
+  calamity:
+    "For employees directly affected by a natural or man-made calamity in a declared disaster area.",
+  monetization:
+    "Converts a portion of accumulated, unused vacation/sick leave credits into a cash equivalent, without actually going on leave.",
+  terminal:
+    "Cashes out all remaining leave credits upon resignation, retirement, or separation from service.",
+  adoption:
+    "For an employee upon the issuance of a Pre-Adoptive Placement Authority by DSWD in their favor.",
+  wellness:
+    "For attending to the employee's physical and mental wellbeing — medical/wellness check-ups, therapy sessions, or similar self-care activities.",
+  compensatory_off:
+    "Time off earned in exchange for approved overtime work rendered, credited and consumed in hours.",
 };
 
 export const LEAVE_INFO_NOTICES = {
@@ -266,6 +372,18 @@ export const LEAVE_INFO_NOTICES = {
     title: "Adoption Leave",
     message:
       "Requires authenticated copy of Pre-Adoptive Placement Authority issued by DSWD.",
+  },
+  wellness: {
+    variant: "info",
+    title: "Filing Requirement",
+    message:
+      "File at least 3 days before the intended date whenever possible. Subject to available Wellness Leave credits.",
+  },
+  compensatory_off: {
+    variant: "info",
+    title: "Compensatory Off Policy",
+    message:
+      "Credited in hours from approved overtime rendered. Must be filed against available Compensatory Off credits and used within the period set by HR.",
   },
 };
 
@@ -374,9 +492,15 @@ export const LEAVE_REQUIREMENTS = {
       required: true,
     },
   ],
+  wellness: [],
+  compensatory_off: [
+    {
+      id: "ot_approval",
+      label: "Approved Overtime Authorization/DTR (basis for hours credited)",
+    },
+  ],
 };
 
-/** Upload field definitions keyed by leave type */
 export const LEAVE_UPLOAD_FIELDS = {
   sick: [{ id: "medical_certificate", label: "Medical Certificate" }],
   maternity: [
@@ -411,28 +535,4 @@ export const LEAVE_UPLOAD_FIELDS = {
   adoption: [
     { id: "pre_adoptive_placement", label: "Pre-Adoptive Placement Authority" },
   ],
-};
-
-export const LEAVE_STATUSES = {
-  DRAFT: "draft",
-  FOR_HR_REVIEW: "for_hr_review",
-  PENDING_APPROVAL: "pending_approval",
-  APPROVED: "approved",
-  REJECTED: "rejected",
-  RETURNED_FOR_REVISION: "returned_for_revision",
-  RETRACTED: "retracted",
-  CANCELLED: "cancelled",
-
-  // Display labels, used for CSV export and anywhere StatusBadge can't be
-  // reused (e.g. plain-text contexts).
-  LABELS: {
-    draft: "Draft",
-    for_hr_review: "For HR Review",
-    pending_approval: "Pending Approval",
-    approved: "Approved",
-    rejected: "Rejected/Disapproved",
-    returned_for_revision: "Returned for Clarification/Revision",
-    retracted: "Retracted",
-    cancelled: "Cancelled",
-  },
 };

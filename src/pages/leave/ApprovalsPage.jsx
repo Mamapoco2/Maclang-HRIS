@@ -15,10 +15,13 @@ import { useToast } from "./Toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLeaveApprovals } from "@/hooks/useLeaveApprovals";
 import { formatDate } from "./utils";
+import { LEAVE_STATUSES } from "./leavePolicy";
 import {
   CheckCircle,
   XCircle,
   Ban,
+  Undo2,
+  RotateCcw,
   MessageSquare,
   Clock,
   Filter,
@@ -26,8 +29,6 @@ import {
   Eye,
 } from "lucide-react";
 
-// Roles that can act on requests. Employees without one of these get a
-// read-only view of the same list.
 const APPROVER_ROLES = new Set(["admin", "hr", "manager", "supervisor"]);
 
 function canUserApprove(user) {
@@ -52,7 +53,11 @@ function mapToRow(r) {
   const remarks =
     r.status === "cancelled"
       ? (r.cancellation_reason ?? null)
-      : (lastActedStep?.remarks ?? null);
+      : r.status === "retracted"
+        ? (r.retraction_reason ?? null)
+        : r.status === "returned_for_revision"
+          ? (r.return_reason ?? null)
+          : (lastActedStep?.remarks ?? null);
 
   return {
     id: r.id,
@@ -86,6 +91,7 @@ export default function ApprovalsPage() {
     refetch,
     approve,
     reject,
+    returnForRevision,
     bulkApprove,
   } = useLeaveApprovals();
 
@@ -120,16 +126,34 @@ export default function ApprovalsPage() {
     try {
       if (action === "approved") {
         await approve(id, remarks || null);
+      } else if (action === "returned") {
+        await returnForRevision(id, remarks);
       } else {
         await reject(id, remarks || "Rejected");
       }
       setActionDialog(null);
       setRemarks("");
       setDetailOpen(false);
+      const titles = {
+        approved: "Request Approved",
+        rejected: "Request Rejected",
+        returned: "Sent Back for Revision",
+      };
+      const descriptions = {
+        approved: "Leave request has been approved successfully.",
+        rejected: "Leave request has been rejected successfully.",
+        returned:
+          "The employee has been notified and can revise and resubmit this request.",
+      };
+      const variants = {
+        approved: "success",
+        rejected: "destructive",
+        returned: "default",
+      };
       toast({
-        title: action === "approved" ? "Request Approved" : "Request Rejected",
-        description: `Leave request has been ${action} successfully.`,
-        variant: action === "approved" ? "success" : "destructive",
+        title: titles[action] ?? "Request Updated",
+        description: descriptions[action] ?? "Leave request has been updated.",
+        variant: variants[action] ?? "default",
       });
     } catch (err) {
       toast({
@@ -382,6 +406,19 @@ export default function ApprovalsPage() {
                                 onClick={() =>
                                   setActionDialog({
                                     id: req.id,
+                                    action: "returned",
+                                  })
+                                }
+                                className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 hover:bg-orange-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                                aria-label={`Return request from ${req.employeeName} for revision`}
+                                title="Return for revision"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setActionDialog({
+                                    id: req.id,
                                     action: "rejected",
                                   })
                                 }
@@ -420,17 +457,27 @@ export default function ApprovalsPage() {
                       <div key={req.id} className="flex gap-4 relative">
                         <div
                           className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 relative z-10 ${
-                            req.status === "approved"
+                            req.status === LEAVE_STATUSES.APPROVED
                               ? "bg-emerald-100 dark:bg-emerald-950/40"
-                              : req.status === "cancelled"
+                              : req.status === LEAVE_STATUSES.CANCELLED
                                 ? "bg-slate-100 dark:bg-slate-800/40"
-                                : "bg-red-100 dark:bg-red-950/40"
+                                : req.status === LEAVE_STATUSES.RETRACTED
+                                  ? "bg-purple-100 dark:bg-purple-950/40"
+                                  : req.status ===
+                                      LEAVE_STATUSES.RETURNED_FOR_REVISION
+                                    ? "bg-orange-100 dark:bg-orange-950/40"
+                                    : "bg-red-100 dark:bg-red-950/40"
                           }`}
                         >
-                          {req.status === "approved" ? (
+                          {req.status === LEAVE_STATUSES.APPROVED ? (
                             <CheckCircle className="w-4 h-4 text-emerald-600" />
-                          ) : req.status === "cancelled" ? (
+                          ) : req.status === LEAVE_STATUSES.CANCELLED ? (
                             <Ban className="w-4 h-4 text-slate-500" />
+                          ) : req.status === LEAVE_STATUSES.RETRACTED ? (
+                            <Undo2 className="w-4 h-4 text-purple-600" />
+                          ) : req.status ===
+                            LEAVE_STATUSES.RETURNED_FOR_REVISION ? (
+                            <RotateCcw className="w-4 h-4 text-orange-600" />
                           ) : (
                             <XCircle className="w-4 h-4 text-red-600" />
                           )}
@@ -486,14 +533,18 @@ export default function ApprovalsPage() {
             <DialogTitle>
               {actionDialog?.action === "approved"
                 ? "Approve Leave Request"
-                : "Reject Leave Request"}
+                : actionDialog?.action === "returned"
+                  ? "Return for Revision"
+                  : "Reject Leave Request"}
             </DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-4">
             <p className="text-sm text-[var(--muted-foreground)]">
               {actionDialog?.action === "approved"
                 ? "Are you sure you want to approve this leave request?"
-                : "Please provide a reason for rejecting this request."}
+                : actionDialog?.action === "returned"
+                  ? "The employee will be notified and can revise and resubmit this request. Let them know what needs to change."
+                  : "Please provide a reason for rejecting this request."}
             </p>
             <div>
               <label
@@ -501,7 +552,8 @@ export default function ApprovalsPage() {
                 className="text-sm font-medium text-[var(--foreground)] block mb-1.5"
               >
                 Remarks{" "}
-                {actionDialog?.action === "rejected" && (
+                {(actionDialog?.action === "rejected" ||
+                  actionDialog?.action === "returned") && (
                   <span className="text-red-500">*</span>
                 )}
               </label>
@@ -513,14 +565,19 @@ export default function ApprovalsPage() {
                 placeholder={
                   actionDialog?.action === "approved"
                     ? "Optional note to employee..."
-                    : "Reason for rejection..."
+                    : actionDialog?.action === "returned"
+                      ? "What needs to be revised before this can be re-reviewed..."
+                      : "Reason for rejection..."
                 }
                 className="w-full px-3 py-2.5 text-sm bg-[var(--background)] border border-[var(--border)] rounded-lg outline-none focus:ring-2 focus:ring-[var(--ring)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] resize-none"
               />
-              {actionDialog?.action === "rejected" &&
+              {(actionDialog?.action === "rejected" ||
+                actionDialog?.action === "returned") &&
                 isRemarksEmpty(remarks) && (
                   <p className="text-xs text-red-500 mt-1">
-                    A reason is required to reject a request.
+                    {actionDialog?.action === "returned"
+                      ? "Remarks are required so the employee knows what to revise."
+                      : "A reason is required to reject a request."}
                   </p>
                 )}
             </div>
@@ -535,21 +592,34 @@ export default function ApprovalsPage() {
             </Button>
             <Button
               variant={
-                actionDialog?.action === "approved" ? "success" : "destructive"
+                actionDialog?.action === "approved"
+                  ? "success"
+                  : actionDialog?.action === "returned"
+                    ? "outline"
+                    : "destructive"
+              }
+              className={
+                actionDialog?.action === "returned"
+                  ? "border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400"
+                  : undefined
               }
               onClick={() =>
                 handleAction(actionDialog?.id, actionDialog?.action)
               }
               disabled={
                 submitting ||
-                (actionDialog?.action === "rejected" && isRemarksEmpty(remarks))
+                ((actionDialog?.action === "rejected" ||
+                  actionDialog?.action === "returned") &&
+                  isRemarksEmpty(remarks))
               }
             >
               {submitting
                 ? "Processing…"
                 : actionDialog?.action === "approved"
                   ? "Approve"
-                  : "Reject"}
+                  : actionDialog?.action === "returned"
+                    ? "Return for Revision"
+                    : "Reject"}
             </Button>
           </DialogFooter>
         </Dialog>
@@ -612,30 +682,45 @@ export default function ApprovalsPage() {
             </div>
           </DialogBody>
           <DialogFooter>
-            {canManageApprovals && selected.status === "pending" && (
-              <>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    setActionDialog({ id: selected.id, action: "rejected" });
-                    setDetailOpen(false);
-                  }}
-                >
-                  <XCircle className="w-4 h-4" /> Reject
-                </Button>
-                <Button
-                  variant="success"
-                  size="sm"
-                  onClick={() => {
-                    setActionDialog({ id: selected.id, action: "approved" });
-                    setDetailOpen(false);
-                  }}
-                >
-                  <CheckCircle className="w-4 h-4" /> Approve
-                </Button>
-              </>
-            )}
+            {canManageApprovals &&
+              [
+                LEAVE_STATUSES.FOR_HR_REVIEW,
+                LEAVE_STATUSES.PENDING_APPROVAL,
+              ].includes(selected.status) && (
+                <>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setActionDialog({ id: selected.id, action: "rejected" });
+                      setDetailOpen(false);
+                    }}
+                  >
+                    <XCircle className="w-4 h-4" /> Reject
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400"
+                    onClick={() => {
+                      setActionDialog({ id: selected.id, action: "returned" });
+                      setDetailOpen(false);
+                    }}
+                  >
+                    <RotateCcw className="w-4 h-4" /> Return
+                  </Button>
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={() => {
+                      setActionDialog({ id: selected.id, action: "approved" });
+                      setDetailOpen(false);
+                    }}
+                  >
+                    <CheckCircle className="w-4 h-4" /> Approve
+                  </Button>
+                </>
+              )}
             <Button variant="outline" onClick={() => setDetailOpen(false)}>
               Close
             </Button>
