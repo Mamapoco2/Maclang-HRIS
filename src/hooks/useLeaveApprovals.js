@@ -94,6 +94,16 @@ export function useLeaveApprovals(params = {}) {
     [fetchRecentDecisions],
   );
 
+  const returnForRevision = useCallback(
+    async (requestId, remarks) => {
+      const res = await LeaveApi.act(requestId, "returned", remarks);
+      setPending((prev) => prev.filter((r) => r.id !== requestId));
+      fetchRecentDecisions();
+      return res;
+    },
+    [fetchRecentDecisions],
+  );
+
   const bulkApprove = useCallback(
     async (ids) => {
       const res = await LeaveApi.bulkApprove(ids);
@@ -114,6 +124,7 @@ export function useLeaveApprovals(params = {}) {
     refetch: fetchPending,
     approve,
     reject,
+    returnForRevision,
     bulkApprove,
   };
 }

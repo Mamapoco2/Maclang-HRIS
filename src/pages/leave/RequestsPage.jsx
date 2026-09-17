@@ -14,6 +14,7 @@ import LeaveApi from "@/services/leaveApiService";
 import { LeaveRequestModal } from "./components/LeaveRequestModal";
 import { CancelRequestModal } from "./components/CancelRequestModal";
 import { RetractRequestModal } from "./components/RetractRequestModal";
+import { ResubmitRequestModal } from "./components/ResubmitRequestModal";
 import { ApprovalStepsInline } from "./components/ApprovalTrail";
 import { LEAVE_TYPES, LEAVE_STATUSES } from "./leavePolicy";
 import { formatDate, downloadCSV } from "./utils";
@@ -29,20 +30,19 @@ import {
   Columns3,
   MessageSquareWarning,
   XCircle,
+  RotateCcw,
   Undo2,
 } from "lucide-react";
 
-// Statuses where the request is still in the HR/approval pipeline and the
-// employee can still withdraw it outright. Once it reaches final MCC
-// approval, withdrawal becomes a Retract action instead (see RETRACTABLE_STATUSES).
 const CANCELLABLE_STATUSES = [
   LEAVE_STATUSES.FOR_HR_REVIEW,
   LEAVE_STATUSES.PENDING_APPROVAL,
   LEAVE_STATUSES.RETURNED_FOR_REVISION,
 ];
 
-// Only a fully MCC-approved request can be retracted.
 const RETRACTABLE_STATUSES = [LEAVE_STATUSES.APPROVED];
+
+const RESUBMITTABLE_STATUSES = [LEAVE_STATUSES.RETURNED_FOR_REVISION];
 
 function mapRequestToRow(r) {
   const pendingStep = r.approval_steps?.find(
@@ -75,6 +75,7 @@ function mapRequestToRow(r) {
     currentStepOrder: r.current_step_order,
     cancellationReason: r.cancellation_reason ?? null,
     retractionReason: r.retraction_reason ?? null,
+    returnReason: r.return_reason ?? null,
   };
 }
 
@@ -90,6 +91,7 @@ export default function RequestsPage({ onNavigate }) {
   const [viewTarget, setViewTarget] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [retractTarget, setRetractTarget] = useState(null);
+  const [resubmitTarget, setResubmitTarget] = useState(null);
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [actionError, setActionError] = useState(null);
 
@@ -154,6 +156,24 @@ export default function RequestsPage({ onNavigate }) {
     [retractTarget, loadRequests],
   );
 
+  const handleResubmitSubmit = useCallback(() => {
+    if (!resubmitTarget) return;
+    setActionSubmitting(true);
+    setActionError(null);
+    LeaveApi.resubmitRequest(resubmitTarget.id)
+      .then(() => {
+        setResubmitTarget(null);
+        loadRequests();
+      })
+      .catch((err) => {
+        setActionError(
+          err?.response?.data?.message ||
+            "Failed to resubmit this leave request.",
+        );
+      })
+      .finally(() => setActionSubmitting(false));
+  }, [resubmitTarget, loadRequests]);
+
   const canCancel = useCallback(
     (status) => CANCELLABLE_STATUSES.includes(status),
     [],
@@ -161,6 +181,11 @@ export default function RequestsPage({ onNavigate }) {
 
   const canRetract = useCallback(
     (status) => RETRACTABLE_STATUSES.includes(status),
+    [],
+  );
+
+  const canResubmit = useCallback(
+    (status) => RESUBMITTABLE_STATUSES.includes(status),
     [],
   );
 
@@ -285,11 +310,20 @@ export default function RequestsPage({ onNavigate }) {
                 <Undo2 className="w-4 h-4" />
               </button>
             )}
+            {canResubmit(row.original.status) && (
+              <button
+                onClick={() => setResubmitTarget(row.original)}
+                className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-600 transition-colors"
+                title="Resubmit"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
           </div>
         ),
       },
     ],
-    [canCancel, canRetract],
+    [canCancel, canRetract, canResubmit],
   );
 
   const table = useReactTable({
@@ -318,9 +352,6 @@ export default function RequestsPage({ onNavigate }) {
     downloadCSV(data, "my-leave-requests.csv");
   };
 
-  // Status filter pills reflect the standardized pipeline stages one-for-one
-  // (rather than grouping them) so employees can tell "For HR Review" apart
-  // from "Pending Approval" at a glance.
   const statusPills = [
     { label: "All", value: "all" },
     { label: "For HR Review", value: LEAVE_STATUSES.FOR_HR_REVIEW },
@@ -600,6 +631,18 @@ export default function RequestsPage({ onNavigate }) {
             setActionError(null);
           }}
           onSave={handleRetractSubmit}
+        />
+      )}
+
+      {resubmitTarget && (
+        <ResubmitRequestModal
+          request={resubmitTarget}
+          submitting={actionSubmitting}
+          onClose={() => {
+            setResubmitTarget(null);
+            setActionError(null);
+          }}
+          onSave={handleResubmitSubmit}
         />
       )}
 

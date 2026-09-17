@@ -7,6 +7,7 @@ import { StatusBadge, LeaveTypeBadge } from "./StatusBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "./utils";
+import { LEAVE_STATUSES } from "./leavePolicy";
 import { initializeAutoYearlyUpdate } from "@/services/holidayService";
 import { useAuth } from "@/hooks/useAuth";
 import LeaveApi from "@/services/leaveApiService";
@@ -98,8 +99,13 @@ export default function DashboardPage({ onNavigate: onNavigateProp }) {
         setOverview(overviewRes);
         setActivities(activityRes ?? []);
         setTeamRequests(
-          (teamRes.data ?? []).filter(
-            (r) => r.status === "approved" || r.status === "pending",
+          (teamRes.data ?? []).filter((r) =>
+            [
+              LEAVE_STATUSES.FOR_HR_REVIEW,
+              LEAVE_STATUSES.PENDING_APPROVAL,
+              LEAVE_STATUSES.RETURNED_FOR_REVISION,
+              LEAVE_STATUSES.APPROVED,
+            ].includes(r.status),
           ),
         );
       })
