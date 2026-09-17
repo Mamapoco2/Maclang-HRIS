@@ -266,40 +266,40 @@ const NAV_MAIN = [
               { title: "Hazard", permission: "compensation.view" },
             ],
           },
-        ],
-      },
-      {
-        title: "Special",
-        items: [
           {
-            title: "Salary",
+            title: "Special",
             items: [
               {
-                title: "Attendance & Report Generation",
-                permission: "compensation.view",
+                title: "Salary",
+                items: [
+                  {
+                    title: "Attendance & Report Generation",
+                    permission: "compensation.view",
+                  },
+                  { title: "Certification", permission: "compensation.view" },
+                  { title: "Transmittal", permission: "compensation.view" },
+                ],
               },
-              { title: "Certification", permission: "compensation.view" },
-              { title: "Transmittal", permission: "compensation.view" },
-            ],
-          },
-          {
-            title: "Hazard",
-            items: [
               {
-                title: "Attendance & Report Generation",
-                permission: "compensation.view",
+                title: "Hazard",
+                items: [
+                  {
+                    title: "Attendance & Report Generation",
+                    permission: "compensation.view",
+                  },
+                  { title: "Certification", permission: "compensation.view" },
+                  { title: "Transmittal", permission: "compensation.view" },
+                ],
               },
-              { title: "Certification", permission: "compensation.view" },
-              { title: "Transmittal", permission: "compensation.view" },
-            ],
-          },
-          { title: "Night Diff", permission: "compensation.view" },
-          {
-            title: "Salary Diff",
-            items: [
+              { title: "Night Diff", permission: "compensation.view" },
               {
-                title: "Same as Spec & Rec Sal",
-                permission: "compensation.view",
+                title: "Salary Diff",
+                items: [
+                  {
+                    title: "Same as Spec & Rec Sal",
+                    permission: "compensation.view",
+                  },
+                ],
               },
             ],
           },
