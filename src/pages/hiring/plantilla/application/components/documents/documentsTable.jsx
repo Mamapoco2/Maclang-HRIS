@@ -19,6 +19,7 @@ import api from "@/api/api";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
 import { AuthContext } from "@/context/authContext";
 import { candidateName } from "../psbUtils";
+import DOMPurify from "dompurify";
 
 function formatDocKey(key) {
   return key
@@ -39,6 +40,37 @@ const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"];
 const DOCX_EXTS = ["docx", "doc"];
 const SHEET_EXTS = ["xlsx", "xls", "csv"];
 const SLIDE_EXTS = ["pptx", "ppt"];
+
+const DOCX_SANITIZE_OPTIONS = {
+  ALLOWED_TAGS: [
+    "p",
+    "br",
+    "strong",
+    "em",
+    "u",
+    "s",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "ul",
+    "ol",
+    "li",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "a",
+    "img",
+    "sup",
+    "sub",
+    "blockquote",
+  ],
+  ALLOWED_ATTR: ["href", "src", "alt", "title", "colspan", "rowspan"],
+  ALLOW_DATA_ATTR: false,
+};
 
 function getFileIcon(filename) {
   const ext = getExt(filename);
@@ -454,7 +486,9 @@ function DocumentViewerModal({
         const mammoth = await import("mammoth");
         const arrayBuffer = await blob.arrayBuffer();
         const result = await mammoth.convertToHtml({ arrayBuffer });
-        if (!cancelled) setDocxHtml(result.value);
+        if (!cancelled) {
+          setDocxHtml(DOMPurify.sanitize(result.value, DOCX_SANITIZE_OPTIONS));
+        }
       } catch (e) {
         if (!cancelled) setDocxError(true);
       } finally {
