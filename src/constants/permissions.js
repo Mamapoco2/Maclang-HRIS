@@ -70,6 +70,7 @@ export const PERMISSIONS = Object.freeze({
   PLANTILLA_ITEMS_MANAGE: "plantilla_items.manage",
   POSITIONS_VIEW: "positions.view",
   ROLES_VIEW: "roles.view",
+  ROLES_MANAGE: "roles.manage",
 
   // ── Rewards & Recognition ───────────────────────────────
   REWARDS_VIEW: "rewards.view",

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,6 +16,7 @@ import { LeaveRequestModal } from "./components/LeaveRequestModal";
 import { CancelRequestModal } from "./components/CancelRequestModal";
 import { RetractRequestModal } from "./components/RetractRequestModal";
 import { ResubmitRequestModal } from "./components/ResubmitRequestModal";
+import { DeleteDraftModal } from "./components/DeleteDraftModal";
 import { ApprovalStepsInline } from "./components/ApprovalTrail";
 import { LEAVE_TYPES, LEAVE_STATUSES } from "./leavePolicy";
 import { formatDate, downloadCSV } from "./utils";
@@ -32,6 +34,8 @@ import {
   XCircle,
   RotateCcw,
   Undo2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 const CANCELLABLE_STATUSES = [
@@ -80,6 +84,8 @@ function mapRequestToRow(r) {
 }
 
 export default function RequestsPage({ onNavigate }) {
+  const navigate = useNavigate();
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -92,6 +98,7 @@ export default function RequestsPage({ onNavigate }) {
   const [cancelTarget, setCancelTarget] = useState(null);
   const [retractTarget, setRetractTarget] = useState(null);
   const [resubmitTarget, setResubmitTarget] = useState(null);
+  const [deleteDraftTarget, setDeleteDraftTarget] = useState(null);
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [actionError, setActionError] = useState(null);
 
@@ -174,6 +181,30 @@ export default function RequestsPage({ onNavigate }) {
       .finally(() => setActionSubmitting(false));
   }, [resubmitTarget, loadRequests]);
 
+  const handleDeleteDraftSubmit = useCallback(() => {
+    if (!deleteDraftTarget) return;
+    setActionSubmitting(true);
+    setActionError(null);
+    LeaveApi.deleteDraft(deleteDraftTarget.id)
+      .then(() => {
+        setDeleteDraftTarget(null);
+        loadRequests();
+      })
+      .catch((err) => {
+        setActionError(
+          err?.response?.data?.message || "Failed to delete this draft.",
+        );
+      })
+      .finally(() => setActionSubmitting(false));
+  }, [deleteDraftTarget, loadRequests]);
+
+  const goToEditDraft = useCallback(
+    (id) => navigate(`/NewLeaveRequest?draft=${id}`),
+    [navigate],
+  );
+
+  const isDraft = useCallback((status) => status === LEAVE_STATUSES.DRAFT, []);
+
   const canCancel = useCallback(
     (status) => CANCELLABLE_STATUSES.includes(status),
     [],
@@ -195,11 +226,27 @@ export default function RequestsPage({ onNavigate }) {
       if (typeFilter !== "all" && r.leaveType !== typeFilter) return false;
       if (globalFilter) {
         const q = globalFilter.toLowerCase();
-        return r.leaveType.toLowerCase().includes(q);
+        const haystack = [r.leaveType, r.status, r.reason, r.approverName]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
       return true;
     });
   }, [requests, statusFilter, typeFilter, globalFilter]);
+
+  const handleExport = useCallback(() => {
+    const data = filteredData.map((r) => ({
+      "Leave Type": r.leaveType,
+      "Date Range": `${formatDate(r.startDate)} - ${formatDate(r.endDate)}`,
+      Days: r.days,
+      Status: r.status,
+      "Date Filed": r.dateFiled,
+      "Current Approver": r.approverName,
+    }));
+    downloadCSV(data, "my-leave-requests.csv");
+  }, [filteredData]);
 
   const columns = useMemo(
     () => [
@@ -216,13 +263,10 @@ export default function RequestsPage({ onNavigate }) {
         id: "dateRange",
         header: "Date Range",
         cell: ({ row }) => (
-          <div className="text-center">
-            <p className="text-sm text-[var(--foreground)]">
-              {formatDate(row.original.startDate)}
-            </p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              to {formatDate(row.original.endDate)}
-            </p>
+          <div className="flex justify-center text-sm text-[var(--foreground)]">
+            {row.original.startDate
+              ? `${formatDate(row.original.startDate)} - ${formatDate(row.original.endDate)}`
+              : "—"}
           </div>
         ),
       },
@@ -230,29 +274,17 @@ export default function RequestsPage({ onNavigate }) {
         accessorKey: "days",
         header: "Days",
         cell: ({ getValue }) => (
-          <div className="flex justify-center">
-            <span className="text-sm font-semibold text-[var(--foreground)]">
-              {getValue()}
-            </span>
+          <div className="flex justify-center text-sm text-[var(--foreground)]">
+            {getValue() ?? "—"}
           </div>
         ),
       },
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row, getValue }) => (
-          <div className="flex flex-col items-center gap-1">
+        cell: ({ getValue }) => (
+          <div className="flex justify-center">
             <StatusBadge status={getValue()} />
-            {getValue() === LEAVE_STATUSES.REJECTED &&
-              row.original.rejectionReason && (
-                <span
-                  title={row.original.rejectionReason}
-                  className="flex items-center gap-1 text-xs text-red-600 max-w-[160px] truncate"
-                >
-                  <MessageSquareWarning className="w-3 h-3 shrink-0" />
-                  {row.original.rejectionReason}
-                </span>
-              )}
           </div>
         ),
       },
@@ -270,60 +302,74 @@ export default function RequestsPage({ onNavigate }) {
       {
         accessorKey: "approverName",
         header: "Current Approver",
-        cell: ({ row }) => (
-          <div className="flex flex-col items-center gap-1.5 max-w-[260px] mx-auto">
-            <ApprovalStepsInline
-              steps={row.original.approvalSteps}
-              currentStepOrder={row.original.currentStepOrder}
-              className="justify-center"
-            />
+        cell: ({ getValue }) => (
+          <div className="flex justify-center text-sm text-[var(--foreground)]">
+            {getValue()}
           </div>
         ),
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center gap-1">
-            <button
-              onClick={() => setViewTarget(row.original)}
-              className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors"
-              title="View"
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-            {canCancel(row.original.status) && (
+        cell: ({ row }) =>
+          isDraft(row.original.status) ? (
+            <div className="flex items-center justify-center gap-1">
               <button
-                onClick={() => setCancelTarget(row.original)}
+                onClick={() => goToEditDraft(row.original.id)}
+                className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors"
+                title="Edit Draft"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setDeleteDraftTarget(row.original)}
                 className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
-                title="Cancel"
+                title="Delete Draft"
               >
-                <XCircle className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" />
               </button>
-            )}
-            {canRetract(row.original.status) && (
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-1">
               <button
-                onClick={() => setRetractTarget(row.original)}
-                className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
-                title="Retract"
+                onClick={() => setViewTarget(row.original)}
+                className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-[var(--muted-foreground)] transition-colors"
+                title="View"
               >
-                <Undo2 className="w-4 h-4" />
+                <Eye className="w-4 h-4" />
               </button>
-            )}
-            {canResubmit(row.original.status) && (
-              <button
-                onClick={() => setResubmitTarget(row.original)}
-                className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-600 transition-colors"
-                title="Resubmit"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        ),
+              {canCancel(row.original.status) && (
+                <button
+                  onClick={() => setCancelTarget(row.original)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                  title="Cancel"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              )}
+              {canRetract(row.original.status) && (
+                <button
+                  onClick={() => setRetractTarget(row.original)}
+                  className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
+                  title="Retract"
+                >
+                  <Undo2 className="w-4 h-4" />
+                </button>
+              )}
+              {canResubmit(row.original.status) && (
+                <button
+                  onClick={() => setResubmitTarget(row.original)}
+                  className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-600 transition-colors"
+                  title="Resubmit"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ),
       },
     ],
-    [canCancel, canRetract, canResubmit],
+    [canCancel, canRetract, canResubmit, isDraft, goToEditDraft],
   );
 
   const table = useReactTable({
@@ -335,102 +381,57 @@ export default function RequestsPage({ onNavigate }) {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 8 } },
+    initialState: { pagination: { pageSize: 10 } },
   });
 
-  const handleExport = () => {
-    const data = filteredData.map((r) => ({
-      "Leave Type": r.leaveType,
-      "Start Date": r.startDate,
-      "End Date": r.endDate,
-      Days: r.days,
-      Status: LEAVE_STATUSES.LABELS[r.status] ?? r.status,
-      "Rejection Reason": r.rejectionReason ?? "",
-      "Date Filed": r.dateFiled,
-      "Current Approver": r.approverName,
-    }));
-    downloadCSV(data, "my-leave-requests.csv");
-  };
-
-  const statusPills = [
-    { label: "All", value: "all" },
-    { label: "For HR Review", value: LEAVE_STATUSES.FOR_HR_REVIEW },
-    { label: "Pending Approval", value: LEAVE_STATUSES.PENDING_APPROVAL },
-    { label: "Returned", value: LEAVE_STATUSES.RETURNED_FOR_REVISION },
-    { label: "Approved", value: LEAVE_STATUSES.APPROVED },
-    { label: "Rejected", value: LEAVE_STATUSES.REJECTED },
-    { label: "Retracted", value: LEAVE_STATUSES.RETRACTED },
-    { label: "Cancelled", value: LEAVE_STATUSES.CANCELLED },
-  ].map((p) => ({
-    ...p,
-    count:
-      p.value === "all"
-        ? requests.length
-        : requests.filter((r) => r.status === p.value).length,
-  }));
-
   return (
-    <div className="p-5">
+    <div className="p-4 md:p-6 space-y-4">
       <PageHeader
         title="My Leave Requests"
-        description="Track the leave requests you've filed and their approval status"
+        description="Track and manage your submitted leave applications"
       />
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400 flex items-center justify-between">
-          <span>{error}</span>
-          <button
-            onClick={loadRequests}
-            className="text-xs font-medium underline hover:no-underline"
-          >
-            Retry
-          </button>
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          {error}
         </div>
       )}
 
-      {/* Summary pills */}
-      <div className="flex gap-3 mb-5 flex-wrap">
-        {statusPills.map((s) => (
-          <button
-            key={s.value}
-            onClick={() => setStatusFilter(s.value)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
-              statusFilter === s.value
-                ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                : "bg-[var(--card)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            }`}
-          >
-            {s.label}
-            <span
-              className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${statusFilter === s.value ? "bg-white/20" : "bg-[var(--muted)]"}`}
-            >
-              {s.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <Card>
-        {/* Toolbar */}
-        <div className="p-4 border-b border-[var(--border)] flex items-center gap-3 flex-wrap">
+      <Card className="p-0 overflow-hidden">
+        {/* Filters toolbar */}
+        <div className="flex flex-wrap items-center gap-2 p-4 border-b border-[var(--border)]">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
             <input
+              type="text"
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              placeholder="Search by leave type..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-[var(--muted)] border-0 rounded-lg outline-none focus:ring-2 focus:ring-[var(--ring)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]"
+              placeholder="Search leave requests..."
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             />
           </div>
 
           <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)]"
+          >
+            <option value="all">All Statuses</option>
+            {Object.entries(LEAVE_STATUSES.LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+
+          <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 text-sm bg-[var(--muted)] border-0 rounded-lg outline-none focus:ring-2 focus:ring-[var(--ring)] text-[var(--foreground)] cursor-pointer"
+            className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)]"
           >
             <option value="all">All Types</option>
             {LEAVE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
+              <option key={t.code} value={t.code}>
                 {t.label}
               </option>
             ))}
@@ -439,7 +440,7 @@ export default function RequestsPage({ onNavigate }) {
           <div className="relative">
             <button
               onClick={() => setShowColumnMenu((v) => !v)}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-[var(--muted)] rounded-lg hover:bg-[var(--border)] transition-colors text-[var(--foreground)]"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors text-[var(--foreground)]"
             >
               <Columns3 className="w-4 h-4" />
               <span className="hidden sm:inline">Columns</span>
@@ -643,6 +644,18 @@ export default function RequestsPage({ onNavigate }) {
             setActionError(null);
           }}
           onSave={handleResubmitSubmit}
+        />
+      )}
+
+      {deleteDraftTarget && (
+        <DeleteDraftModal
+          request={deleteDraftTarget}
+          submitting={actionSubmitting}
+          onClose={() => {
+            setDeleteDraftTarget(null);
+            setActionError(null);
+          }}
+          onSave={handleDeleteDraftSubmit}
         />
       )}
 

@@ -1,4 +1,3 @@
-// src/components/org-chart/utils.js
 export const resolveBorderColor = (data) => {
   if (data?.borderColor) return data.borderColor;
 

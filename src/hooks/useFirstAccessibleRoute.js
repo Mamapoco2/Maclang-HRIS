@@ -56,6 +56,7 @@ const ROUTE_PERMISSION_MAP = [
   { path: "/PerformancePeriod", permission: "spms.manage" },
 
   { path: "/accounts", permission: "accounts.view" },
+  { path: "/users", permission: "users.view" },
   { path: "/departments", permission: "departments.view" },
   { path: "/plantillaItems", permission: "plantilla_items.view" },
   { path: "/COSList", permission: "positions.view" },

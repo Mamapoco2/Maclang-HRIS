@@ -27,7 +27,7 @@ import LeaveApproval from "../pages/leave/ApprovalsPage";
 import LeaveRequest from "../pages/leave/RequestsPage";
 import SuspensionsPage from "../pages/leave/SuspensionsPage";
 import NewLeaveRequest from "../pages/leave/NewRequestPage";
-import Accounts from "../pages/accounts/components/accountApprovalPage";
+import Accounts from "../pages/accounts/components/accountsPage";
 import ManPower from "../pages/manpower/manPowerPage";
 import IPCRForm from "../pages/spms/ipcr/IPCRForm";
 import OPCRForm from "../pages/spms/OPCRPage";
@@ -65,6 +65,7 @@ import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplications
 import DTRPage from "../pages/dtr/dtrPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
 import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
+import UserManagementPage from "../pages/accounts/components/userManagementPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -470,6 +471,15 @@ function AppRoutes() {
               element={
                 <PermissionRoute permission="renewals.view">
                   <RenewalsPage />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/users"
+              element={
+                <PermissionRoute permission="users.view">
+                  <UserManagementPage />
                 </PermissionRoute>
               }
             />

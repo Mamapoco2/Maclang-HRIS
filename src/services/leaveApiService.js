@@ -1,5 +1,53 @@
 import api from "@/api/api";
 
+const BOOLEAN_FIELDS = new Set(["is_half_day"]);
+
+function buildLeaveRequestJson(fields) {
+  const payload = {};
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value === undefined || value === "") return;
+    payload[key] = value;
+  });
+  return payload;
+}
+
+function buildLeaveRequestFormData(fields, files = {}, multiFiles = []) {
+  const formData = new FormData();
+
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+
+    if (BOOLEAN_FIELDS.has(key)) {
+      formData.append(key, value ? "1" : "0");
+      return;
+    }
+
+    if (key === "details" && typeof value === "object") {
+      Object.entries(value).forEach(([dKey, dValue]) => {
+        if (dValue === undefined || dValue === null || dValue === "") return;
+        formData.append(`details[${dKey}]`, dValue);
+      });
+      return;
+    }
+    formData.append(key, value);
+  });
+
+  let fileIndex = 0;
+  Object.entries(files).forEach(([requirementKey, file]) => {
+    if (!file) return;
+    formData.append(`documents[${fileIndex}]`, file);
+    formData.append(`document_keys[${fileIndex}]`, requirementKey);
+    fileIndex += 1;
+  });
+  multiFiles.forEach((file) => {
+    formData.append(`documents[${fileIndex}]`, file);
+    formData.append(`document_keys[${fileIndex}]`, "vawc_documents");
+    fileIndex += 1;
+  });
+
+  return formData;
+}
+
 export const LeaveApi = {
   // ─── Leave Types ─────────────────────────────────────────────────────
   listTypes(params) {
@@ -29,40 +77,7 @@ export const LeaveApi = {
   },
 
   submitRequest(fields, files = {}, multiFiles = []) {
-    const formData = new FormData();
-
-    const BOOLEAN_FIELDS = new Set(["is_half_day"]);
-
-    Object.entries(fields).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === "") return;
-
-      if (BOOLEAN_FIELDS.has(key)) {
-        formData.append(key, value ? "1" : "0");
-        return;
-      }
-
-      if (key === "details" && typeof value === "object") {
-        Object.entries(value).forEach(([dKey, dValue]) => {
-          if (dValue === undefined || dValue === null || dValue === "") return;
-          formData.append(`details[${dKey}]`, dValue);
-        });
-        return;
-      }
-      formData.append(key, value);
-    });
-
-    let fileIndex = 0;
-    Object.entries(files).forEach(([requirementKey, file]) => {
-      if (!file) return;
-      formData.append(`documents[${fileIndex}]`, file);
-      formData.append(`document_keys[${fileIndex}]`, requirementKey);
-      fileIndex += 1;
-    });
-    multiFiles.forEach((file) => {
-      formData.append(`documents[${fileIndex}]`, file);
-      formData.append(`document_keys[${fileIndex}]`, "vawc_documents");
-      fileIndex += 1;
-    });
+    const formData = buildLeaveRequestFormData(fields, files, multiFiles);
 
     return api
       .post("/leave/requests", formData, {
@@ -70,6 +85,56 @@ export const LeaveApi = {
       })
       .then((r) => r.data);
   },
+
+  // ─── Drafts (started but not yet formally filed/submitted) ─────────
+  saveDraft(fields, files = {}, multiFiles = []) {
+    const hasFiles =
+      Object.values(files).some(Boolean) || multiFiles.length > 0;
+
+    if (!hasFiles) {
+      return api
+        .post("/leave/requests/draft", buildLeaveRequestJson(fields))
+        .then((r) => r.data);
+    }
+
+    const formData = buildLeaveRequestFormData(fields, files, multiFiles);
+    return api
+      .post("/leave/requests/draft", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
+  updateDraft(id, fields, files = {}, multiFiles = []) {
+    const hasFiles =
+      Object.values(files).some(Boolean) || multiFiles.length > 0;
+
+    if (!hasFiles) {
+      return api
+        .put(`/leave/requests/${id}/draft`, buildLeaveRequestJson(fields))
+        .then((r) => r.data);
+    }
+
+    const formData = buildLeaveRequestFormData(fields, files, multiFiles);
+    formData.append("_method", "PUT");
+    return api
+      .post(`/leave/requests/${id}/draft`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
+  deleteDraft(id) {
+    return api.delete(`/leave/requests/${id}/draft`).then((r) => r.data);
+  },
+  submitDraft(id, fields, files = {}, multiFiles = []) {
+    const formData = buildLeaveRequestFormData(fields, files, multiFiles);
+
+    return api
+      .post(`/leave/requests/${id}/submit`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
+
   cancelRequest(id, reason) {
     return api
       .post(`/leave/requests/${id}/cancel`, { reason })

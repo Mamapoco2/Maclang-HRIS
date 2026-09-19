@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader } from "./PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
@@ -12,6 +12,7 @@ import {
   LEAVE_TYPE_MAP,
   HIDE_DATE_SELECTION,
   LEAVE_DETAIL_FIELDS,
+  groupLeaveTypesByCategory,
 } from "./leavePolicy";
 import { LeaveTypeFields } from "./components/LeaveTypeFields";
 import { LeaveRequirementsPanel } from "./components/LeaveRequirementsPanel";
@@ -39,10 +40,13 @@ function extractErrorMessage(err, fallback) {
 
 export default function NewRequestPage({ onNavigate }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const draftId = searchParams.get("draft");
   const { user } = useAuth();
   const employee = user?.employee ?? null;
 
   const [loading, setLoading] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [uploads, setUploads] = useState({});
   const [vawcFiles, setVawcFiles] = useState([]);
 
@@ -52,6 +56,9 @@ export default function NewRequestPage({ onNavigate }) {
 
   const [balances, setBalances] = useState([]);
   const [balancesLoading, setBalancesLoading] = useState(true);
+
+  const [loadingDraft, setLoadingDraft] = useState(false);
+  const [draftLoadError, setDraftLoadError] = useState(null);
 
   const goTo = (page) => {
     const routes = {
@@ -112,7 +119,7 @@ export default function NewRequestPage({ onNavigate }) {
     };
   }, [employee?.id]);
 
-  const { register, handleSubmit, watch, reset } = useForm({
+  const { register, handleSubmit, watch, reset, getValues } = useForm({
     defaultValues: {
       leaveType: "",
       startDate: "",
@@ -123,6 +130,45 @@ export default function NewRequestPage({ onNavigate }) {
     },
   });
 
+  // ─── Load an existing draft into the form when ?draft=<id> is present ────
+  useEffect(() => {
+    if (!draftId) return;
+
+    let cancelled = false;
+    setLoadingDraft(true);
+    setDraftLoadError(null);
+
+    LeaveApi.getRequest(draftId)
+      .then((data) => {
+        if (cancelled) return;
+        const details =
+          data?.details && typeof data.details === "object" ? data.details : {};
+        reset({
+          leaveType: data?.leave_type?.code || "",
+          startDate: data?.start_date || "",
+          endDate: data?.end_date || "",
+          reason: data?.reason || "",
+          destination: "within_ph",
+          locationType: "within_ph",
+          ...details,
+        });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDraftLoadError(
+            extractErrorMessage(err, "Failed to load your draft."),
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDraft(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draftId, reset]);
+
   const leaveType = watch("leaveType");
   const startDate = watch("startDate");
   const endDate = watch("endDate");
@@ -132,6 +178,10 @@ export default function NewRequestPage({ onNavigate }) {
   const serverType = useMemo(
     () => leaveTypes.find((t) => t.code === leaveType) ?? null,
     [leaveTypes, leaveType],
+  );
+  const leaveTypeGroups = useMemo(
+    () => groupLeaveTypesByCategory(leaveTypes),
+    [leaveTypes],
   );
   const typeConfig = LEAVE_TYPE_MAP[leaveType];
 
@@ -162,6 +212,25 @@ export default function NewRequestPage({ onNavigate }) {
     uploadedFilesForPanel.bpo = vawcFiles[0];
   }
 
+  // ─── Shape form values into the payload the API expects ─────────────────
+  const buildFields = (formValues) => {
+    const detailKeys = LEAVE_DETAIL_FIELDS[formValues.leaveType] || [];
+    const details = {};
+    detailKeys.forEach((key) => {
+      const value = formValues[key];
+      if (value !== undefined && value !== "") details[key] = value;
+    });
+
+    return {
+      employee_id: employee?.id,
+      leave_type_id: serverType?.id,
+      start_date: hideDates ? undefined : formValues.startDate,
+      end_date: hideDates ? undefined : formValues.endDate,
+      reason: formValues.reason,
+      details,
+    };
+  };
+
   const onSubmit = async (formValues) => {
     if (!employee?.id) {
       toast.error("No linked employee record", {
@@ -177,27 +246,15 @@ export default function NewRequestPage({ onNavigate }) {
       return;
     }
 
-    const detailKeys = LEAVE_DETAIL_FIELDS[leaveType] ?? [];
-    const details = detailKeys.reduce((acc, key) => {
-      const value = formValues[key];
-      if (value !== undefined && value !== null && value !== "") {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
-
-    const fields = {
-      employee_id: employee.id,
-      leave_type_id: serverType.id,
-      start_date: hideDates ? undefined : formValues.startDate,
-      end_date: hideDates ? undefined : formValues.endDate,
-      reason: formValues.reason,
-      details,
-    };
+    const fields = buildFields(formValues);
 
     setLoading(true);
     try {
-      await LeaveApi.submitRequest(fields, uploads, vawcFiles);
+      if (draftId) {
+        await LeaveApi.submitDraft(draftId, fields, uploads, vawcFiles);
+      } else {
+        await LeaveApi.submitRequest(fields, uploads, vawcFiles);
+      }
       toast.success("Leave Request Submitted", {
         description: "Your request is pending approval.",
       });
@@ -217,13 +274,58 @@ export default function NewRequestPage({ onNavigate }) {
     }
   };
 
+  const handleSaveDraft = async () => {
+    if (!employee?.id) {
+      toast.error("No linked employee record", {
+        description: "Your account isn't linked to an employee profile yet.",
+      });
+      return;
+    }
+
+    if (!serverType) {
+      toast.error("Select a leave type", {
+        description: "Please choose a leave type before saving a draft.",
+      });
+      return;
+    }
+
+    const fields = buildFields(getValues());
+
+    setSavingDraft(true);
+    try {
+      if (draftId) {
+        await LeaveApi.updateDraft(draftId, fields, uploads, vawcFiles);
+        toast.success("Draft updated");
+      } else {
+        await LeaveApi.saveDraft(fields, uploads, vawcFiles);
+        toast.success("Draft saved", {
+          description: "You can continue this later from My Leave Requests.",
+        });
+      }
+      goTo("requests");
+    } catch (err) {
+      toast.error("Failed to save draft", {
+        description: extractErrorMessage(
+          err,
+          "Something went wrong while saving your draft.",
+        ),
+      });
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
   const LeaveTypeIcon = typeConfig?.icon;
 
   return (
     <div className="p-4 md:p-6 max-w-screeen mx-auto">
       <PageHeader
-        title="Leave Application"
-        description="Submit a leave request in accordance with CSC leave policies"
+        title={draftId ? "Continue Draft" : "Leave Application"}
+        description={
+          draftId
+            ? "Finish filling out your saved draft, then submit it for approval."
+            : "Submit a leave request in accordance with CSC leave policies"
+        }
       />
 
       {typesError && (
@@ -232,20 +334,22 @@ export default function NewRequestPage({ onNavigate }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* Left: Current Leave Credits */}
-        <div className="xl:col-span-1 xl:order-1">
-          <LeaveCreditsPanel
-            leaveTypes={leaveTypes}
-            balances={balances}
-            loading={balancesLoading}
-            selectedLeaveType={leaveType}
-          />
+      {draftLoadError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          {draftLoadError}
         </div>
+      )}
 
+      {loadingDraft && (
+        <div className="mb-4 p-3 rounded-lg bg-[var(--muted)] border border-[var(--border)] text-sm text-[var(--muted-foreground)] flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Loading your draft…
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="xl:col-span-2 xl:order-2 space-y-5"
+          className="xl:col-span-2 space-y-5"
         >
           {/* Employee Information */}
           <Card>
@@ -310,11 +414,21 @@ export default function NewRequestPage({ onNavigate }) {
                       ? "Loading leave types..."
                       : "Select leave type"}
                   </option>
-                  {leaveTypes.map((t) => (
-                    <option key={t.id} value={t.code}>
-                      {t.name}
-                    </option>
-                  ))}
+                  {leaveTypeGroups
+                    ? leaveTypeGroups.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.options.map((t) => (
+                            <option key={t.id} value={t.code}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))
+                    : leaveTypes.map((t) => (
+                        <option key={t.id} value={t.code}>
+                          {t.name}
+                        </option>
+                      ))}
                 </Select>
               </FormField>
 
@@ -392,9 +506,22 @@ export default function NewRequestPage({ onNavigate }) {
           </Card>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button
+              type="submit"
+              disabled={loading || savingDraft || loadingDraft}
+              className="flex-1"
+            >
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Submit Leave Request
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading || savingDraft || loadingDraft}
+              onClick={handleSaveDraft}
+            >
+              {savingDraft && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save as Draft
             </Button>
             <Button
               type="button"
@@ -407,7 +534,7 @@ export default function NewRequestPage({ onNavigate }) {
         </form>
 
         {/* Right Sidebar */}
-        <div className="xl:col-span-1 xl:order-3 space-y-4">
+        <div className="xl:col-span-1 space-y-4">
           <LeaveRequirementsPanel
             leaveType={leaveType}
             uploadedFiles={uploadedFilesForPanel}
@@ -471,6 +598,13 @@ export default function NewRequestPage({ onNavigate }) {
               )}
             </CardContent>
           </Card>
+
+          <LeaveCreditsPanel
+            leaveTypes={leaveTypes}
+            balances={balances}
+            loading={typesLoading || balancesLoading}
+            selectedLeaveType={leaveType}
+          />
         </div>
       </div>
     </div>

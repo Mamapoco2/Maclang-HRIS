@@ -11,22 +11,7 @@ import {
 import { IconLoader2, IconSearch } from "@tabler/icons-react";
 import { ShieldCheck, X } from "lucide-react";
 import { PERMISSION_GROUPS } from "./permissionGroups";
-import { DEFAULT_ROLE_NAME, ACCESS_SCOPE_LABEL } from "../roles";
-
-const ACCESS_SCOPE = [
-  {
-    value: "ALL",
-    label: "All Departments",
-  },
-  {
-    value: "DEPARTMENT",
-    label: "Specific Department",
-  },
-  {
-    value: "SELF",
-    label: "Self",
-  },
-];
+import { ACCESS_SCOPE, ACCESS_SCOPE_LABEL } from "../roles";
 
 const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((g) =>
   g.permissions.map((p) => p.key),

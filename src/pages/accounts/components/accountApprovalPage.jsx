@@ -23,10 +23,10 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getEcho } from "@/lib/echo";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
 
-// Deterministic, low-saturation avatar palette so rows stay calm but distinguishable.
 const AVATAR_STYLES = [
   "bg-indigo-50 text-indigo-600",
   "bg-violet-50 text-violet-600",
@@ -163,6 +163,11 @@ export default function AccountApprovalPage() {
     try {
       await activateUser(id);
       await loadUsers(true);
+      toast.success("Account activated successfully.");
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message ?? "Failed to activate account.",
+      );
     } finally {
       setActivatingId(null);
     }
@@ -172,8 +177,15 @@ export default function AccountApprovalPage() {
     if (selected.length === 0) return;
     setBulkActivating(true);
     try {
-      await bulkActivateUsers(selected);
+      const result = await bulkActivateUsers(selected);
       await loadUsers(true);
+      toast.success(
+        result?.message ?? "Selected accounts activated successfully.",
+      );
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message ?? "Failed to activate selected accounts.",
+      );
     } finally {
       setBulkActivating(false);
     }
@@ -238,13 +250,10 @@ export default function AccountApprovalPage() {
   const someSelected =
     !allSelected && pagedUsers.some((u) => selected.includes(u.id));
 
-  const stats = useMemo(() => {
-    const approved = users.filter(
-      (u) => u.approval_status === "APPROVED",
-    ).length;
-    const pending = users.length - approved;
-    return { total: users.length, approved, pending };
-  }, [users]);
+  // `getUsers()` reads `/pending-users`, which only ever returns
+  // PENDING accounts — an "Approved" count here would always read 0, so
+  // it isn't shown as a stat.
+  const stats = useMemo(() => ({ total: users.length }), [users]);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -269,7 +278,7 @@ export default function AccountApprovalPage() {
 
       <div className="mx-auto max-w-full px-4 py-6 sm:px-6">
         {/* ── Stats ── */}
-        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <StatCard
             icon={Inbox}
             label="Total registrations"
@@ -279,14 +288,8 @@ export default function AccountApprovalPage() {
           <StatCard
             icon={Clock3}
             label="Awaiting approval"
-            value={stats.pending}
+            value={stats.total}
             tone="amber"
-          />
-          <StatCard
-            icon={UserCheck}
-            label="Approved"
-            value={stats.approved}
-            tone="emerald"
           />
         </div>
 

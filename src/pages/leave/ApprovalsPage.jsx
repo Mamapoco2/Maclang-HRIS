@@ -14,6 +14,7 @@ import {
 import { useToast } from "./Toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLeaveApprovals } from "@/hooks/useLeaveApprovals";
+import { PERMISSIONS } from "@/constants/permissions";
 import { formatDate } from "./utils";
 import { LEAVE_STATUSES } from "./leavePolicy";
 import {
@@ -28,12 +29,6 @@ import {
   CheckCheck,
   Eye,
 } from "lucide-react";
-
-const APPROVER_ROLES = new Set(["admin", "hr", "manager", "supervisor"]);
-
-function canUserApprove(user) {
-  return user?.employee?.is_approver === true || APPROVER_ROLES.has(user?.role);
-}
 
 function daysSince(dateStr) {
   if (!dateStr) return null;
@@ -80,8 +75,8 @@ function mapToRow(r) {
 
 export default function ApprovalsPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const canManageApprovals = canUserApprove(user);
+  const { hasPermission } = useAuth();
+  const canManageApprovals = hasPermission(PERMISSIONS.LEAVE_APPROVAL_MANAGE);
 
   const {
     pending: pendingRaw,
@@ -657,7 +652,7 @@ export default function ApprovalsPage() {
                 { label: "From", value: formatDate(selected.startDate) },
                 { label: "To", value: formatDate(selected.endDate) },
                 {
-                  label: "Applied On",
+                  label: "Date Filed",
                   value: formatDate(selected.appliedDate),
                 },
                 { label: "Approver", value: selected.approverName },

@@ -126,6 +126,7 @@ export const PERMISSION_GROUPS = [
       { key: "plantilla_items.manage", label: "Manage Plantilla Items" },
       { key: "positions.view", label: "View Positions (COS / Consultant)" },
       { key: "roles.view", label: "View Role Management" },
+      { key: "roles.manage", label: "Create / Edit / Delete Roles" },
     ],
   },
   // ─── Rewards & Recognition ───────────────────────────────────────────

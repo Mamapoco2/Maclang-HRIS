@@ -1,4 +1,7 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Users, AlertTriangle } from "lucide-react";
+import { IconLoader2, IconRefresh, IconSearch } from "@tabler/icons-react";
 import {
   Select,
   SelectContent,
@@ -6,115 +9,127 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getApprovedUsers, updateUserRole } from "@/services/accountsService";
-import { getRoles } from "../services/rolesService";
-import { AuthContext } from "@/context/authContext";
-import { getEcho } from "@/lib/echo";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserManagement } from "@/hooks/useUserManagement";
+import { PERMISSIONS } from "@/constants/permissions";
+import { getRoles } from "@/services/rolesService";
+import {
+  updateUserPermissions,
+  updateUserRole,
+} from "@/services/accountsService";
+import {
+  SEARCH_MAX_LENGTH,
+  formatUserName,
+  getApiErrorMessage,
+} from "@/utils/userManagement";
 import RoleViewModal from "./roleViewModal";
-import { toast } from "sonner";
-import { IconSearch, IconLoader2 } from "@tabler/icons-react";
-import { Users, Eye } from "lucide-react";
-import { DEFAULT_ROLE_NAME } from "../constants/roles";
+import PermissionsModal from "./permissionModal";
+import { DEFAULT_ROLE_NAME } from "../roles";
+import UserManagementTable from "./UserManagementTable";
+import UserPagination from "./UserPagination";
+import RoleChangeDialog from "./RoleChangeDialog";
 
-const ROLE_BADGE_STYLES = {
-  "medical center chief": "bg-indigo-50 text-indigo-700 border-indigo-200",
-  admin: "bg-orange-50 text-orange-700 border-orange-200",
-  chairman: "bg-rose-50 text-rose-700 border-rose-200",
-  director: "bg-purple-50 text-purple-700 border-purple-200",
-  hr: "bg-blue-50 text-blue-700 border-blue-200",
-  head: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "officer in charge": "bg-cyan-50 text-cyan-700 border-cyan-200",
-  supervisor: "bg-amber-50 text-amber-700 border-amber-200",
-  staff: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-const AVATAR_STYLES = [
-  "bg-indigo-50 text-indigo-600",
-  "bg-violet-50 text-violet-600",
-  "bg-sky-50 text-sky-600",
-  "bg-teal-50 text-teal-600",
-  "bg-amber-50 text-amber-700",
-  "bg-rose-50 text-rose-600",
-];
-
-function avatarStyle(seed = "") {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_STYLES[Math.abs(hash) % AVATAR_STYLES.length];
-}
-
-function getRoleBadgeClass(roleName) {
-  return ROLE_BADGE_STYLES[roleName?.toLowerCase()] ?? "bg-gray-100 text-gray-600 border-gray-200";
-}
+const ALL_ROLES = "all";
 
 export default function UserManagementPage() {
-  const { user: currentUser } = useContext(AuthContext);
-  const [accounts, setAccounts] = useState([]);
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission(PERMISSIONS.USERS_MANAGE_ROLES);
+  const canViewRoles = hasPermission(PERMISSIONS.ROLES_VIEW);
+
+  const list = useUserManagement();
+  const { reload, setPage } = list;
+
   const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [roleSaving, setRoleSaving] = useState({});
-  const [search, setSearch] = useState("");
+  const [savingIds, setSavingIds] = useState(() => new Set());
+  const [pendingChange, setPendingChange] = useState(null);
   const [viewingRole, setViewingRole] = useState(null);
-
-  const loadAccounts = async () => {
-    const data = await getApprovedUsers();
-    const filtered = (data ?? []).filter(
-      (u) =>
-        !u.roles?.some((r) => r.toLowerCase() === "superadmin") &&
-        u.id !== currentUser?.id,
-    );
-    setAccounts(filtered);
-    return filtered;
-  };
+  const [editingUser, setEditingUser] = useState(null);
+  const [permissionsSaving, setPermissionsSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([loadAccounts(), getRoles()])
-      .then(([, roleList]) => setRoles(roleList ?? []))
-      .finally(() => setLoading(false));
+    if (!canViewRoles) return undefined;
+
+    let cancelled = false;
+
+    getRoles()
+      .then((data) => {
+        if (cancelled) return;
+        const active = (Array.isArray(data) ? data : []).filter(
+          (r) => r.isActive !== false,
+        );
+        setRoles(active);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        toast.error(getApiErrorMessage(err, "Failed to load roles."));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canViewRoles]);
+
+  const setSaving = useCallback((userId, isSaving) => {
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      if (isSaving) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
   }, []);
 
-  useEffect(() => {
-    const echo = getEcho();
-    if (!echo) return;
-    const channel = echo.private("admin.notifications");
-    channel.listen(".role.updated", async () => setRoles(await getRoles()));
-    return () => echo.leaveChannel("admin.notifications");
-  }, []);
-
-  // Only active roles from Role Management can be assigned; a deleted or
-  // deactivated role simply drops out of this list.
-  const activeRoles = roles.filter((r) => r.isActive !== false);
-
-  const getCurrentRoleName = (user) =>
-    user.roles?.find((r) => r.toLowerCase() !== "superadmin") ?? null;
-
-  const handleRoleChange = async (userId, roleName) => {
-    setRoleSaving((prev) => ({ ...prev, [userId]: true }));
-    try {
-      await updateUserRole(userId, roleName);
-      await loadAccounts();
-      toast.success("Role updated successfully.");
-    } catch (err) {
-      toast.error(err?.response?.data?.message ?? "Failed to update role.");
-    } finally {
-      setRoleSaving((prev) => ({ ...prev, [userId]: false }));
-    }
-  };
-
-  const filteredAccounts = accounts.filter(
-    (u) =>
-      u.name?.toLowerCase().includes(search.toLowerCase()) ||
-      u.username?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase()),
+  const handleRoleChange = useCallback(
+    (user, roleName) => setPendingChange({ user, roleName }),
+    [],
   );
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <IconLoader2 size={24} className="animate-spin text-gray-300" />
-      </div>
-    );
-  }
+  const confirmRoleChange = useCallback(async () => {
+    if (!pendingChange) return;
+
+    const { user, roleName } = pendingChange;
+    setPendingChange(null);
+    setSaving(user.id, true);
+
+    try {
+      await updateUserRole(user.id, roleName);
+      toast.success(
+        `${formatUserName(user) ?? user.username} is now ${roleName}.`,
+      );
+      reload();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update role."));
+    } finally {
+      setSaving(user.id, false);
+    }
+  }, [pendingChange, reload, setSaving]);
+
+  const handleViewRole = useCallback(
+    (roleName) => {
+      const role = roles.find((r) => r.name === roleName);
+      if (role) setViewingRole(role);
+    },
+    [roles],
+  );
+
+  const handleSavePermissions = useCallback(
+    async (userId, permissions) => {
+      setPermissionsSaving(true);
+      try {
+        await updateUserPermissions(userId, permissions);
+        toast.success("Permissions updated successfully.");
+        setEditingUser(null);
+        reload();
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Failed to update permissions."));
+      } finally {
+        setPermissionsSaving(false);
+      }
+    },
+    [reload],
+  );
+
+  const roleFilterOptions = useMemo(() => roles.map((r) => r.name), [roles]);
+  const busy = list.loading || list.isSearchPending;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,9 +140,14 @@ export default function UserManagementPage() {
               <Users className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight text-gray-900">User Management</h1>
+              <h1 className="text-lg font-bold leading-tight text-gray-900">
+                User Management
+              </h1>
               <p className="text-xs leading-tight text-gray-500">
-                Assign a role to each employee. New accounts default to {DEFAULT_ROLE_NAME}.
+                {canManage
+                  ? "Assign a role to each employee, then fine-tune individual access under Permissions."
+                  : "View each employee's assigned role."}{" "}
+                New accounts default to {DEFAULT_ROLE_NAME}.
               </p>
             </div>
           </div>
@@ -136,136 +156,127 @@ export default function UserManagementPage() {
 
       <div className="mx-auto max-w-full px-6 py-6">
         <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-          <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3.5">
+          <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 px-5 py-3.5">
             <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500">
               <IconSearch size={13} className="shrink-0 text-gray-400" />
               <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                type="search"
+                value={list.search}
+                onChange={(e) => list.setSearch(e.target.value)}
+                maxLength={SEARCH_MAX_LENGTH}
                 placeholder="Search by name, username or email..."
-                className="w-56 flex-1 bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-400"
+                aria-label="Search users"
+                className="w-64 flex-1 bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-400"
               />
+              {busy && (
+                <IconLoader2
+                  size={13}
+                  className="shrink-0 animate-spin text-gray-300"
+                />
+              )}
             </div>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/80">
-                  {["Employee", "Email", "Role", "Actions"].map((col) => (
-                    <th
-                      key={col}
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400"
-                    >
-                      {col}
-                    </th>
+            {roleFilterOptions.length > 0 && (
+              <Select
+                value={list.role || ALL_ROLES}
+                onValueChange={(value) =>
+                  list.setRole(value === ALL_ROLES ? "" : value)
+                }
+              >
+                <SelectTrigger
+                  aria-label="Filter by role"
+                  className="h-8 w-44 rounded-lg border-gray-200 bg-gray-50 text-xs"
+                >
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_ROLES} className="text-xs">
+                    All roles
+                  </SelectItem>
+                  {roleFilterOptions.map((name) => (
+                    <SelectItem key={name} value={name} className="text-xs">
+                      {name}
+                    </SelectItem>
                   ))}
-                </tr>
-              </thead>
+                </SelectContent>
+              </Select>
+            )}
 
-              <tbody className="divide-y divide-gray-50">
-                {accounts.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-16">
-                      <div className="flex flex-col items-center gap-2 text-center">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-                          <Users size={18} className="text-gray-400" />
-                        </div>
-                        <p className="text-sm text-gray-400">No approved accounts found.</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredAccounts.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-16 text-center text-sm text-gray-400">
-                      No accounts match your search.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAccounts.map((u) => {
-                    const currentRoleName = getCurrentRoleName(u);
-                    const currentRole = activeRoles.find(
-                      (r) => r.name.toLowerCase() === currentRoleName?.toLowerCase(),
-                    );
-                    const displayName = (() => {
-                      if (!u.name || u.name === u.username) return null;
-                      const parts = u.name.trim().split(" ");
-                      if (parts.length >= 2) {
-                        const last = parts[parts.length - 1];
-                        const first = parts.slice(0, -1).join(" ");
-                        return `${last}, ${first}`;
-                      }
-                      return u.name;
-                    })();
-
-                    return (
-                      <tr key={u.id} className="transition-colors hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarStyle(
-                                u.username || u.email,
-                              )}`}
-                            >
-                              {(u.username || u.email || "?").slice(0, 2).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-medium text-gray-800">
-                                {displayName ?? <span className="italic text-gray-400">No name</span>}
-                              </p>
-                              <p className="truncate text-[11px] text-gray-400">{u.username}</p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3 text-xs text-gray-500">{u.email}</td>
-
-                        <td className="px-4 py-3">
-                          <Select
-                            value={currentRole?.name ?? ""}
-                            onValueChange={(roleName) => handleRoleChange(u.id, roleName)}
-                            disabled={!!roleSaving[u.id]}
-                          >
-                            <SelectTrigger
-                              className={`h-7 w-40 rounded-lg border text-xs focus:ring-0 focus:ring-offset-0 ${
-                                currentRole
-                                  ? `${getRoleBadgeClass(currentRole.name)} font-semibold`
-                                  : "border-gray-200 bg-gray-50 text-gray-400"
-                              }`}
-                            >
-                              <SelectValue placeholder="Assign role…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {activeRoles.map((r) => (
-                                <SelectItem key={r.id} value={r.name} className="text-xs">
-                                  {r.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => setViewingRole(currentRole)}
-                            disabled={!currentRole}
-                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            <Eye size={11} /> View role
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+            <button
+              type="button"
+              onClick={reload}
+              disabled={list.loading}
+              aria-label="Refresh list"
+              title="Refresh"
+              className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              <IconRefresh
+                size={13}
+                className={list.loading ? "animate-spin" : ""}
+              />
+              Refresh
+            </button>
           </div>
+
+          {list.error && (
+            <div
+              role="alert"
+              className="flex items-center gap-3 border-b border-red-100 bg-red-50 px-5 py-3 text-xs text-red-700"
+            >
+              <AlertTriangle size={14} className="shrink-0" />
+              <span className="flex-1">{list.error}</span>
+              <button
+                type="button"
+                onClick={reload}
+                className="font-semibold underline-offset-2 hover:underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          <UserManagementTable
+            users={list.users}
+            roles={roles}
+            loading={list.loading}
+            hasFilters={list.hasFilters}
+            canManage={canManage}
+            canViewRoles={canViewRoles}
+            savingIds={savingIds}
+            onRoleChange={handleRoleChange}
+            onViewRole={handleViewRole}
+            onEditPermissions={setEditingUser}
+            onClearFilters={list.clearFilters}
+          />
+
+          <UserPagination
+            meta={list.meta}
+            disabled={list.loading}
+            onPage={setPage}
+            onPerPage={list.setPerPage}
+          />
         </div>
       </div>
 
-      <RoleViewModal open={!!viewingRole} onClose={() => setViewingRole(null)} role={viewingRole} />
+      <RoleChangeDialog
+        change={pendingChange}
+        onConfirm={confirmRoleChange}
+        onCancel={() => setPendingChange(null)}
+      />
+
+      <RoleViewModal
+        open={!!viewingRole}
+        onClose={() => setViewingRole(null)}
+        role={viewingRole}
+      />
+
+      <PermissionsModal
+        open={!!editingUser}
+        user={editingUser}
+        onClose={() => setEditingUser(null)}
+        onSave={handleSavePermissions}
+        saving={permissionsSaving}
+      />
     </div>
   );
 }

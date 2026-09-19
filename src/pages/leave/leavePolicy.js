@@ -153,7 +153,32 @@ export const LEAVE_TYPE_MAP = Object.fromEntries(
   LEAVE_TYPES.map((t) => [t.value, t]),
 );
 
+const LEAVE_CATEGORY_ORDER = ["Credit-Based Leave", "Entitlement-Based Leave"];
+
+export function groupLeaveTypesByCategory(leaveTypes) {
+  if (!Array.isArray(leaveTypes) || !leaveTypes.some((t) => t.category_label)) {
+    return null;
+  }
+
+  const groups = new Map();
+  leaveTypes.forEach((type) => {
+    const label = type.category_label || "Other";
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(type);
+  });
+
+  const orderedLabels = [
+    ...LEAVE_CATEGORY_ORDER.filter((label) => groups.has(label)),
+    ...[...groups.keys()].filter(
+      (label) => !LEAVE_CATEGORY_ORDER.includes(label),
+    ),
+  ];
+
+  return orderedLabels.map((label) => ({ label, options: groups.get(label) }));
+}
+
 export const LEAVE_STATUSES = {
+  DRAFT: "draft",
   FOR_HR_REVIEW: "for_hr_review",
   PENDING_APPROVAL: "pending_approval",
   RETURNED_FOR_REVISION: "returned_for_revision",
@@ -162,17 +187,25 @@ export const LEAVE_STATUSES = {
   RETRACTED: "retracted",
   CANCELLED: "cancelled",
   LABELS: {
+    draft: "Draft",
     for_hr_review: "For HR Review",
     pending_approval: "Pending Approval",
-    returned_for_revision: "Returned for Revision",
+    returned_for_revision: "Returned for Clarification/Revision",
     approved: "Approved",
-    rejected: "Rejected",
+    rejected: "Rejected/Disapproved",
     retracted: "Retracted",
     cancelled: "Cancelled",
   },
 };
 
 export const STATUS_CONFIG = {
+  draft: {
+    label: "Draft",
+    color: "text-slate-600",
+    bg: "bg-slate-50",
+    border: "border-slate-200",
+    dot: "bg-slate-400",
+  },
   for_hr_review: {
     label: "For HR Review",
     color: "text-sky-700",
@@ -188,7 +221,7 @@ export const STATUS_CONFIG = {
     dot: "bg-amber-500",
   },
   returned_for_revision: {
-    label: "Returned for Revision",
+    label: "Returned for Clarification/Revision",
     color: "text-orange-700",
     bg: "bg-orange-50",
     border: "border-orange-200",
@@ -202,7 +235,7 @@ export const STATUS_CONFIG = {
     dot: "bg-emerald-500",
   },
   rejected: {
-    label: "Rejected",
+    label: "Rejected/Disapproved",
     color: "text-red-700",
     bg: "bg-red-50",
     border: "border-red-200",

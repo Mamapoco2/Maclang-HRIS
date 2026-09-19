@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import RoleFormModal from "./roleFormModal";
 import RoleViewModal from "./roleViewModal";
 import DeleteRoleDialog from "./deleteRoleDialog";
 import { toast } from "sonner";
-import { IconSearch, IconLoader2, IconPlus } from "@tabler/icons-react";
+import { IconSearch, IconLoader2, IconPlus, IconRefresh } from "@tabler/icons-react";
 import {
   ShieldCheck,
   Users,
@@ -11,125 +11,19 @@ import {
   Eye,
   Pencil,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { PERMISSIONS } from "@/constants/permissions";
+import {
+  getRoles,
+  getDepartments,
+  createRole,
+  updateRole,
+  deleteRole,
+} from "@/services/rolesService";
+import { getApiErrorMessage } from "@/utils/userManagement";
 import { DEFAULT_ROLE_NAME, ACCESS_SCOPE_LABEL } from "../roles";
-
-/*
-|--------------------------------------------------------------------------
-| MOCK DATA
-|--------------------------------------------------------------------------
-| Frontend only.
-| No Laravel/API connection is required.
-*/
-
-const INITIAL_ROLES = [
-  {
-    id: 1,
-    name: "SuperAdmin",
-    description: "Full system access",
-    accessScope: "ALL",
-    usersCount: 1,
-    permissions: [
-      { name: "view employees" },
-      { name: "manage employees" },
-      { name: "manage roles" },
-      { name: "manage payroll" },
-      { name: "manage leave" },
-    ],
-    departments: [],
-  },
-  {
-    id: 2,
-    name: "HR",
-    description: "Human Resources management access",
-    accessScope: "DEPARTMENT",
-    usersCount: 5,
-    permissions: [
-      { name: "view employees" },
-      { name: "manage employees" },
-      { name: "manage leave" },
-      { name: "view payroll" },
-    ],
-    departments: [
-      {
-        id: 1,
-        name: "Human Resources",
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Manager",
-    description: "Department manager access",
-    accessScope: "DEPARTMENT",
-    usersCount: 8,
-    permissions: [
-      { name: "view employees" },
-      { name: "approve leave" },
-      { name: "view attendance" },
-    ],
-    departments: [
-      {
-        id: 2,
-        name: "Operations",
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "Employee",
-    description: "Standard employee access",
-    accessScope: "SELF",
-    usersCount: 25,
-    permissions: [
-      { name: "view profile" },
-      { name: "file leave" },
-      { name: "view payslip" },
-    ],
-    departments: [],
-  },
-  {
-    id: 5,
-    name: "Finance",
-    description: "Finance and payroll access",
-    accessScope: "DEPARTMENT",
-    usersCount: 3,
-    permissions: [
-      { name: "view payroll" },
-      { name: "manage payroll" },
-      { name: "view reports" },
-    ],
-    departments: [
-      {
-        id: 3,
-        name: "Finance",
-      },
-    ],
-  },
-];
-
-const INITIAL_DEPARTMENTS = [
-  {
-    id: 1,
-    name: "Human Resources",
-  },
-  {
-    id: 2,
-    name: "Operations",
-  },
-  {
-    id: 3,
-    name: "Finance",
-  },
-  {
-    id: 4,
-    name: "Information Technology",
-  },
-  {
-    id: 5,
-    name: "Administration",
-  },
-];
 
 function StatCard({ icon: Icon, label, value, tone }) {
   const tones = {
@@ -160,16 +54,20 @@ function StatCard({ icon: Icon, label, value, tone }) {
 }
 
 export default function RoleManagementPage() {
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission(PERMISSIONS.ROLES_MANAGE);
+
   /*
   |--------------------------------------------------------------------------
-  | LOCAL STATE
+  | DATA (backend-connected)
   |--------------------------------------------------------------------------
   */
 
-  const [roles, setRoles] = useState(INITIAL_ROLES);
-  const [departments, setDepartments] = useState(INITIAL_DEPARTMENTS);
+  const [roles, setRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [search, setSearch] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
@@ -181,24 +79,33 @@ export default function RoleManagementPage() {
   const [deletingRole, setDeletingRole] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  /*
-  |--------------------------------------------------------------------------
-  | FRONTEND ONLY LOADING
-  |--------------------------------------------------------------------------
-  */
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
 
-  useEffect(() => {
-    // Simulate loading so the UI still has a loading state.
-    const timer = setTimeout(() => {
+    try {
+      const [rolesData, departmentsData] = await Promise.all([
+        getRoles(),
+        getDepartments(),
+      ]);
+
+      setRoles(Array.isArray(rolesData) ? rolesData : []);
+      setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
+    } catch (error) {
+      console.error(error);
+      setLoadError(getApiErrorMessage(error, "Failed to load role data."));
+    } finally {
       setLoading(false);
-    }, 300);
-
-    return () => clearTimeout(timer);
+    }
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   /*
   |--------------------------------------------------------------------------
-  | CREATE ROLE
+  | CREATE / EDIT
   |--------------------------------------------------------------------------
   */
 
@@ -207,56 +114,26 @@ export default function RoleManagementPage() {
     setFormOpen(true);
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | EDIT ROLE
-  |--------------------------------------------------------------------------
-  */
-
   const openEdit = (role) => {
     setEditingRole(role);
     setFormOpen(true);
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | SAVE ROLE
-  |--------------------------------------------------------------------------
-  | Local only — does NOT call API.
-  */
-
   const handleSaveRole = async (payload) => {
     setSaving(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
       if (payload.id) {
-        // Update existing role locally.
-        setRoles((currentRoles) =>
-          currentRoles.map((role) =>
-            role.id === payload.id
-              ? {
-                  ...role,
-                  ...payload,
-                }
-              : role,
-          ),
+        const updated = await updateRole(payload.id, payload);
+        setRoles((current) =>
+          current.map((role) => (role.id === updated.id ? updated : role)),
         );
-
         toast.success("Role updated.");
       } else {
-        // Create new role locally.
-        const newRole = {
-          ...payload,
-          id: Date.now(),
-          usersCount: 0,
-          permissions: payload.permissions || [],
-          departments: payload.departments || [],
-        };
-
-        setRoles((currentRoles) => [...currentRoles, newRole]);
-
+        const created = await createRole(payload);
+        setRoles((current) =>
+          [...current, created].sort((a, b) => a.name.localeCompare(b.name)),
+        );
         toast.success("Role created.");
       }
 
@@ -264,7 +141,7 @@ export default function RoleManagementPage() {
       setEditingRole(null);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to save role.");
+      toast.error(getApiErrorMessage(error, "Failed to save role."));
     } finally {
       setSaving(false);
     }
@@ -272,9 +149,8 @@ export default function RoleManagementPage() {
 
   /*
   |--------------------------------------------------------------------------
-  | DELETE ROLE
+  | DELETE
   |--------------------------------------------------------------------------
-  | Local only — does NOT call API.
   */
 
   const handleDeleteRole = async () => {
@@ -283,18 +159,20 @@ export default function RoleManagementPage() {
     setDeleting(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await deleteRole(deletingRole.id);
 
-      setRoles((currentRoles) =>
-        currentRoles.filter((role) => role.id !== deletingRole.id),
+      setRoles((current) =>
+        current.filter((role) => role.id !== deletingRole.id),
       );
 
       toast.success("Role deleted.");
-
       setDeletingRole(null);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete role.");
+      // The backend rejects deletion (422) when the role still has users,
+      // is the default role, or is a protected system role — surface that
+      // exact message instead of a generic one.
+      toast.error(getApiErrorMessage(error, "Failed to delete role."));
     } finally {
       setDeleting(false);
     }
@@ -334,9 +212,7 @@ export default function RoleManagementPage() {
   const stats = useMemo(
     () => ({
       total: roles.length,
-
       inUse: roles.filter((role) => (role.usersCount ?? 0) > 0).length,
-
       unused: roles.filter((role) => (role.usersCount ?? 0) === 0).length,
     }),
     [roles],
@@ -344,7 +220,7 @@ export default function RoleManagementPage() {
 
   /*
   |--------------------------------------------------------------------------
-  | LOADING
+  | LOADING / ERROR
   |--------------------------------------------------------------------------
   */
 
@@ -352,6 +228,22 @@ export default function RoleManagementPage() {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <IconLoader2 size={24} className="animate-spin text-gray-300" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center">
+        <AlertTriangle size={24} className="text-amber-500" />
+        <p className="max-w-sm text-sm text-gray-500">{loadError}</p>
+        <button
+          onClick={loadData}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+        >
+          <IconRefresh size={13} />
+          Retry
+        </button>
       </div>
     );
   }
@@ -430,13 +322,15 @@ export default function RoleManagementPage() {
             </div>
 
             {/* NEW ROLE */}
-            <button
-              onClick={openCreate}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
-            >
-              <IconPlus size={13} />
-              New role
-            </button>
+            {canManage && (
+              <button
+                onClick={openCreate}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
+              >
+                <IconPlus size={13} />
+                New role
+              </button>
+            )}
           </div>
 
           {/* TABLE */}
@@ -471,12 +365,14 @@ export default function RoleManagementPage() {
                           No roles configured yet.
                         </p>
 
-                        <button
-                          onClick={openCreate}
-                          className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-700"
-                        >
-                          Create the first role
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={openCreate}
+                            className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                          >
+                            Create the first role
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -563,29 +459,33 @@ export default function RoleManagementPage() {
                               View
                             </button>
 
-                            {/* EDIT */}
-                            <button
-                              onClick={() => openEdit(role)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
-                            >
-                              <Pencil size={11} />
-                              Edit
-                            </button>
+                            {canManage && (
+                              <>
+                                {/* EDIT */}
+                                <button
+                                  onClick={() => openEdit(role)}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                                >
+                                  <Pencil size={11} />
+                                  Edit
+                                </button>
 
-                            {/* DELETE */}
-                            <button
-                              onClick={() => setDeletingRole(role)}
-                              disabled={isDefault}
-                              title={
-                                isDefault
-                                  ? "The default role can't be deleted."
-                                  : "Delete role"
-                              }
-                              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-white disabled:hover:text-gray-600"
-                            >
-                              <Trash2 size={11} />
-                              Delete
-                            </button>
+                                {/* DELETE */}
+                                <button
+                                  onClick={() => setDeletingRole(role)}
+                                  disabled={isDefault}
+                                  title={
+                                    isDefault
+                                      ? "The default role can't be deleted."
+                                      : "Delete role"
+                                  }
+                                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-white disabled:hover:text-gray-600"
+                                >
+                                  <Trash2 size={11} />
+                                  Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -599,17 +499,19 @@ export default function RoleManagementPage() {
       </div>
 
       {/* CREATE / EDIT MODAL */}
-      <RoleFormModal
-        open={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditingRole(null);
-        }}
-        onSave={handleSaveRole}
-        saving={saving}
-        role={editingRole}
-        departments={departments}
-      />
+      {canManage && (
+        <RoleFormModal
+          open={formOpen}
+          onClose={() => {
+            setFormOpen(false);
+            setEditingRole(null);
+          }}
+          onSave={handleSaveRole}
+          saving={saving}
+          role={editingRole}
+          departments={departments}
+        />
+      )}
 
       {/* VIEW MODAL */}
       <RoleViewModal
@@ -619,13 +521,15 @@ export default function RoleManagementPage() {
       />
 
       {/* DELETE DIALOG */}
-      <DeleteRoleDialog
-        open={!!deletingRole}
-        onClose={() => setDeletingRole(null)}
-        onConfirm={handleDeleteRole}
-        role={deletingRole}
-        deleting={deleting}
-      />
+      {canManage && (
+        <DeleteRoleDialog
+          open={!!deletingRole}
+          onClose={() => setDeletingRole(null)}
+          onConfirm={handleDeleteRole}
+          role={deletingRole}
+          deleting={deleting}
+        />
+      )}
     </div>
   );
 }
