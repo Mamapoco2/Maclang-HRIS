@@ -5,6 +5,7 @@ import {
   SUFFIX_OPTIONS,
   TITLE_OPTIONS,
   EMPLOYEE_TYPE_PREFIXES,
+  GENDER_OPTIONS,
 } from "../../utils/employeeConstants";
 import { stripEmployeeNumberPrefix } from "../../utils/employeeFormatters";
 
@@ -91,6 +92,15 @@ export function PersonalInformationSection({ formData, handleChange }) {
             onChange={(v) => handleChange("title", v)}
             placeholder="Select titles"
             options={TITLE_OPTIONS}
+          />
+        </FieldSelect>
+
+        <FieldSelect label="Sex">
+          <NativeSelect
+            value={formData.gender}
+            onChange={(v) => handleChange("gender", v)}
+            options={GENDER_OPTIONS}
+            placeholder="Select sex"
           />
         </FieldSelect>
       </div>

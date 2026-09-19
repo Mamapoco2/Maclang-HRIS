@@ -43,15 +43,6 @@ export function EmploymentInformationSection({
           />
         </FieldSelect>
 
-        <FieldSelect label="Sex">
-          <NativeSelect
-            value={formData.gender}
-            onChange={(v) => handleChange("gender", v)}
-            options={GENDER_OPTIONS}
-            placeholder="Select sex"
-          />
-        </FieldSelect>
-
         <FieldSelect label="Division">
           <SingleCombobox
             value={formData.division}
