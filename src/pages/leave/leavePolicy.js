@@ -142,11 +142,15 @@ export const LEAVE_TYPES = [
 ];
 
 export const CREDITS_PANEL_LEAVE_CODES = [
-  "sick",
   "vacation",
-  "special_privilege",
+  "sick",
   "wellness",
   "compensatory_off",
+];
+
+export const MY_LEAVE_CREDITS_DISPLAY_CODES = [
+  ...CREDITS_PANEL_LEAVE_CODES,
+  "special_privilege",
 ];
 
 export const LEAVE_TYPE_MAP = Object.fromEntries(

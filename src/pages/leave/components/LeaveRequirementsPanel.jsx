@@ -14,15 +14,34 @@ import {
 } from "../leavePolicy";
 import { cn } from "@/lib/utils";
 
+function resolveNotice(serverType, leaveType) {
+  const serverNotice = serverType?.filing_guidelines;
+  if (
+    serverNotice &&
+    typeof serverNotice === "object" &&
+    serverNotice.message
+  ) {
+    return serverNotice;
+  }
+  return LEAVE_INFO_NOTICES[leaveType];
+}
+
+function resolveRequirements(serverType, leaveType) {
+  if (Array.isArray(serverType?.required_documents)) {
+    return serverType.required_documents;
+  }
+  return LEAVE_REQUIREMENTS[leaveType] || [];
+}
+
 export function LeaveRequirementsPanel({
   leaveType,
   uploadedFiles = {},
   serverType = null,
 }) {
-  const requirements = LEAVE_REQUIREMENTS[leaveType] || [];
+  const requirements = resolveRequirements(serverType, leaveType);
   const typeConfig = LEAVE_TYPE_MAP[leaveType];
   const description = serverType?.description || LEAVE_DESCRIPTIONS[leaveType];
-  const notice = LEAVE_INFO_NOTICES[leaveType];
+  const notice = resolveNotice(serverType, leaveType);
 
   if (!leaveType) {
     return (

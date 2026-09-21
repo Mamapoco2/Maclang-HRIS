@@ -1,7 +1,11 @@
 import { Fragment } from "react";
 import { Wallet } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { LEAVE_TYPE_MAP, groupLeaveTypesByCategory } from "../leavePolicy";
+import {
+  LEAVE_TYPE_MAP,
+  MY_LEAVE_CREDITS_DISPLAY_CODES,
+  groupLeaveTypesByCategory,
+} from "../leavePolicy";
 import { cn } from "@/lib/utils";
 
 function formatCredit(value, unit) {
@@ -19,6 +23,7 @@ function formatEntitlementCap(maxDays) {
 function buildRow(serverType, balances) {
   const localConfig = LEAVE_TYPE_MAP[serverType.code];
   const isCreditBased = Boolean(serverType.requires_balance_check);
+  const hasAnnualCap = Boolean(serverType.enforce_annual_cap);
   const record = balances.find(
     (b) =>
       b.leave_type?.code === serverType.code ||
@@ -30,9 +35,11 @@ function buildRow(serverType, balances) {
     label: serverType.name ?? localConfig?.label ?? serverType.code,
     unit: record?.leave_type?.unit ?? serverType.unit ?? "days",
     isCreditBased,
+    hasAnnualCap,
     available: record ? Number(record.available) : 0,
     hasRecord: Boolean(record),
     maxDays: serverType.max_days ?? null,
+    entitlementStatus: serverType.entitlement_status ?? null,
     color: localConfig?.color ?? serverType.color ?? "#64748b",
   };
 }
@@ -43,8 +50,12 @@ export function LeaveCreditsPanel({
   loading = false,
   selectedLeaveType = null,
 }) {
-  const groups = groupLeaveTypesByCategory(leaveTypes) ?? [
-    { label: null, options: leaveTypes },
+  const creditBasedTypes = leaveTypes.filter((t) =>
+    MY_LEAVE_CREDITS_DISPLAY_CODES.includes(t.code),
+  );
+
+  const groups = groupLeaveTypesByCategory(creditBasedTypes) ?? [
+    { label: null, options: creditBasedTypes },
   ];
 
   const rowGroups = groups
@@ -133,6 +144,18 @@ export function LeaveCreditsPanel({
                           >
                             {formatCredit(row.available, row.unit)}
                           </span>
+                        ) : row.hasAnnualCap && row.entitlementStatus ? (
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+                              row.entitlementStatus.is_exhausted
+                                ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
+                                : "bg-[var(--muted)] text-[var(--muted-foreground)]",
+                            )}
+                          >
+                            {row.entitlementStatus.remaining_days} of{" "}
+                            {row.entitlementStatus.annual_cap_days} days left
+                          </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--muted)] text-[var(--muted-foreground)]">
                             {formatEntitlementCap(row.maxDays)}
@@ -147,11 +170,10 @@ export function LeaveCreditsPanel({
           </table>
         )}
         <p className="text-[11px] text-[var(--muted-foreground)] px-4 py-3 border-t border-[var(--border)]">
-          Balances update automatically based on approved leave records.
-          Entitlement-based leaves show their maximum allowable duration per
-          qualifying event and aren't deducted from a running balance. Filing a
-          credit-based leave type with 0 available credit may be rejected during
-          approval.
+          Balances update automatically based on approved leave records. Filing
+          a leave type with 0 available credit (or an exhausted annual
+          entitlement) may be rejected during approval. Other leave privileges
+          (e.g. Maternity, Paternity) aren't shown here.
         </p>
       </CardContent>
     </Card>

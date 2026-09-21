@@ -3,6 +3,7 @@ import { PageHeader } from "./PageHeader";
 import { employeeService } from "@/services/employeeService";
 import LeaveApi from "@/services/leaveApiService";
 import { LeaveCreditsModal } from "./components/LeaveCreditsModal";
+import { CREDITS_PANEL_LEAVE_CODES } from "./leavePolicy";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -591,7 +592,10 @@ export default function BalancesPage() {
   const fetchLeaveTypes = useCallback(async () => {
     try {
       const types = await LeaveApi.listTypes({ all: true });
-      setLeaveTypes(types ?? []);
+      const creditBasedOnly = (types ?? []).filter((t) =>
+        CREDITS_PANEL_LEAVE_CODES.includes(t.code),
+      );
+      setLeaveTypes(creditBasedOnly);
     } catch {}
   }, []);
 
