@@ -15,11 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarClock, MessageSquareText } from "lucide-react";
+import { CalendarClock, MessageSquareText, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { plantillaPostingService } from "@/services/plantillaPostingService";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import ScheduleInterviewDialog from "./scheduleInterviewDialog";
 import CancelInterviewDialog from "./cancelInterviewDialog";
+import ApplicantQualificationView from "../comparativeAssessment/applicantQualificationView";
 import {
   candidateName,
   formatLabel,
@@ -32,8 +39,6 @@ const SCHEDULE_FIELD = {
   hr_status: "hr_scheduled_at",
 };
 
-// Statuses that need extra input before they can be saved, and which
-// field on the interview record holds that extra input.
 const CANCEL_FIELD = {
   hr_status: "hr_cancellation_reason",
 };
@@ -42,9 +47,6 @@ const STAGE_LABELS = {
   hr_status: "Initial review",
 };
 
-// Dot color per status, following the pipeline from the notes:
-// Pending -> Scheduled -> In Progress -> Passed/Failed, with
-// Cancelled and No Show as exit states.
 const STAGE_DOT_COLORS = {
   PENDING: "bg-gray-300",
   SCHEDULED: "bg-blue-400",
@@ -71,6 +73,8 @@ function formatScheduledAt(value) {
 export default function InterviewTable({ applications, onUpdate }) {
   const [scheduleTarget, setScheduleTarget] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [qualificationsApplicationId, setQualificationsApplicationId] =
+    useState(null);
   const columnCount = 5;
 
   const handleFieldChange = async (application, field, value) => {
@@ -113,8 +117,6 @@ export default function InterviewTable({ applications, onUpdate }) {
       <CardContent className="p-4">
         <Table>
           <TableHeader>
-            {/* Group header clarifies that HR is a stage of the pipeline,
-                not just an unrelated field */}
             <TableRow className="border-b-0 bg-gray-50/60 hover:bg-gray-50/60">
               <TableHead colSpan={3} />
               <TableHead
@@ -156,7 +158,16 @@ export default function InterviewTable({ applications, onUpdate }) {
                 return (
                   <TableRow key={application.id}>
                     <TableCell className="font-medium">
-                      {candidateName(application.employee)}
+                      <button
+                        onClick={() =>
+                          setQualificationsApplicationId(application.id)
+                        }
+                        className="flex items-center gap-1.5 text-left hover:text-indigo-600 hover:underline"
+                        title="View comparative assessment / qualifications"
+                      >
+                        <ClipboardList className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                        {candidateName(application.employee)}
+                      </button>
                     </TableCell>
                     <TableCell className="text-gray-600">
                       {application.posting?.base_item_number ?? "—"}
@@ -295,6 +306,25 @@ export default function InterviewTable({ applications, onUpdate }) {
         onClose={() => setCancelTarget(null)}
         onSaved={handleCancelled}
       />
+
+      <Sheet
+        open={!!qualificationsApplicationId}
+        onOpenChange={(open) => !open && setQualificationsApplicationId(null)}
+      >
+        <SheetContent className="w-full gap-0 overflow-hidden p-0 sm:max-w-2xl">
+          <SheetTitle className="sr-only">
+            Applicant comparative assessment / qualifications
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            Reference view of the selected applicant's eligibility, education,
+            training, experience, and performance against the requirements of
+            the position being filled.
+          </SheetDescription>
+          <ApplicantQualificationView
+            applicationId={qualificationsApplicationId}
+          />
+        </SheetContent>
+      </Sheet>
     </Card>
   );
 }

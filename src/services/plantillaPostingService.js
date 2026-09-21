@@ -148,16 +148,26 @@ export const plantillaPostingService = {
     }
   },
 
-  async reviewApplication(applicationId, { status, remarks }) {
+  async reviewApplication(applicationId, { status, remarks, reason = null }) {
     const res = await api.patch(
       `/plantilla-posting-applications/${applicationId}/review`,
-      { status, remarks },
+      { status, remarks, reason },
     );
     return res.data;
   },
 
   documentDownloadUrl(documentId) {
     return `/plantilla-posting-applications/documents/${documentId}/download`;
+  },
+
+  // ── Admin: PSB comparative assessment (qualification reference) ────────────
+
+  async getApplicantQualifications(applicationId, config = {}) {
+    const res = await api.get(
+      `/plantilla-posting-applications/${applicationId}/qualifications`,
+      { signal: config.signal },
+    );
+    return res.data?.data ?? res.data;
   },
 
   // ── Admin: document review comments ──────────────────────────────────────

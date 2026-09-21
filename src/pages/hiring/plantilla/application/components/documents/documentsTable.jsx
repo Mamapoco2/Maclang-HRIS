@@ -1,6 +1,8 @@
 import React, { useContext, useMemo, useEffect, useRef, useState } from "react";
 import {
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
   IconFileText,
   IconFileTypePdf,
   IconPhoto,
@@ -10,6 +12,7 @@ import {
   IconLoader2,
   IconFolderOpen,
   IconEye,
+  IconLayoutGrid,
   IconCheck,
   IconTrash,
   IconMessageCircle2,
@@ -168,7 +171,7 @@ function timeAgo(dateStr) {
 }
 
 // ── one candidate's row ──────────────────────────────────────────────────
-function CandidateRow({ application, isExpanded, onToggle, onOpenDoc }) {
+function CandidateRow({ application, isExpanded, onToggle, onOpen }) {
   const { totalRequired, fulfilled, missing, documents, status } =
     getCompletionInfo(application);
   const styles = STATUS[status];
@@ -186,10 +189,11 @@ function CandidateRow({ application, isExpanded, onToggle, onOpenDoc }) {
         isExpanded ? "border-gray-300" : "border-gray-200 hover:border-gray-300"
       }`}
     >
-      <button
-        onClick={onToggle}
-        disabled={documents.length === 0}
-        className="flex w-full items-center gap-3 p-4 text-left disabled:cursor-default"
+      <div
+        onClick={() => documents.length > 0 && onToggle()}
+        className={`flex w-full items-center gap-3 p-4 text-left ${
+          documents.length > 0 ? "cursor-pointer" : "cursor-default"
+        }`}
       >
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${styles.dot}`} />
 
@@ -205,6 +209,20 @@ function CandidateRow({ application, isExpanded, onToggle, onOpenDoc }) {
           </p>
         </div>
 
+        {documents.length > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(application, 0);
+            }}
+            title="View all submitted documents together"
+            className="hidden shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 sm:inline-flex"
+          >
+            <IconLayoutGrid size={13} />
+            View all
+          </button>
+        )}
+
         <span
           className={`hidden shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium sm:inline-flex ${styles.badgeBg} ${styles.badgeText} ${styles.badgeBorder}`}
         >
@@ -219,7 +237,21 @@ function CandidateRow({ application, isExpanded, onToggle, onOpenDoc }) {
             }`}
           />
         )}
-      </button>
+      </div>
+
+      {/* "View all" repeated on small screens, where the header button above is hidden */}
+      {documents.length > 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(application, 0);
+          }}
+          className="-mt-1 flex items-center gap-1 px-4 pb-2 text-xs font-medium text-indigo-600 sm:hidden"
+        >
+          <IconLayoutGrid size={13} />
+          View all documents
+        </button>
+      )}
 
       {/* count label repeated on small screens, where the badge above is hidden */}
       <p
@@ -231,7 +263,7 @@ function CandidateRow({ application, isExpanded, onToggle, onOpenDoc }) {
       {isExpanded && documents.length > 0 && (
         <div className="border-t border-gray-100 bg-gray-50/60">
           <ul className="divide-y divide-gray-100">
-            {documents.map((doc) => {
+            {documents.map((doc, index) => {
               const { Icon, className, bg } = getFileIcon(
                 doc.original_filename,
               );
@@ -256,7 +288,7 @@ function CandidateRow({ application, isExpanded, onToggle, onOpenDoc }) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onOpenDoc(doc);
+                      onOpen(application, index);
                     }}
                     className="flex shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50"
                   >
@@ -448,25 +480,35 @@ function CommentsPanel({ documentId, canManage }) {
 }
 
 function DocumentViewerModal({
-  doc,
-  blobUrl,
-  blob,
-  mimeType,
-  loading,
+  candidateLabel,
+  documents,
+  activeIndex,
+  onNavigate,
+  getEntry,
   canManageComments,
   onClose,
 }) {
+  const doc = documents[activeIndex];
+  const entry = getEntry(doc.id) ?? {};
+  const { blob, blobUrl, mimeType, loading, error } = entry;
+
   const [docxHtml, setDocxHtml] = useState(null);
   const [docxError, setDocxError] = useState(false);
   const [docxLoading, setDocxLoading] = useState(false);
 
+  const goPrev = () => onNavigate(Math.max(0, activeIndex - 1));
+  const goNext = () =>
+    onNavigate(Math.min(documents.length - 1, activeIndex + 1));
+
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") goPrev();
+      if (e.key === "ArrowRight") goNext();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, activeIndex, documents.length]);
 
   const ext = getExt(doc.original_filename);
   const isPdf = ext === "pdf" || mimeType === "application/pdf";
@@ -475,6 +517,11 @@ function DocumentViewerModal({
     DOCX_EXTS.includes(ext) ||
     mimeType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  useEffect(() => {
+    setDocxHtml(null);
+    setDocxError(false);
+  }, [doc.id]);
 
   useEffect(() => {
     if (!isDocx || !blob) return;
@@ -522,17 +569,40 @@ function DocumentViewerModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={doc.original_filename}
-        className="flex h-full max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        aria-label={`${candidateLabel} — ${doc.original_filename}`}
+        className="flex h-full max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
       >
         <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3">
+          {documents.length > 1 && (
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                onClick={goPrev}
+                disabled={activeIndex === 0}
+                title="Previous document"
+                className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
+              >
+                <IconChevronLeft size={16} />
+              </button>
+              <button
+                onClick={goNext}
+                disabled={activeIndex === documents.length - 1}
+                title="Next document"
+                className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
+              >
+                <IconChevronRight size={16} />
+              </button>
+            </div>
+          )}
           <Icon size={20} className={`shrink-0 ${iconClassName}`} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-gray-800">
               {doc.original_filename}
             </p>
             <p className="text-xs text-gray-400">
-              {formatDocKey(doc.document_key)}
+              {candidateLabel} · {formatDocKey(doc.document_key)}
+              {documents.length > 1
+                ? ` · ${activeIndex + 1} of ${documents.length}`
+                : ""}
             </p>
           </div>
           <button
@@ -552,36 +622,110 @@ function DocumentViewerModal({
           </button>
         </div>
 
-        <div className="flex flex-1 flex-col overflow-hidden sm:flex-row">
-          <div className="flex flex-1 items-center justify-center overflow-auto bg-gray-100">
-            {loading ? (
-              <div className="flex flex-col items-center gap-2 text-gray-400">
-                <IconLoader2 size={28} className="animate-spin" />
-                <span className="text-xs">Loading preview…</span>
-              </div>
-            ) : isPdf ? (
-              <iframe
-                src={blobUrl}
-                title={doc.original_filename}
-                className="h-full w-full border-0"
-              />
-            ) : isImage ? (
-              <img
-                src={blobUrl}
-                alt={doc.original_filename}
-                className="max-h-full max-w-full object-contain"
-              />
-            ) : isDocx ? (
-              docxLoading ? (
+        <div className="flex flex-1 overflow-hidden">
+          {documents.length > 1 && (
+            <div className="hidden w-48 shrink-0 overflow-y-auto border-r border-gray-100 bg-gray-50/60 md:block">
+              <ul className="space-y-1 p-2">
+                {documents.map((d, i) => {
+                  const { Icon: ThumbIcon, className: thumbClass } =
+                    getFileIcon(d.original_filename);
+                  const isActive = i === activeIndex;
+                  return (
+                    <li key={d.id}>
+                      <button
+                        onClick={() => onNavigate(i)}
+                        className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left ${
+                          isActive
+                            ? "bg-white shadow-sm ring-1 ring-indigo-200"
+                            : "hover:bg-white/70"
+                        }`}
+                      >
+                        <ThumbIcon
+                          size={15}
+                          className={`mt-0.5 shrink-0 ${thumbClass}`}
+                        />
+                        <span className="min-w-0">
+                          <span
+                            className={`block truncate text-xs ${
+                              isActive
+                                ? "font-medium text-gray-800"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            {d.original_filename}
+                          </span>
+                          <span className="block truncate text-[10px] text-gray-400">
+                            {formatDocKey(d.document_key)}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex flex-1 flex-col overflow-hidden sm:flex-row">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-gray-100">
+              {loading ? (
                 <div className="flex flex-col items-center gap-2 text-gray-400">
                   <IconLoader2 size={28} className="animate-spin" />
-                  <span className="text-xs">Converting document…</span>
+                  <span className="text-xs">Loading preview…</span>
                 </div>
-              ) : docxError ? (
+              ) : error ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center text-gray-500">
+                  <IconAlertTriangle size={32} className="text-amber-500" />
+                  <p className="text-sm">
+                    Couldn't load this file. It may require different
+                    permissions, or the file may be missing.
+                  </p>
+                </div>
+              ) : isPdf ? (
+                <iframe
+                  src={blobUrl}
+                  title={doc.original_filename}
+                  className="h-full w-full border-0"
+                />
+              ) : isImage ? (
+                <img
+                  src={blobUrl}
+                  alt={doc.original_filename}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : isDocx ? (
+                docxLoading ? (
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <IconLoader2 size={28} className="animate-spin" />
+                    <span className="text-xs">Converting document…</span>
+                  </div>
+                ) : docxError ? (
+                  <div className="flex flex-col items-center gap-3 py-16 text-center text-gray-500">
+                    <IconFileText size={40} className="text-gray-300" />
+                    <p className="text-sm">
+                      Couldn't render a preview for this file.
+                    </p>
+                    <button
+                      onClick={handleDownload}
+                      className="flex items-center gap-1.5 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+                    >
+                      <IconDownload size={14} />
+                      Download to view
+                    </button>
+                  </div>
+                ) : (
+                  <div className="h-full w-full overflow-auto bg-gray-100 p-6">
+                    <div
+                      className="mx-auto max-w-3xl rounded bg-white p-10 shadow prose prose-sm"
+                      dangerouslySetInnerHTML={{ __html: docxHtml }}
+                    />
+                  </div>
+                )
+              ) : (
                 <div className="flex flex-col items-center gap-3 py-16 text-center text-gray-500">
                   <IconFileText size={40} className="text-gray-300" />
                   <p className="text-sm">
-                    Couldn't render a preview for this file.
+                    No preview available for this file type.
                   </p>
                   <button
                     onClick={handleDownload}
@@ -591,32 +735,11 @@ function DocumentViewerModal({
                     Download to view
                   </button>
                 </div>
-              ) : (
-                <div className="h-full w-full overflow-auto bg-gray-100 p-6">
-                  <div
-                    className="mx-auto max-w-3xl rounded bg-white p-10 shadow prose prose-sm"
-                    dangerouslySetInnerHTML={{ __html: docxHtml }}
-                  />
-                </div>
-              )
-            ) : (
-              <div className="flex flex-col items-center gap-3 py-16 text-center text-gray-500">
-                <IconFileText size={40} className="text-gray-300" />
-                <p className="text-sm">
-                  No preview available for this file type.
-                </p>
-                <button
-                  onClick={handleDownload}
-                  className="flex items-center gap-1.5 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
-                >
-                  <IconDownload size={14} />
-                  Download to view
-                </button>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <CommentsPanel documentId={doc.id} canManage={canManageComments} />
+            <CommentsPanel documentId={doc.id} canManage={canManageComments} />
+          </div>
         </div>
       </div>
     </div>
@@ -628,11 +751,12 @@ export default function DocumentsTable({ applications }) {
   const canManageComments = hasRole("SuperAdmin") || hasRole("HR");
 
   const [expandedIds, setExpandedIds] = useState(new Set());
-  const [viewerDoc, setViewerDoc] = useState(null);
-  const [viewerBlob, setViewerBlob] = useState(null);
-  const [viewerBlobUrl, setViewerBlobUrl] = useState(null);
-  const [viewerMimeType, setViewerMimeType] = useState(null);
-  const [viewerLoading, setViewerLoading] = useState(false);
+
+  const [viewerApplication, setViewerApplication] = useState(null);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [docCache, setDocCache] = useState({});
+  const docCacheRef = useRef(docCache);
+  docCacheRef.current = docCache;
 
   const groups = useMemo(() => {
     const empty = [];
@@ -660,41 +784,61 @@ export default function DocumentsTable({ applications }) {
     });
   };
 
-  const handleOpen = async (doc) => {
-    setViewerDoc(doc);
-    setViewerBlob(null);
-    setViewerBlobUrl(null);
-    setViewerMimeType(null);
-    setViewerLoading(true);
+  const loadDoc = async (doc) => {
+    const existing = docCacheRef.current[doc.id];
+    if (existing && (existing.loading || existing.blobUrl || existing.error)) {
+      return;
+    }
+
+    setDocCache((prev) => ({ ...prev, [doc.id]: { loading: true } }));
     try {
       const res = await api.get(
         plantillaPostingService.documentDownloadUrl(doc.id),
-        {
-          responseType: "blob",
-        },
+        { responseType: "blob" },
       );
       const blob = new Blob([res.data], { type: res.data.type });
-      setViewerBlob(blob);
-      setViewerBlobUrl(URL.createObjectURL(blob));
-      setViewerMimeType(res.data.type);
+      setDocCache((prev) => ({
+        ...prev,
+        [doc.id]: {
+          loading: false,
+          blob,
+          blobUrl: URL.createObjectURL(blob),
+          mimeType: res.data.type,
+        },
+      }));
     } catch (err) {
       toast.error(
         err?.response?.status === 403
           ? "Not authorized to view this file."
           : "Failed to open file.",
       );
-      setViewerDoc(null);
-    } finally {
-      setViewerLoading(false);
+      setDocCache((prev) => ({
+        ...prev,
+        [doc.id]: { loading: false, error: true },
+      }));
     }
   };
 
+  const openViewer = (application, index) => {
+    setViewerApplication(application);
+    setViewerIndex(index);
+    setDocCache({});
+    docCacheRef.current = {};
+    loadDoc(application.documents[index]);
+  };
+
+  const navigateViewer = (index) => {
+    setViewerIndex(index);
+    loadDoc(viewerApplication.documents[index]);
+  };
+
   const closeViewer = () => {
-    if (viewerBlobUrl) URL.revokeObjectURL(viewerBlobUrl);
-    setViewerDoc(null);
-    setViewerBlob(null);
-    setViewerBlobUrl(null);
-    setViewerMimeType(null);
+    Object.values(docCacheRef.current).forEach((entry) => {
+      if (entry?.blobUrl) URL.revokeObjectURL(entry.blobUrl);
+    });
+    setViewerApplication(null);
+    setViewerIndex(0);
+    setDocCache({});
   };
 
   if (applications.length === 0) {
@@ -730,7 +874,7 @@ export default function DocumentsTable({ applications }) {
                   application={application}
                   isExpanded={expandedIds.has(application.id)}
                   onToggle={() => toggleRow(application.id)}
-                  onOpenDoc={handleOpen}
+                  onOpen={openViewer}
                 />
               ))}
             </div>
@@ -738,13 +882,13 @@ export default function DocumentsTable({ applications }) {
         );
       })}
 
-      {viewerDoc && (
+      {viewerApplication && (
         <DocumentViewerModal
-          doc={viewerDoc}
-          blob={viewerBlob}
-          blobUrl={viewerBlobUrl}
-          mimeType={viewerMimeType}
-          loading={viewerLoading}
+          candidateLabel={candidateName(viewerApplication.employee)}
+          documents={viewerApplication.documents}
+          activeIndex={viewerIndex}
+          onNavigate={navigateViewer}
+          getEntry={(docId) => docCache[docId]}
           canManageComments={canManageComments}
           onClose={closeViewer}
         />

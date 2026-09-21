@@ -20,6 +20,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { IconNotes } from "@tabler/icons-react";
@@ -31,6 +39,7 @@ import {
   APPLICATION_STATUS_OPTIONS,
   APPLICATION_STATUS_BG,
   formatLabel,
+  isBackwardStatusTransition,
 } from "../psbUtils";
 
 const IN_PROGRESS_STATUSES = [
@@ -64,6 +73,9 @@ export default function ApplicationsTable({
   showSummary = true,
 }) {
   const [remarksDraft, setRemarksDraft] = useState({});
+  const [pendingChange, setPendingChange] = useState(null);
+  const [reversalReason, setReversalReason] = useState("");
+  const [savingChange, setSavingChange] = useState(false);
 
   const summary = {
     total: applications.length,
@@ -74,20 +86,56 @@ export default function ApplicationsTable({
     completed: applications.filter((a) => a.status === "Completed").length,
   };
 
-  const handleStatusChange = async (application, status) => {
+  const applyStatusChange = async (application, status, reason = null) => {
     try {
       const updated = await plantillaPostingService.reviewApplication(
         application.id,
-        { status, remarks: application.remarks ?? null },
+        { status, remarks: application.remarks ?? null, reason },
       );
       onUpdate(application.id, updated);
       toast.success("Application updated.");
+      return true;
     } catch (err) {
       const message =
+        err?.response?.data?.errors?.reason?.[0] ||
         err?.response?.data?.errors?.status?.[0] ||
         err?.response?.data?.message ||
         "Failed to update application.";
       toast.error(message);
+      return false;
+    }
+  };
+
+  const handleStatusChange = (application, status) => {
+    if (status === application.status) return;
+
+    setReversalReason("");
+    setPendingChange({
+      application,
+      status,
+      isBackward: isBackwardStatusTransition(application.status, status),
+    });
+  };
+
+  const handleConfirmChange = async () => {
+    if (!pendingChange) return;
+
+    if (pendingChange.isBackward && !reversalReason.trim()) {
+      toast.error("Please provide a reason for sending this back.");
+      return;
+    }
+
+    setSavingChange(true);
+    const ok = await applyStatusChange(
+      pendingChange.application,
+      pendingChange.status,
+      pendingChange.isBackward ? reversalReason.trim() : null,
+    );
+    setSavingChange(false);
+
+    if (ok) {
+      setPendingChange(null);
+      setReversalReason("");
     }
   };
 
@@ -182,11 +230,6 @@ export default function ApplicationsTable({
                         </span>
                       </TableCell>
                       <TableCell className="min-w-[13rem]">
-                        {/* Always editable now — previously this rendered a
-                            static, non-interactive badge while status was
-                            "Pending", which meant a reviewer had no way to
-                            change the status at all until it left that
-                            state through some other path. */}
                         <Select
                           value={application.status}
                           onValueChange={(val) =>
@@ -262,6 +305,78 @@ export default function ApplicationsTable({
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!pendingChange}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingChange(null);
+            setReversalReason("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingChange?.isBackward
+                ? "Send application back a stage?"
+                : "Confirm status change?"}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingChange && (
+                <>
+                  Moving{" "}
+                  <span className="font-medium text-gray-700">
+                    {candidateName(pendingChange.application.employee)}
+                  </span>{" "}
+                  from{" "}
+                  <span className="font-medium text-gray-700">
+                    {pendingChange.application.status}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-medium text-gray-700">
+                    {pendingChange.status}
+                  </span>
+                  .
+                  {pendingChange.isBackward
+                    ? " This sends the application back to an earlier stage — please record why, for the PSB record."
+                    : " Are you sure?"}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {pendingChange?.isBackward && (
+            <Textarea
+              rows={3}
+              value={reversalReason}
+              onChange={(e) => setReversalReason(e.target.value)}
+              placeholder="e.g. Deliberation found a missing eligibility document; sending back for initial review."
+              autoFocus
+            />
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPendingChange(null);
+                setReversalReason("");
+              }}
+              disabled={savingChange}
+            >
+              No
+            </Button>
+            <Button
+              onClick={handleConfirmChange}
+              disabled={
+                savingChange ||
+                (pendingChange?.isBackward && !reversalReason.trim())
+              }
+            >
+              {savingChange ? "Saving..." : "Yes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

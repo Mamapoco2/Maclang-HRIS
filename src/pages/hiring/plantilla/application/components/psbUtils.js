@@ -38,6 +38,22 @@ export const APPLICATION_STATUS_OPTIONS = [
   "Rejected",
 ];
 
+export const APPLICATION_PIPELINE_ORDER = {
+  "Initial Review/Evaluation": 0,
+  "For Initial Deliberation": 1,
+  "Scheduled for Interview": 2,
+  "For HRMPSB Compliance": 3,
+  "For HRMPSB Deliberation": 4,
+  Completed: 5,
+};
+
+export function isBackwardStatusTransition(from, to) {
+  const fromRank = APPLICATION_PIPELINE_ORDER[from];
+  const toRank = APPLICATION_PIPELINE_ORDER[to];
+  if (fromRank === undefined || toRank === undefined) return false;
+  return toRank < fromRank;
+}
+
 export const STAGE_COLORS = {
   PASSED: "text-green-600",
   COMPLETED: "text-green-600",
