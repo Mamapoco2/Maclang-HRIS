@@ -233,7 +233,10 @@ export default function PlantillaPostingPage() {
     list.sort((a, b) => {
       switch (sortBy) {
         case "Oldest":
-          return new Date(a.datePosted) - new Date(b.datePosted);
+          return (
+            new Date(a.datePosted) - new Date(b.datePosted) ||
+            (a.id ?? 0) - (b.id ?? 0)
+          );
         case "Salary Grade":
           return (
             parseInt(b.salaryGrade.replace(/\D/g, "")) -
@@ -242,7 +245,10 @@ export default function PlantillaPostingPage() {
         case "Position Name":
           return a.positionTitle.localeCompare(b.positionTitle);
         default:
-          return new Date(b.datePosted) - new Date(a.datePosted);
+          return (
+            new Date(b.datePosted) - new Date(a.datePosted) ||
+            (b.id ?? 0) - (a.id ?? 0)
+          );
       }
     });
     return list;

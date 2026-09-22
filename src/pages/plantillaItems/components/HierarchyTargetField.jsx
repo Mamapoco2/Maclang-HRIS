@@ -14,25 +14,23 @@ import {
   departmentsUnderUnit,
 } from "../helpers/plantillaHelpers";
 
-/**
- * Two-tier org-placement picker: pick a Directorate/Division directly, OR
- * pick a Department (which auto-resolves and locks its parent
- * Directorate/Division). Used by both the "Add Plantilla Item" and
- * "Edit Slot" forms via the shared `display_target` field
- * ("division:<id>" | "department:<id>").
- */
+const OFFICE_TYPE_LABELS = {
+  DEPARTMENT: "Department",
+  SECTION: "Section",
+  UNIT: "Unit",
+  CLUSTER: "Cluster",
+};
+
+function officeTypeLabel(type) {
+  return OFFICE_TYPE_LABELS[(type ?? "").toUpperCase()] ?? "Department";
+}
+
 export function HierarchyTargetField({ units, loading, value, onChange }) {
   const [unitSearch, setUnitSearch] = useState("");
   const [deptSearch, setDeptSearch] = useState("");
 
-  const unitOptions = units.filter((u) =>
-    ["DIRECTORATE", "OFFICE", "DIVISION"].includes(
-      (u.type ?? "").toUpperCase(),
-    ),
-  );
-  const departmentOptions = units.filter(
-    (u) => (u.type ?? "").toUpperCase() === "DEPARTMENT",
-  );
+  const unitOptions = units.filter((u) => u.kind === "division");
+  const departmentOptions = units.filter((u) => u.kind === "department");
 
   const parsed = (() => {
     const [type, id] = (value || "").split(":");
@@ -176,10 +174,12 @@ export function HierarchyTargetField({ units, loading, value, onChange }) {
         )}
       </div>
 
-      {/* Tier 2: Department (optional) */}
+      {/* Tier 2: Department / Section / Unit / Cluster (optional) */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">
-          Department{" "}
+          {selectedDept
+            ? officeTypeLabel(selectedDept.type)
+            : "Department / Section / Unit"}{" "}
           <span className="text-gray-300 normal-case font-normal">
             (optional — leave blank to attach directly to the
             Directorate/Division above)
@@ -187,8 +187,13 @@ export function HierarchyTargetField({ units, loading, value, onChange }) {
         </p>
         {selectedDept ? (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-slate-50">
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 bg-blue-100 text-blue-700">
-              DEPT
+            <span
+              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+                TYPE_BADGE[(selectedDept.type ?? "").toUpperCase()] ??
+                "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {(selectedDept.type ?? "DEPT").toUpperCase()}
             </span>
             <span className="text-sm font-medium flex-1 truncate">
               {selectedDept.name}
@@ -217,8 +222,8 @@ export function HierarchyTargetField({ units, loading, value, onChange }) {
                     loading
                       ? "Loading..."
                       : resolvedUnit
-                        ? "Select department (optional)"
-                        : "Select department"
+                        ? "Select department/section/unit (optional)"
+                        : "Select department/section/unit"
                   }
                 />
               </SelectTrigger>
@@ -257,6 +262,14 @@ export function HierarchyTargetField({ units, loading, value, onChange }) {
                       value={String(d.id)}
                       className="pl-3 [&>span:first-child]:hidden"
                     >
+                      <span
+                        className={`text-[9px] font-semibold px-1 py-0.5 rounded mr-1.5 ${
+                          TYPE_BADGE[(d.type ?? "").toUpperCase()] ??
+                          "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {(d.type ?? "").toUpperCase()}
+                      </span>
                       {d.name}
                     </SelectItem>
                   ))

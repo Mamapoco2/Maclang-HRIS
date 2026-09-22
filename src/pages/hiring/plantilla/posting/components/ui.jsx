@@ -62,13 +62,21 @@ export function FieldError({ children }) {
   return <p className="mt-1 text-xs text-rose-600">{children}</p>;
 }
 
-export function Select({ value, onChange, options, placeholder, className = "" }) {
+export function Select({
+  value,
+  onChange,
+  options,
+  placeholder,
+  className = "",
+  disabled = false,
+}) {
   return (
     <div className="relative">
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className={`h-9 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-8 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${className}`}
+        disabled={disabled}
+        className={`h-9 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-8 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${className}`}
       >
         <option value="">{placeholder}</option>
         {options.map((o) => (

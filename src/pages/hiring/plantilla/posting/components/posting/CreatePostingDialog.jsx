@@ -1,12 +1,14 @@
 import React, { useContext, useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
-import { Button, Label, Select, FieldError, Modal } from "../ui";
+import { Button, Label, Select, Modal } from "../ui";
 import { FormSection, PostingForm } from "./PostingForm";
 import { EMPTY_FORM } from "../constants";
 import { AuthContext } from "@/context/authContext";
 import {
   filterSelectableVacantItems,
-  getSelectableSlots,
+  getPositionTitleOptions,
+  getSlotOptionsForTitle,
+  findVacantItemBySlotId,
   validatePostingForm,
   buildSavePayload,
   deriveAnnualFromMonthly,
@@ -46,13 +48,19 @@ export function CreatePostingDialog({
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [availableSteps, setAvailableSteps] = useState([]);
-  const [availableSlots, setAvailableSlots] = useState([]);
+  const [selectedTitle, setSelectedTitle] = useState("");
+  const [resolvedOffice, setResolvedOffice] = useState({
+    type: "",
+    name: "",
+    divisionName: "",
+  });
 
   useEffect(() => {
     if (open) {
       setForm(buildInitialForm());
       setAvailableSteps([]);
-      setAvailableSlots([]);
+      setSelectedTitle("");
+      setResolvedOffice({ type: "", name: "", divisionName: "" });
       setErrors({});
     }
   }, [open]);
@@ -63,62 +71,63 @@ export function CreatePostingDialog({
     vacantItems,
     postedBaseItemNumbers,
   );
+  const positionTitleOptions = getPositionTitleOptions(selectableVacantItems);
+  const itemNumberOptions = getSlotOptionsForTitle(
+    selectableVacantItems,
+    selectedTitle,
+  );
 
-  const applyVacantItem = (baseItemNumber) => {
-    const vi = vacantItems.find((v) => v.base_item_number === baseItemNumber);
-    if (!vi) {
-      setForm((f) => ({
-        ...f,
-        base_item_number: baseItemNumber,
-        position_slot_names: [],
-        plantilla_position_ids: [],
-      }));
-      setAvailableSteps([]);
-      setAvailableSlots([]);
-      return;
-    }
-    const slots = getSelectableSlots(vi);
-    setAvailableSteps(vi.step_increments ?? []);
-    setAvailableSlots(slots);
+  const resetItemSelection = () => {
     setForm((f) => ({
       ...f,
-      base_item_number: vi.base_item_number,
+      base_item_number: "",
       position_slot_names: [],
       plantilla_position_ids: [],
-      title: vi.title || f.title,
-      display_department_id: vi.display_department_id ?? "",
-      display_division_id: vi.display_division_id ?? "",
-      salary_grade_id: vi.salary_grade_id ?? "",
-      step_increment_id: vi.step_increment_id ?? "",
-      monthly_salary: formatSalaryNumber(vi.monthly_salary ?? null),
-      annual_salary: formatSalaryNumber(vi.annual_salary ?? null),
-      immediate_supervisor: vi.immediate_supervisor ?? f.immediate_supervisor,
-      status: f.status || "Open",
+      section: "",
       vacancies: "",
     }));
+    setAvailableSteps([]);
+    setResolvedOffice({ type: "", name: "", divisionName: "" });
+  };
+
+  const handleTitleChange = (title) => {
+    setSelectedTitle(title);
+    resetItemSelection();
   };
 
   const applyItemNumber = (slotId) => {
-    const slot = availableSlots.find((s) => String(s.id) === String(slotId));
-    if (!slot) {
-      setForm((f) => ({
-        ...f,
-        position_slot_names: [],
-        plantilla_position_ids: [],
-        vacancies: "",
-      }));
+    const found = findVacantItemBySlotId(selectableVacantItems, slotId);
+    if (!found) {
+      resetItemSelection();
       return;
     }
+    const { vacantItem: vi, slot } = found;
+
+    setAvailableSteps(vi.step_increments ?? []);
+    setResolvedOffice({
+      type: vi.office_type ?? "",
+      name: vi.office_name ?? "",
+      divisionName: vi.division_name ?? "",
+    });
     setForm((f) => ({
       ...f,
+      base_item_number: vi.base_item_number,
       position_slot_names: [slot.position_slot_name],
       plantilla_position_ids: [slot.id],
-      salary_grade_id: slot.salary_grade_id ?? f.salary_grade_id,
-      step_increment_id: slot.step_increment_id ?? f.step_increment_id,
+      title: vi.title || f.title,
+      display_department_id: vi.display_department_id ?? "",
+      display_division_id: vi.display_division_id ?? "",
+      section: vi.office_type === "SECTION" ? (vi.office_name ?? "") : "",
+      salary_grade_id: slot.salary_grade_id ?? vi.salary_grade_id ?? "",
+      step_increment_id: slot.step_increment_id ?? vi.step_increment_id ?? "",
       monthly_salary: formatSalaryNumber(
-        slot.monthly_salary ?? f.monthly_salary,
+        slot.monthly_salary ?? vi.monthly_salary ?? null,
       ),
-      annual_salary: formatSalaryNumber(slot.annual_salary ?? f.annual_salary),
+      annual_salary: formatSalaryNumber(
+        slot.annual_salary ?? vi.annual_salary ?? null,
+      ),
+      immediate_supervisor: vi.immediate_supervisor ?? f.immediate_supervisor,
+      status: f.status || "Open",
       vacancies: "1",
     }));
   };
@@ -211,19 +220,16 @@ export function CreatePostingDialog({
         <FormSection title="Source Plantilla Item">
           <Label required>Position Title</Label>
           <Select
-            value={form.base_item_number}
-            onChange={applyVacantItem}
-            options={selectableVacantItems.map((v) => ({
-              value: v.base_item_number,
-              label: v.title,
-            }))}
-            placeholder="Select a vacant plantilla item"
+            value={selectedTitle}
+            onChange={handleTitleChange}
+            options={positionTitleOptions}
+            placeholder="Select a position title"
           />
           <p className="mt-1 text-[11px] text-slate-400">
             Only items with at least one VACANT slot and no existing posting are
-            listed.
+            listed, one entry per title. Pick the Item Number below (under
+            Position Details) to load the specific item's details.
           </p>
-          <FieldError>{errors.base_item_number}</FieldError>
         </FormSection>
 
         <PostingForm
@@ -234,11 +240,15 @@ export function CreatePostingDialog({
           salaryGrades={salaryGrades}
           stepLabel={stepLabel}
           statusLabel="Open"
-          itemNumberOptions={availableSlots.map((s) => ({
-            value: s.id,
-            label: s.position_slot_name,
-          }))}
+          officeType={resolvedOffice.type}
+          departmentDisplayName={resolvedOffice.name}
+          divisionDisplayName={resolvedOffice.divisionName}
+          itemNumberOptions={itemNumberOptions}
           itemNumberEditable
+          itemNumberDisabled={!selectedTitle}
+          slotNameHelpText={
+            selectedTitle ? undefined : "Select a position title above first."
+          }
           onItemNumberChange={applyItemNumber}
           onFieldChange={handleFieldChange}
           onMonthlySalaryChange={handleMonthlySalaryChange}

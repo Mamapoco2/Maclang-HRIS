@@ -1,7 +1,7 @@
 import React from "react";
 import { Input, Label, FieldError, Switch, Select } from "../ui";
 import { DOC_KEYS } from "../constants";
-import { formatDateSlash } from "./postingHelpers";
+import { formatDateSlash, officeTypeLabel } from "./postingHelpers";
 
 function CurrencyInput({ value, onChange, onBlur }) {
   return (
@@ -50,9 +50,13 @@ export function PostingForm({
   salaryGrades,
   stepLabel,
   statusLabel,
+  officeType,
+  departmentDisplayName,
+  divisionDisplayName,
   slotNameHelpText,
   itemNumberOptions = [],
   itemNumberEditable = false,
+  itemNumberDisabled = false,
   onItemNumberChange,
   onFieldChange,
   onMonthlySalaryChange,
@@ -62,12 +66,17 @@ export function PostingForm({
   onDocChange,
   canViewClosingDate = false,
 }) {
-  const divisionName =
-    divisions.find((d) => String(d.id) === String(form.display_division_id))
-      ?.name || "—";
+  const officeLabel = officeTypeLabel(officeType);
   const departmentName =
+    departmentDisplayName ||
     departments.find((d) => String(d.id) === String(form.display_department_id))
-      ?.name || "—";
+      ?.name ||
+    "—";
+  const divisionName =
+    divisionDisplayName ||
+    divisions.find((d) => String(d.id) === String(form.display_division_id))
+      ?.name ||
+    "—";
   const salaryGradeLabel = (() => {
     const sg = salaryGrades.find(
       (s) => String(s.id) === String(form.salary_grade_id),
@@ -86,7 +95,12 @@ export function PostingForm({
                 value={form.plantilla_position_ids?.[0] ?? ""}
                 onChange={onItemNumberChange}
                 options={itemNumberOptions}
-                placeholder="Select an item number"
+                placeholder={
+                  itemNumberDisabled
+                    ? "Select a position title first"
+                    : "Select an item number"
+                }
+                disabled={itemNumberDisabled}
               />
             ) : (
               <ReadOnlyField>
@@ -99,16 +113,12 @@ export function PostingForm({
             <FieldError>{errors.position_slot_names}</FieldError>
           </div>
           <div>
-            <Label>Department</Label>
-            <ReadOnlyField>{departmentName}</ReadOnlyField>
-          </div>
-          <div>
             <Label>Division</Label>
             <ReadOnlyField>{divisionName}</ReadOnlyField>
           </div>
           <div>
-            <Label>Section</Label>
-            <ReadOnlyField>{form.section || "—"}</ReadOnlyField>
+            <Label>{officeLabel}</Label>
+            <ReadOnlyField>{departmentName}</ReadOnlyField>
           </div>
           <div>
             <Label>Immediate Supervisor</Label>
