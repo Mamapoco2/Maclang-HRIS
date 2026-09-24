@@ -84,9 +84,19 @@ export function PositionsSubTable({ item, onRefresh }) {
                       </TableCell>
 
                       <TableCell className="text-sm text-slate-600 text-center uppercase">
-                        {pos.position_title ?? item.title ?? (
-                          <span className="text-slate-300 text-xs">—</span>
-                        )}
+                        <span className="inline-flex items-center gap-1.5">
+                          {pos.position_title ?? item.title ?? (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                          {pos.cti === "YES" && (
+                            <span
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-violet-50 text-violet-600 border-violet-200 normal-case"
+                              title="Co-Terminus with the Incumbent"
+                            >
+                              CTI
+                            </span>
+                          )}
+                        </span>
                       </TableCell>
 
                       <TableCell className="text-sm text-slate-600 text-center font-mono uppercase">

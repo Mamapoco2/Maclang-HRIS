@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getUsers,
   activateUser,
@@ -16,27 +16,42 @@ export default function UsersTable() {
   const [bulkActivating, setBulkActivating] = useState(false);
   const [search, setSearch] = useState("");
 
-  const loadUsers = async (resetSelected = false) => {
+  const requestId = useRef(0);
+
+  const loadUsers = useCallback(async (resetSelected = false) => {
+    const myRequest = ++requestId.current;
     try {
       const data = await getUsers();
+      if (myRequest !== requestId.current) return;
       setUsers(data);
       if (resetSelected) setSelected([]);
     } finally {
-      setLoading(false);
+      if (myRequest === requestId.current) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadUsers(true);
     const echo = getEcho();
     if (!echo) return;
     const channel = echo.private("pending-users");
-    channel.listen(".user.registered", () => loadUsers(false));
-    channel.listen(".user.activated", () => loadUsers(false));
+
+    let debounceTimer = null;
+    const refetchDebounced = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => loadUsers(false), 300);
+    };
+
+    channel.listen(".user.registered", refetchDebounced);
+    channel.listen(".user.activated", refetchDebounced);
+
     return () => {
+      clearTimeout(debounceTimer);
+      channel.stopListening(".user.registered", refetchDebounced);
+      channel.stopListening(".user.activated", refetchDebounced);
       echo.leave("pending-users");
     };
-  }, []);
+  }, [loadUsers]);
 
   const handleActivate = async (id) => {
     setActivatingId(id);
@@ -70,11 +85,14 @@ export default function UsersTable() {
   const allSelected = users.length > 0 && selected.length === users.length;
   const someSelected = selected.length > 0 && !allSelected;
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.username?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredUsers = useMemo(() => {
+    const needle = search.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.username?.toLowerCase().includes(needle) ||
+        u.email?.toLowerCase().includes(needle),
+    );
+  }, [users, search]);
 
   if (loading) {
     return (

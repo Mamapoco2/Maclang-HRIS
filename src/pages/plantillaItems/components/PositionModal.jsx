@@ -29,7 +29,7 @@ import {
   plantillaPositionService,
   plantillaPositionService as plantillaItemService,
 } from "@/services/plantillaService";
-import { positionDefaults } from "../helpers/constants";
+import { CTI_OPTIONS, positionDefaults } from "../helpers/constants";
 import {
   fetchAllUnits,
   parseDisplayTarget,
@@ -38,7 +38,13 @@ import {
 import { HierarchyTargetField } from "./HierarchyTargetField";
 import { RoleField } from "./RoleField";
 
-export function PositionModal({ open, onOpenChange, item, position, onSuccess }) {
+export function PositionModal({
+  open,
+  onOpenChange,
+  item,
+  position,
+  onSuccess,
+}) {
   const form = useForm({ defaultValues: positionDefaults });
 
   const [salaryGrades, setSalaryGrades] = useState([]);
@@ -81,6 +87,7 @@ export function PositionModal({ open, onOpenChange, item, position, onSuccess })
         step_increment_id: String(position.step_increment_id ?? ""),
         date_of_assumption: position.date_of_assumption ?? "",
         role: position.role ?? "",
+        cti: position.cti ?? "NOT_SPECIFIED",
         display_target: buildDisplayTarget(position),
       });
 
@@ -133,6 +140,7 @@ export function PositionModal({ open, onOpenChange, item, position, onSuccess })
           : null,
         date_of_assumption: data.date_of_assumption || null,
         role: data.role || null,
+        cti: data.cti || "NOT_SPECIFIED",
         ...parseDisplayTarget(data.display_target),
       });
       toast.success(`Slot ${position.slot_number} updated.`);
@@ -188,6 +196,11 @@ export function PositionModal({ open, onOpenChange, item, position, onSuccess })
                 {position?.role && (
                   <p className="text-xs text-emerald-700 font-semibold uppercase">
                     Role: {position.role}
+                  </p>
+                )}
+                {position?.cti === "YES" && (
+                  <p className="text-xs text-emerald-700 font-semibold uppercase">
+                    CTI: Yes
                   </p>
                 )}
                 {position?.display_department?.name && (
@@ -353,7 +366,44 @@ export function PositionModal({ open, onOpenChange, item, position, onSuccess })
                           (optional)
                         </span>
                       </FormLabel>
-                      <RoleField value={field.value} onChange={field.onChange} />
+                      <RoleField
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cti"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                        Co-Terminus with the Incumbent (CTI)?
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="text-sm border-gray-200">
+                            <SelectValue placeholder="Select CTI status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {CTI_OPTIONS.map((opt) => (
+                            <SelectItem
+                              key={opt.value}
+                              value={opt.value}
+                              className="pl-3 [&>span:first-child]:hidden"
+                            >
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )}

@@ -60,6 +60,11 @@ export const ROLE_OPTIONS = [
   "STAFF",
 ];
 
+export const CTI_OPTIONS = [
+  { value: "YES", label: "Yes" },
+  { value: "NOT_SPECIFIED", label: "Not Specified" },
+];
+
 // ─── Pagination ─────────────────────────────────────────────────────────────
 export const PAGE_SIZE = 15;
 
@@ -80,6 +85,7 @@ export const positionDefaults = {
   step_increment_id: "",
   date_of_assumption: "",
   role: "",
+  cti: "NOT_SPECIFIED",
   display_target: "",
 };
 

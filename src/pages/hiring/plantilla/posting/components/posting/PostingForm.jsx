@@ -1,7 +1,14 @@
 import React from "react";
-import { Input, Label, FieldError, Switch, Select } from "../ui";
+import { Input, Label, FieldError, Switch, Select, MultiCombobox } from "../ui";
 import { DOC_KEYS } from "../constants";
 import { formatDateSlash, officeTypeLabel } from "./postingHelpers";
+import {
+  QUALIFICATION_EDUCATION_OPTIONS,
+  QUALIFICATION_EXPERIENCE_OPTIONS,
+  QUALIFICATION_TRAINING_OPTIONS,
+  QUALIFICATION_ELIGIBILITY_OPTIONS,
+  QUALIFICATION_COMPETENCY_OPTIONS,
+} from "./qualificationStandardsData";
 
 function CurrencyInput({ value, onChange, onBlur }) {
   return (
@@ -162,47 +169,47 @@ export function PostingForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label>Education</Label>
-            <Input
+            <MultiCombobox
               value={form.qualification_education}
-              onChange={(e) =>
-                onFieldChange("qualification_education", e.target.value)
-              }
+              onChange={(v) => onFieldChange("qualification_education", v)}
+              options={QUALIFICATION_EDUCATION_OPTIONS}
+              placeholder="Select or type education requirement"
             />
           </div>
           <div>
             <Label>Experience</Label>
-            <Input
+            <MultiCombobox
               value={form.qualification_experience}
-              onChange={(e) =>
-                onFieldChange("qualification_experience", e.target.value)
-              }
+              onChange={(v) => onFieldChange("qualification_experience", v)}
+              options={QUALIFICATION_EXPERIENCE_OPTIONS}
+              placeholder="Select or type experience requirement"
             />
           </div>
           <div>
             <Label>Training</Label>
-            <Input
+            <MultiCombobox
               value={form.qualification_training}
-              onChange={(e) =>
-                onFieldChange("qualification_training", e.target.value)
-              }
+              onChange={(v) => onFieldChange("qualification_training", v)}
+              options={QUALIFICATION_TRAINING_OPTIONS}
+              placeholder="Select or type training requirement"
             />
           </div>
           <div>
             <Label>Eligibility</Label>
-            <Input
+            <MultiCombobox
               value={form.qualification_eligibility}
-              onChange={(e) =>
-                onFieldChange("qualification_eligibility", e.target.value)
-              }
+              onChange={(v) => onFieldChange("qualification_eligibility", v)}
+              options={QUALIFICATION_ELIGIBILITY_OPTIONS}
+              placeholder="Select or type eligibility requirement"
             />
           </div>
           <div className="sm:col-span-2">
             <Label>Competency</Label>
-            <Input
+            <MultiCombobox
               value={form.qualification_competency}
-              onChange={(e) =>
-                onFieldChange("qualification_competency", e.target.value)
-              }
+              onChange={(v) => onFieldChange("qualification_competency", v)}
+              options={QUALIFICATION_COMPETENCY_OPTIONS}
+              placeholder="Select or type competency requirement"
             />
           </div>
         </div>
