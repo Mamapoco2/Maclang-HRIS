@@ -3,7 +3,6 @@ import { BASE_POSITION_HEADERS, PAGE_SIZE } from "./constants";
 
 // ─── Item list ──────────────────────────────────────────────────────────────
 
-/** Sorts plantilla items by base_item_number (numeric when possible). */
 export function sortItems(items) {
   return [...items].sort((a, b) => {
     const numA = Number(a.base_item_number);
@@ -14,7 +13,6 @@ export function sortItems(items) {
   });
 }
 
-/** Filters items by title / item number against a free-text search query. */
 export function filterItemsBySearch(items, search) {
   const q = search.trim().toLowerCase();
   if (!q) return items;
@@ -25,7 +23,6 @@ export function filterItemsBySearch(items, search) {
   );
 }
 
-/** Aggregates the four stat-card totals (items / filled / vacant / unfilled). */
 export function computeItemStats(items) {
   const all = items.flatMap((i) => i.positions ?? []);
   return {
@@ -36,18 +33,12 @@ export function computeItemStats(items) {
   };
 }
 
-/** Normalized status key for a position (falls back to computed_status). */
 export function getStatus(position) {
   return (position?.computed_status ?? position?.status ?? "").toUpperCase();
 }
 
 // ─── Pagination ─────────────────────────────────────────────────────────────
 
-/**
- * Computes the paginated slice + page metadata for a sorted list. Page is
- * clamped to the valid range so a stale `page` (e.g. after a filter
- * shrinks the list) never produces an out-of-bounds slice.
- */
 export function getPagination(sortedItems, page, pageSize = PAGE_SIZE) {
   const totalPages = Math.max(1, Math.ceil(sortedItems.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -58,7 +49,6 @@ export function getPagination(sortedItems, page, pageSize = PAGE_SIZE) {
   return { totalPages, safePage, paginated };
 }
 
-/** Builds the "1 … 4 5 [6] 7 8 … 12" page-number list used by Pagination. */
 export function buildPageList(totalPages, safePage) {
   return Array.from({ length: totalPages }, (_, i) => i + 1)
     .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
@@ -71,12 +61,10 @@ export function buildPageList(totalPages, safePage) {
 
 // ─── Positions sub-table ────────────────────────────────────────────────────
 
-/** Whether any position in the item has a recorded step increment. */
 export function itemHasSteps(positions = []) {
   return positions.some((p) => !!p.step_increment?.step);
 }
 
-/** Column headers for the positions sub-table, with/without the Step column. */
 export function getPositionHeaders(showStep) {
   if (!showStep) return BASE_POSITION_HEADERS;
   return [
@@ -90,11 +78,6 @@ export function getPositionHeaders(showStep) {
   ];
 }
 
-/**
- * Finds the most common (salary grade, step) pairing already configured
- * across an item's slots, so "Add Slot" can default new slots to match —
- * returns null when no slot has both fields set yet.
- */
 export function resolveInheritedConfig(positions = []) {
   const configured = positions.filter(
     (p) => p.salary_grade_id && p.step_increment_id,
@@ -126,7 +109,6 @@ export function resolveInheritedConfig(positions = []) {
 
 // ─── Directorate / Division / Department hierarchy ─────────────────────────
 
-/** Fetches divisions + departments and tags departments with type: "DEPARTMENT". */
 export async function fetchAllUnits() {
   const [divRes, deptRes] = await Promise.all([
     api.get("/divisions"),
@@ -134,18 +116,17 @@ export async function fetchAllUnits() {
   ]);
   const divData = divRes.data;
   const deptData = deptRes.data;
-  const divisions = Array.isArray(divData) ? divData : (divData.data ?? []);
+  const divisions = (
+    Array.isArray(divData) ? divData : (divData.data ?? [])
+  ).map((d) => ({ ...d, kind: "division" }));
   const departments = (
     Array.isArray(deptData) ? deptData : (deptData.data ?? [])
-  ).map((d) => ({ ...d, type: "DEPARTMENT" }));
+  ).map((d) => ({ ...d, kind: "department" }));
   return [...divisions, ...departments];
 }
 
 export function unitValue(unit) {
-  const prefix =
-    (unit?.type ?? "").toUpperCase() === "DEPARTMENT"
-      ? "department"
-      : "division";
+  const prefix = unit?.kind === "department" ? "department" : "division";
   return `${prefix}:${unit.id}`;
 }
 
@@ -166,7 +147,6 @@ export function buildDisplayTarget({
   return "";
 }
 
-/** Resolves the Directorate/Division a department belongs to, if any. */
 export function resolveUnitForDepartment(dept) {
   if (dept?.division) {
     return {
@@ -180,7 +160,6 @@ export function resolveUnitForDepartment(dept) {
   return null;
 }
 
-/** Filters a department list down to those belonging to the given unit. */
 export function departmentsUnderUnit(departmentUnits, unit) {
   if (!unit) return departmentUnits;
   return departmentUnits.filter(

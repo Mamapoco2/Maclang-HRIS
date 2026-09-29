@@ -10,17 +10,18 @@ import {
   CheckCircle2,
   FileText,
 } from "lucide-react";
-import { Button, DrawerPanel } from "./ui";
+import { Button, DrawerPanel, normalizeQualificationDisplay } from "./ui";
 import { StatusBadge } from "./TableParts";
 import { DOC_KEYS } from "./constants";
 import { formatCurrency, formatDate } from "./utils";
+import { officeTypeLabel } from "./posting/postingHelpers";
 
 export function Section({ title, icon: Icon, children }) {
   return (
     <div>
-      <div className="mb-2 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-slate-400" />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className="mb-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-inset ring-slate-200">
+        <Icon className="h-4 w-4 text-indigo-500" />
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
           {title}
         </h3>
       </div>
@@ -37,7 +38,7 @@ export function InfoGrid({ rows, stacked }) {
       {rows.map(([label, value]) => (
         <div key={label}>
           <dt className="text-xs text-slate-400">{label}</dt>
-          <dd className="text-slate-700">{value}</dd>
+          <dd className="whitespace-pre-wrap text-slate-700">{value}</dd>
         </div>
       ))}
     </dl>
@@ -93,18 +94,20 @@ export function ViewDrawer({
                 item.positionSlotNames?.[0] || item.baseItemNumber,
               ],
               ["Salary Grade", item.salaryGrade],
+              [
+                "Step",
+                item.stepIncrement ? `Step ${item.stepIncrement.step}` : "—",
+              ],
               ["Monthly Salary", formatCurrency(item.monthlySalary)],
               ["Employment Status", item.employmentStatus],
-              // ["Vacancy Count", item.vacantSlots ?? item.vacancies],
             ]}
           />
         </Section>
         <Section title="Assignment" icon={Building2}>
           <InfoGrid
             rows={[
-              ["Office", item.office],
               ["Division", item.division],
-              ["Section", item.section || "—"],
+              [officeTypeLabel(item.officeType), item.office],
               ["Immediate Supervisor", item.immediateSupervisor],
             ]}
           />
@@ -113,18 +116,34 @@ export function ViewDrawer({
           <InfoGrid
             stacked
             rows={[
-              ["Education", item.qualifications.education || "—"],
-              ["Experience", item.qualifications.experience || "—"],
-              ["Training", item.qualifications.training || "—"],
-              ["Eligibility", item.qualifications.eligibility || "—"],
-              ["Competency", item.qualifications.competency || "—"],
+              [
+                "Education",
+                normalizeQualificationDisplay(item.qualifications.education) ||
+                  "—",
+              ],
+              [
+                "Experience",
+                normalizeQualificationDisplay(item.qualifications.experience) ||
+                  "—",
+              ],
+              [
+                "Training",
+                normalizeQualificationDisplay(item.qualifications.training) ||
+                  "—",
+              ],
+              [
+                "Eligibility",
+                normalizeQualificationDisplay(
+                  item.qualifications.eligibility,
+                ) || "—",
+              ],
+              [
+                "Competency",
+                normalizeQualificationDisplay(item.qualifications.competency) ||
+                  "—",
+              ],
             ]}
           />
-        </Section>
-        <Section title="Job Description" icon={ClipboardList}>
-          <div className="max-h-40 overflow-y-auto rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-600">
-            {item.jobDescription}
-          </div>
         </Section>
         <Section title="Required Documents" icon={Award}>
           <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -158,10 +177,6 @@ export function ViewDrawer({
                     : item.applicationDeadline,
                 ),
               ],
-              // [
-              //   "Expected Appointment Date",
-              //   formatDate(item.expectedAppointmentDate),
-              // ],
             ]}
           />
         </Section>

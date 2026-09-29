@@ -31,9 +31,22 @@ export const TYPE_BADGE = {
   DIRECTORATE: "bg-purple-100 text-purple-700",
   DIVISION: "bg-teal-100 text-teal-700",
   DEPARTMENT: "bg-blue-100 text-blue-700",
+  SECTION: "bg-amber-100 text-amber-700",
+  UNIT: "bg-emerald-100 text-emerald-700",
+  CLUSTER: "bg-rose-100 text-rose-700",
 };
 
-export const DEPT_TYPES = ["OFFICE", "DIRECTORATE", "DIVISION", "DEPARTMENT"];
+export const DEPT_TYPES = [
+  "OFFICE",
+  "DIRECTORATE",
+  "DIVISION",
+  "DEPARTMENT",
+  "SECTION",
+  "UNIT",
+  "CLUSTER",
+];
+
+export const OFFICE_TYPES = ["DEPARTMENT", "SECTION", "UNIT", "CLUSTER"];
 
 // ─── Dropdown option lists ──────────────────────────────────────────────────
 export const ROLE_OPTIONS = [
@@ -45,6 +58,11 @@ export const ROLE_OPTIONS = [
   "HEAD",
   "SUPERVISOR",
   "STAFF",
+];
+
+export const CTI_OPTIONS = [
+  { value: "YES", label: "Yes" },
+  { value: "NOT_SPECIFIED", label: "Not Specified" },
 ];
 
 // ─── Pagination ─────────────────────────────────────────────────────────────
@@ -67,6 +85,7 @@ export const positionDefaults = {
   step_increment_id: "",
   date_of_assumption: "",
   role: "",
+  cti: "NOT_SPECIFIED",
   display_target: "",
 };
 

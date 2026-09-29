@@ -30,9 +30,6 @@ export function addDays(dateStr, days) {
   return toDateString(date);
 }
 
-// Public-facing deadline for applicants to submit an application — always
-// 15 days after the posting date. Separate from `closing_date`, which is
-// the internal (HR/SuperAdmin-only) reservation window.
 export const APPLICATION_DEADLINE_DAYS = 15;
 
 export function computeApplicationDeadline(postingDateStr) {
@@ -44,6 +41,18 @@ export function formatDateSlash(dateStr) {
   const [y, m, d] = dateStr.split("-");
   if (!y || !m || !d) return "—";
   return `${m}/${d}/${y}`;
+}
+
+// ── Office type label (Department / Section / Unit / Cluster) ──────────
+const OFFICE_TYPE_LABELS = {
+  DEPARTMENT: "Department",
+  SECTION: "Section",
+  UNIT: "Unit",
+  CLUSTER: "Cluster",
+};
+
+export function officeTypeLabel(type) {
+  return OFFICE_TYPE_LABELS[(type || "").toUpperCase()] ?? "Department";
 }
 
 // ── Slot name display ───────────────────────────────────────────────────
@@ -70,14 +79,6 @@ export function formatPositionSlotNumbers(item) {
 
 // ── Create-mode vacant item filtering ───────────────────────────────────
 
-/**
- * Base item numbers with a currently-ACTIVE posting — mirrors the backend's
- * `PlantillaPostingRepository::activePostingSlotIds()` definition: an
- * active posting is one that isn't soft-deleted, isn't status "Closed",
- * and hasn't passed its closing date. Postings the backend already treats
- * as re-postable (Closed, or past closing_date) must NOT show up here,
- * or this set would block items the backend would otherwise allow.
- */
 export function extractPostedBaseItemNumbers(postings) {
   const today = getTodayDateString();
   return new Set(
@@ -94,16 +95,6 @@ export function extractPostedBaseItemNumbers(postings) {
   );
 }
 
-/**
- * Vacant items eligible to be selected in the "New Posting" dropdown.
- *
- * `postedBaseItemNumbers` is an optional defensive filter: it's a snapshot
- * of base item numbers with a currently-active posting, fetched
- * independently of `vacantItems`. Since `vacantItems` is only refetched
- * after create/delete actions (not on every dialog open), this guards
- * against a stale `vacantItems` list momentarily showing an item that
- * another admin just posted in the meantime.
- */
 export function filterSelectableVacantItems(
   vacantItems,
   postedBaseItemNumbers,
@@ -127,6 +118,44 @@ export function getSelectableSlots(vacantItem) {
   return (vacantItem?.slots ?? []).filter(
     (s) => (s.status || "").toLowerCase() !== "filled",
   );
+}
+
+export function getPositionTitleOptions(selectableVacantItems) {
+  const seen = new Set();
+  const options = [];
+  for (const v of selectableVacantItems ?? []) {
+    if (!v.title || seen.has(v.title)) continue;
+    seen.add(v.title);
+    options.push({ value: v.title, label: v.title });
+  }
+  return options;
+}
+
+export function getSlotOptionsForTitle(selectableVacantItems, title) {
+  if (!title) return [];
+  const options = [];
+  for (const v of selectableVacantItems ?? []) {
+    if (v.title !== title) continue;
+    for (const slot of getSelectableSlots(v)) {
+      options.push({
+        value: slot.id,
+        label: slot.position_slot_name,
+        baseItemNumber: v.base_item_number,
+      });
+    }
+  }
+  return options;
+}
+
+export function findVacantItemBySlotId(selectableVacantItems, slotId) {
+  if (!slotId && slotId !== 0) return null;
+  for (const v of selectableVacantItems ?? []) {
+    const slot = getSelectableSlots(v).find(
+      (s) => String(s.id) === String(slotId),
+    );
+    if (slot) return { vacantItem: v, slot };
+  }
+  return null;
 }
 
 // ── Salary formatting (thousand separators, peso display, live typing) ───
@@ -214,10 +243,6 @@ export function validatePostingForm(form, { mode, canViewClosingDate = true }) {
     errors.application_deadline =
       "Application deadline cannot be earlier than posting date.";
 
-  // Closing Date is only ever rendered (and therefore only ever
-  // user-facing) for HR/SuperAdmin — skip validating it for anyone else,
-  // since the field isn't on their form and the backend preserves the
-  // existing value server-side for them regardless.
   if (canViewClosingDate) {
     if (!form.closing_date) errors.closing_date = "Closing date is required.";
     if (
@@ -247,6 +272,9 @@ export function buildSavePayload(form, mode) {
   if (mode === "edit") {
     delete payload.plantilla_position_ids;
   }
+  delete payload.office_type;
+  delete payload.office_name;
+  delete payload.division_name;
   return payload;
 }
 
@@ -315,6 +343,9 @@ export function buildEditFormFromRecord(d) {
     display_department_id: d.officeId ?? "",
     display_division_id: d.divisionId ?? "",
     section: d.section,
+    office_type: d.officeType ?? "",
+    office_name: d.office && d.office !== "—" ? d.office : "",
+    division_name: d.division && d.division !== "—" ? d.division : "",
     salary_grade_id: d.salaryGradeId ?? "",
     step_increment_id: d.stepIncrementId ?? "",
     monthly_salary: formatSalaryNumber(resolvedMonthly),
@@ -331,11 +362,6 @@ export function buildEditFormFromRecord(d) {
     date_posted: d.datePosted,
     application_deadline:
       d.applicationDeadline || computeApplicationDeadline(d.datePosted),
-    // Falls back to a freshly-computed default when the current user can't
-    // see the real value (backend hides it for non-HR/SuperAdmin) — the
-    // Closing Date field itself is hidden from them in the form too, and
-    // the backend ignores this value for their role anyway (see
-    // PlantillaPostingService::update()).
     closing_date: d.closingDate || computeClosingDate(d.datePosted),
     expected_appointment_date: d.expectedAppointmentDate || "",
     status: d.status,

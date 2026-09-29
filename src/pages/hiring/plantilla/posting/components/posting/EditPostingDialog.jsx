@@ -127,6 +127,9 @@ export function EditPostingDialog({
           salaryGrades={salaryGrades}
           stepLabel={stepLabel}
           statusLabel={form.status || "—"}
+          officeType={form.office_type}
+          departmentDisplayName={form.office_name}
+          divisionDisplayName={form.division_name}
           slotNameHelpText="Fixed at the time this posting was created. Never editable."
           onFieldChange={handleFieldChange}
           onMonthlySalaryChange={handleMonthlySalaryChange}

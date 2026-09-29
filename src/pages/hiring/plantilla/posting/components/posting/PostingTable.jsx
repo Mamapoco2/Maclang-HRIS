@@ -59,7 +59,7 @@ export function PostingTable({
                   {formatPositionSlotNumbers(it)}
                 </TableCell>
 
-                <TableCell className="max-w-[220px] truncate font-medium text-slate-900">
+                <TableCell className="max-w-[260px] whitespace-normal break-words font-medium text-slate-900">
                   {it.positionTitle}
                 </TableCell>
 

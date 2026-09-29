@@ -26,8 +26,9 @@ export function normalisePosting(p) {
     positionTitle: p.title,
     officeId: p.display_department_id,
     office: p.department?.name || "—",
+    officeType: p.department?.type || "",
     divisionId: p.display_division_id,
-    division: p.division?.name || "—",
+    division: p.department?.division?.name || p.division?.name || "—",
     section: p.section || "",
     salaryGradeId: p.salary_grade_id,
     salaryGrade: p.salary_grade?.salary_grade
@@ -49,8 +50,6 @@ export function normalisePosting(p) {
     remainingVacancies: p.remaining_vacancies,
     datePosted: p.date_posted,
     applicationDeadline: p.application_deadline,
-    // Undefined for anyone who isn't HR/SuperAdmin — the backend strips
-    // this field from the response entirely for other roles.
     closingDate: p.closing_date,
     expectedAppointmentDate: p.expected_appointment_date,
     status: p.effective_status || p.status,
