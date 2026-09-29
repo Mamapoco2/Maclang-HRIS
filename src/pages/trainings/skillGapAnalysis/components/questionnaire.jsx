@@ -20,20 +20,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  "clinical",
-  "administrative",
-  "technical",
-  "soft",
-  "compliance",
-];
-
-const WEIGHT_BADGE = {
-  1: "bg-gray-100 text-gray-500",
-  2: "bg-sky-100 text-sky-700",
-  3: "bg-rose-100 text-rose-700",
-};
-const WEIGHT_LABEL = { 1: "Low", 2: "Medium", 3: "Critical" };
+const CATEGORIES = Object.keys(CATEGORY_LABELS);
 
 const SCORE_COLORS = [
   "",
@@ -90,7 +77,7 @@ function RecColumn({ icon, title, items, color }) {
 
 /** Inline gap panel shown directly under a skill row when score ≤ 3 */
 function GapPanel({ skill, score }) {
-  const rec = RECOMMENDATIONS.find((r) => r.skillId === skill.id);
+  const rec = RECOMMENDATIONS[skill.category];
   if (!rec) return null;
 
   return (
@@ -280,13 +267,8 @@ export default function Questionnaire({
                           <p className="font-medium text-gray-900">
                             {skill.name}
                           </p>
-                          <span
-                            className={cn(
-                              "text-[10px] px-2 py-0.5 rounded-full font-semibold",
-                              WEIGHT_BADGE[skill.weight],
-                            )}
-                          >
-                            {WEIGHT_LABEL[skill.weight]}
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-500">
+                            Q{skill.no}
                           </span>
                         </div>
                         <p className="text-gray-500 text-sm">
@@ -413,8 +395,8 @@ export default function Questionnaire({
               <p className="text-sky-800 text-sm">
                 <strong>Next steps:</strong> Share this assessment with your
                 supervisor during your next performance review or Individual
-                Development Plan (IDP) session. Prioritise closing gaps marked{" "}
-                <strong>Critical</strong> first.
+                Development Plan (IDP) session. Focus on the 3–5 areas with your
+                lowest scores.
               </p>
             </CardContent>
           </Card>

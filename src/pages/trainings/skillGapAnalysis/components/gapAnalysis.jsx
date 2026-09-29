@@ -24,14 +24,7 @@ const SCORE_COLORS = [
   "bg-lime-500",
   "bg-emerald-500",
 ];
-const SCORE_LABELS = [
-  "",
-  "Beginner",
-  "Basic",
-  "Developing",
-  "Proficient",
-  "Expert",
-];
+const SCORE_LABELS = ["", "Very Poor", "Poor", "Fair", "Good", "Excellent"];
 
 function getProgressColor(score) {
   if (score <= 1) return "bg-red-400";
@@ -73,10 +66,10 @@ export default function GapAnalysis({ scores, employeeName, department }) {
           <StatBox
             label="Avg Score"
             value={avgScore.toFixed(1)}
-            sub="out of 5"
+            sub={SCORE_LABELS[Math.round(avgScore)] || "out of 5"}
           />
           <StatBox
-            label="Skills Rated"
+            label="Items Rated"
             value={`${rated.length}`}
             sub={`of ${SKILLS.length}`}
           />
@@ -130,14 +123,15 @@ export default function GapAnalysis({ scores, employeeName, department }) {
               <CardTitle>Identified Skill Gaps ({gapSkills.length})</CardTitle>
             </div>
             <p className="text-gray-500 text-sm mt-1">
-              Skills rated 3 or below — priority development areas
+              Rated 3 (Fair) or below — priority development areas, lowest
+              scores first
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {gapSkills
+            {[...gapSkills]
               .sort((a, b) => scores[a.id] - scores[b.id])
               .map((skill) => {
-                const rec = RECOMMENDATIONS.find((r) => r.skillId === skill.id);
+                const rec = RECOMMENDATIONS[skill.category];
                 const score = scores[skill.id];
                 return (
                   <div
@@ -146,54 +140,72 @@ export default function GapAnalysis({ scores, employeeName, department }) {
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
-                        <p className="font-semibold text-gray-900">
-                          {skill.name}
-                        </p>
-                        <p className="text-gray-500 text-xs mt-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-gray-900">
+                            <span className="text-gray-400 font-normal">
+                              Q{skill.no}
+                            </span>{" "}
+                            {skill.name}
+                          </p>
+                          <span
+                            className={cn(
+                              "text-xs font-semibold px-2 py-0.5 rounded-full border",
+                              CATEGORY_COLORS[skill.category],
+                            )}
+                          >
+                            {CATEGORY_LABELS[skill.category]}
+                          </span>
+                        </div>
+                        <p className="text-gray-500 text-xs mt-1">
                           {skill.description}
                         </p>
                       </div>
-                      <span
-                        className={cn(
-                          "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm",
-                          SCORE_COLORS[score],
-                        )}
-                      >
-                        {score}
-                      </span>
+                      <div className="shrink-0 text-center">
+                        <span
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm",
+                            SCORE_COLORS[score],
+                          )}
+                        >
+                          {score}
+                        </span>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          {SCORE_LABELS[score]}
+                        </p>
+                      </div>
                     </div>
                     {rec && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
-                        <RecColumn
-                          icon={<BookOpen className="w-3.5 h-3.5" />}
-                          title="L&D Actions"
-                          items={rec.actions}
-                          color="text-sky-600"
-                        />
-                        <RecColumn
-                          icon={<TrendingUp className="w-3.5 h-3.5" />}
-                          title="Resources"
-                          items={rec.resources}
-                          color="text-violet-600"
-                        />
-                        <RecColumn
-                          icon={<Users className="w-3.5 h-3.5" />}
-                          title="Manager Support"
-                          items={rec.managerSupport}
-                          color="text-teal-600"
-                        />
-                      </div>
-                    )}
-                    {rec && (
-                      <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>
-                          Suggested timeline:{" "}
-                          <strong className="text-gray-700">
-                            {rec.timeline}
-                          </strong>
-                        </span>
-                      </div>
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
+                          <RecColumn
+                            icon={<BookOpen className="w-3.5 h-3.5" />}
+                            title="L&D Actions"
+                            items={rec.actions}
+                            color="text-sky-600"
+                          />
+                          <RecColumn
+                            icon={<TrendingUp className="w-3.5 h-3.5" />}
+                            title="Resources"
+                            items={rec.resources}
+                            color="text-violet-600"
+                          />
+                          <RecColumn
+                            icon={<Users className="w-3.5 h-3.5" />}
+                            title="Manager Support"
+                            items={rec.managerSupport}
+                            color="text-teal-600"
+                          />
+                        </div>
+                        <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>
+                            Suggested timeline:{" "}
+                            <strong className="text-gray-700">
+                              {rec.timeline}
+                            </strong>
+                          </span>
+                        </div>
+                      </>
                     )}
                   </div>
                 );
@@ -236,10 +248,10 @@ export default function GapAnalysis({ scores, employeeName, department }) {
       <Card className="bg-sky-50 border-sky-200">
         <CardContent className="py-4">
           <p className="text-sky-800 text-sm">
-            <strong>Next Steps:</strong> Share this assessment with your
-            supervisor during your next performance review or Individual
-            Development Plan (IDP) session. Prioritize gap closure for skills
-            marked as <strong>Critical</strong> importance first.
+            <strong>Next Steps:</strong> Focus on the 3–5 areas with your lowest
+            scores and share this assessment with your supervisor during your
+            next performance review or Individual Development Plan (IDP)
+            session.
           </p>
         </CardContent>
       </Card>

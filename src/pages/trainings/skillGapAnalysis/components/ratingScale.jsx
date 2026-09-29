@@ -3,32 +3,32 @@ import { cn } from "@/lib/utils";
 const SCALE = [
   {
     value: 1,
-    label: "Beginner",
-    desc: "No or minimal experience",
+    label: "Very Poor",
+    desc: "Needs significant improvement",
     color: "bg-red-400 border-red-500 text-white",
   },
   {
     value: 2,
-    label: "Basic",
-    desc: "Limited, requires guidance",
+    label: "Poor",
+    desc: "Below expectations",
     color: "bg-orange-400 border-orange-500 text-white",
   },
   {
     value: 3,
-    label: "Developing",
-    desc: "Moderate, needs improvement",
+    label: "Fair",
+    desc: "Meets some expectations",
     color: "bg-amber-400 border-amber-500 text-white",
   },
   {
     value: 4,
-    label: "Proficient",
-    desc: "Competent, works independently",
+    label: "Good",
+    desc: "Meets expectations",
     color: "bg-lime-500 border-lime-600 text-white",
   },
   {
     value: 5,
-    label: "Expert",
-    desc: "Mastery, can mentor others",
+    label: "Excellent",
+    desc: "Consistently exceeds expectations",
     color: "bg-emerald-500 border-emerald-600 text-white",
   },
 ];

@@ -1,394 +1,346 @@
+// e-TNA All Employee Self-Assessment Tool (36 statements)
+// Scale: 1 Very Poor | 2 Poor | 3 Fair | 4 Good | 5 Excellent
+
+const s = (no, category, name, description) => ({
+  id: `q${no}`,
+  no,
+  name,
+  description,
+  category,
+});
+
 export const SKILLS = [
-  // Clinical/Medical Skills (for Doctors)
-  {
-    id: "diagnostic-skills",
-    name: "Diagnostic & Clinical Assessment",
-    description: "Ability to accurately diagnose and assess patient conditions",
-    category: "clinical",
-    weight: 3,
-  },
-  {
-    id: "treatment-planning",
-    name: "Treatment Planning & Prescription",
-    description: "Formulating appropriate treatment plans and prescriptions",
-    category: "clinical",
-    weight: 3,
-  },
-  {
-    id: "patient-consultation",
-    name: "Patient Consultation & Communication",
-    description:
-      "Effective communication with patients about diagnosis and treatment",
-    category: "clinical",
-    weight: 3,
-  },
-  {
-    id: "medical-research",
-    name: "Medical Research & Evidence-Based Practice",
-    description:
-      "Staying current with medical literature and evidence-based guidelines",
-    category: "clinical",
-    weight: 2,
-  },
-  {
-    id: "specialist-knowledge",
-    name: "Specialist Knowledge & Expertise",
-    description: "Depth of knowledge in your specialty area",
-    category: "clinical",
-    weight: 3,
-  },
+  // Communication
+  s(
+    1,
+    "communication",
+    "Dialogue & Feedback",
+    "I encourage dialogue and use appropriate techniques to gather opinions and feedback.",
+  ),
+  s(
+    8,
+    "communication",
+    "Written Communication",
+    "I compose clear, direct, concise, complete messages (correct vocabulary, spelling, grammar).",
+  ),
+  s(
+    12,
+    "communication",
+    "Oral Communication",
+    "I display good oral communication skills.",
+  ),
+  s(16, "communication", "Active Listening", "I listen carefully."),
+  s(
+    36,
+    "communication",
+    "Presentation Skills",
+    "I am able to deliver influential presentation.",
+  ),
 
-  // Administrative Management Skills
-  {
-    id: "budget-management",
-    name: "Budget & Financial Management",
-    description:
-      "Managing departmental budgets, cost control, and financial reporting",
-    category: "administrative",
-    weight: 3,
-  },
-  {
-    id: "staff-management",
-    name: "Staff Management & Leadership",
-    description: "Supervising, scheduling, and developing staff members",
-    category: "administrative",
-    weight: 3,
-  },
-  {
-    id: "quality-assurance",
-    name: "Quality Assurance & Performance Monitoring",
-    description:
-      "Implementing quality standards and monitoring departmental performance",
-    category: "administrative",
-    weight: 3,
-  },
-  {
-    id: "workflow-optimization",
-    name: "Workflow Optimization & Process Improvement",
-    description: "Streamlining processes and improving operational efficiency",
-    category: "administrative",
-    weight: 2,
-  },
-  {
-    id: "strategic-planning",
-    name: "Strategic Planning & Goal Setting",
-    description: "Developing departmental strategies and long-term goals",
-    category: "administrative",
-    weight: 3,
-  },
-  {
-    id: "vendor-management",
-    name: "Vendor & Supply Chain Management",
-    description: "Managing equipment, supplies, and vendor relationships",
-    category: "administrative",
-    weight: 2,
-  },
+  // Service & Integrity
+  s(
+    3,
+    "service",
+    "Integrity",
+    "I consistently operate with integrity in my daily activities and stand for the truth without compromise.",
+  ),
+  s(
+    6,
+    "service",
+    "Loyalty & Dedication",
+    "I express loyalty and dedication to QCG in interaction with others.",
+  ),
+  s(
+    7,
+    "service",
+    "Customer Satisfaction",
+    "I seek ways to meet and increase customer's satisfaction.",
+  ),
+  s(
+    9,
+    "service",
+    "Customer-Focused Service",
+    "I pursue the best customer-focused responses that add value to the QCG service delivery system.",
+  ),
+  s(
+    13,
+    "service",
+    "Public Service Ethics",
+    "I uphold public service ethics and accountability.",
+  ),
+  s(30, "service", "Confidentiality", "I secure confidential information."),
 
-  // Technical/Digital Skills
-  {
-    id: "his-system",
-    name: "Hospital Information System (HIS/EMR)",
-    description:
-      "Proficiency in the hospital's HIS/EMR and clinical documentation",
-    category: "technical",
-    weight: 3,
-  },
-  {
-    id: "pacs-lis",
-    name: "PACS & Laboratory Information System",
-    description: "Using Picture Archiving Systems and lab management software",
-    category: "technical",
-    weight: 2,
-  },
-  {
-    id: "data-analytics",
-    name: "Data Analytics & Reporting",
-    description: "Analyzing healthcare data and generating performance reports",
-    category: "technical",
-    weight: 2,
-  },
-  {
-    id: "ms-office",
-    name: "MS Office & Advanced Excel",
-    description:
-      "Advanced use of spreadsheets for data management and analysis",
-    category: "technical",
-    weight: 2,
-  },
+  // Leadership & Collaboration
+  s(
+    4,
+    "leadership",
+    "Recognition",
+    "I recognize and reward people for doing their best.",
+  ),
+  s(
+    11,
+    "leadership",
+    "Teamwork",
+    "I work well with others and encourage collaboration among fellow employees to achieve common objectives & organizational goals.",
+  ),
+  s(
+    14,
+    "leadership",
+    "Vision",
+    "I am able to envision possibilities and help shape the future of the institution and its mission.",
+  ),
+  s(
+    15,
+    "leadership",
+    "Networking",
+    "I collaborate and network with others across organizational boundaries.",
+  ),
+  s(
+    18,
+    "leadership",
+    "Confidence in Others",
+    "I display confidence in others' abilities and talents.",
+  ),
+  s(
+    19,
+    "leadership",
+    "Articulating Mission",
+    "I articulate the vision and mission of the institution to all.",
+  ),
+  s(
+    23,
+    "leadership",
+    "Performance Feedback",
+    "I regularly meet with staff to discuss job performance & give direct, constructive, and actionable feedback.",
+  ),
+  s(
+    24,
+    "leadership",
+    "Influence",
+    "I influence others in a way that results in acceptance, agreement, or behavior change.",
+  ),
+  s(
+    25,
+    "leadership",
+    "Empowerment",
+    "I empower others to achieve results and hold them accountable for actions.",
+  ),
+  s(
+    28,
+    "leadership",
+    "Motivation",
+    "I motivate people in order to reach organizational goals and hold them accountable for actions.",
+  ),
+  s(
+    31,
+    "leadership",
+    "Work Allocation",
+    "I am able to align manpower, design work, and allocate tasks to achieve goals.",
+  ),
+  s(
+    34,
+    "leadership",
+    "Developing Team Talent",
+    "I accurately attend to ideas and talents of my staff and team members.",
+  ),
 
-  // Soft Skills
-  {
-    id: "communication",
-    name: "Professional Communication",
-    description:
-      "Clear communication with patients, staff, and other healthcare professionals",
-    category: "soft",
-    weight: 3,
-  },
-  {
-    id: "leadership",
-    name: "Leadership & Decision Making",
-    description:
-      "Leading teams effectively and making sound clinical/administrative decisions",
-    category: "soft",
-    weight: 3,
-  },
-  {
-    id: "teamwork",
-    name: "Multidisciplinary Teamwork",
-    description:
-      "Collaborating effectively with other departments and specialties",
-    category: "soft",
-    weight: 3,
-  },
-  {
-    id: "conflict-resolution",
-    name: "Conflict Resolution & Negotiation",
-    description:
-      "Managing disagreements and negotiating solutions diplomatically",
-    category: "soft",
-    weight: 2,
-  },
-  {
-    id: "time-management",
-    name: "Time Management & Prioritization",
-    description: "Managing multiple tasks and prioritizing urgent matters",
-    category: "soft",
-    weight: 3,
-  },
-  {
-    id: "critical-thinking",
-    name: "Critical Thinking & Problem Solving",
-    description:
-      "Analyzing complex situations and implementing effective solutions",
-    category: "soft",
-    weight: 3,
-  },
-  {
-    id: "stress-management",
-    name: "Stress & Resilience Management",
-    description: "Coping effectively under pressure in high-stress situations",
-    category: "soft",
-    weight: 2,
-  },
+  // Adaptability & Growth
+  s(
+    10,
+    "growth",
+    "Responding to Change",
+    "I respond and adapt effectively to the changing organization, programs, new direction, & responsibilities to meet the needs of the situation.",
+  ),
+  s(
+    20,
+    "growth",
+    "Continuous Learning",
+    "I seek and utilize opportunities for continuous learning and self-development.",
+  ),
+  s(
+    21,
+    "growth",
+    "Supporting Innovation",
+    "I support the development of new products, services, methods, or procedures.",
+  ),
+  s(
+    22,
+    "growth",
+    "Personal Accountability",
+    "I take personal responsibility for the quality and timeliness of work, and achieves results with little oversight. I get the job done.",
+  ),
+  s(
+    26,
+    "growth",
+    "Adaptability",
+    "I adapt and support changing business needs, conditions, and work responsibilities.",
+  ),
+  s(
+    32,
+    "growth",
+    "Receiving Feedback",
+    "I receive constructive criticism and suggestion from others.",
+  ),
+  s(
+    33,
+    "growth",
+    "Creativity",
+    "I come up with creative ideas, processes and resources that can lead to new and improved programs and systems.",
+  ),
 
-  // Compliance & Regulatory
-  {
-    id: "philhealth-doh",
-    name: "PhilHealth & DOH Compliance",
-    description:
-      "Understanding and adhering to PhilHealth accreditation and DOH requirements",
-    category: "compliance",
-    weight: 3,
-  },
-  {
-    id: "patient-safety",
-    name: "Patient Safety & Risk Management",
-    description:
-      "Implementing patient safety protocols and managing clinical risks",
-    category: "compliance",
-    weight: 3,
-  },
-  {
-    id: "data-privacy",
-    name: "Data Privacy & HIPAA Compliance",
-    description:
-      "Adherence to RA 10173 (Data Privacy Act) and patient confidentiality",
-    category: "compliance",
-    weight: 3,
-  },
-  {
-    id: "medical-records",
-    name: "Medical Records Management & Documentation",
-    description:
-      "Proper documentation, filing, and retention of medical records",
-    category: "compliance",
-    weight: 3,
-  },
-  {
-    id: "professional-ethics",
-    name: "Professional Ethics & Medical Practice Standards",
-    description: "Upholding ethical standards and PMA/PSI code of ethics",
-    category: "compliance",
-    weight: 3,
-  },
-];
-
-export const RECOMMENDATIONS = [
-  {
-    skillId: "diagnostic-skills",
-    threshold: 3,
-    actions: [
-      "Attend diagnostic skills refresher workshops",
-      "Participate in case study reviews with colleagues",
-      "Enroll in specialized diagnostic training programs",
-    ],
-    resources: [
-      "Clinical Guidelines (PMA, WHO)",
-      "Diagnostic Imaging Atlas",
-      "CME Courses on Clinical Diagnosis",
-    ],
-    managerSupport: [
-      "Schedule regular case reviews",
-      "Encourage peer consultation for challenging cases",
-      "Provide access to latest diagnostic tools",
-    ],
-    timeline: "2–4 months",
-  },
-  {
-    skillId: "his-system",
-    threshold: 3,
-    actions: [
-      "Complete in-house HIS/EMR training modules",
-      "Practice with test environment",
-      "One-on-one mentoring from IT specialists",
-    ],
-    resources: [
-      "HIS User Manual & Training Videos",
-      "IT Department helpdesk support",
-      "Online EMR certification courses",
-    ],
-    managerSupport: [
-      "Allow time during clinic for HIS practice",
-      "Pair with HIS power users",
-      "Monitor system usage and provide feedback",
-    ],
-    timeline: "2–4 weeks",
-  },
-  {
-    skillId: "staff-management",
-    threshold: 3,
-    actions: [
-      "Enroll in healthcare management/leadership courses",
-      "Attend staff development workshops",
-      "Participate in mentoring and coaching programs",
-    ],
-    resources: [
-      "Healthcare Leadership Courses",
-      "PMA Management Training Programs",
-      "Articles on Effective Team Management",
-    ],
-    managerSupport: [
-      "Assign a leadership mentor",
-      "Include in management meetings",
-      "Provide regular feedback and coaching",
-    ],
-    timeline: "3–6 months",
-  },
-  {
-    skillId: "budget-management",
-    threshold: 3,
-    actions: [
-      "Complete financial management training",
-      "Review departmental budget processes",
-      "Attend cost-control and efficiency workshops",
-    ],
-    resources: [
-      "Healthcare Financial Management Guide",
-      "Budget Planning Templates",
-      "Finance Department Training Sessions",
-    ],
-    managerSupport: [
-      "Assign finance mentor",
-      "Include in budget planning meetings",
-      "Provide monthly financial reports for review",
-    ],
-    timeline: "2–3 months",
-  },
-  {
-    skillId: "communication",
-    threshold: 3,
-    actions: [
-      "Attend professional communication workshops",
-      "Practice SBAR technique for patient/team communication",
-      "Participate in presentation skills training",
-    ],
-    resources: [
-      "SBAR Communication Framework",
-      "Healthcare Communication Best Practices",
-      "Presentation Skills Workshops",
-    ],
-    managerSupport: [
-      "Conduct regular 1-on-1 check-ins",
-      "Model effective communication",
-      "Provide feedback on patient interactions",
-    ],
-    timeline: "Ongoing",
-  },
-  {
-    skillId: "philhealth-doh",
-    threshold: 3,
-    actions: [
-      "Attend PhilHealth accreditation briefings",
-      "Review updated DOH Administrative Orders",
-      "Complete compliance certification programs",
-    ],
-    resources: [
-      "PhilHealth Circular Updates",
-      "DOH Department Orders & Guidelines",
-      "Compliance Training Modules",
-    ],
-    managerSupport: [
-      "Share compliance updates proactively",
-      "Include compliance in department meetings",
-      "Conduct quarterly compliance audits",
-    ],
-    timeline: "1–2 months",
-  },
-  {
-    skillId: "quality-assurance",
-    threshold: 3,
-    actions: [
-      "Enroll in quality improvement methodologies (Six Sigma, Lean)",
-      "Lead quality improvement projects",
-      "Participate in accreditation preparation",
-    ],
-    resources: [
-      "Quality Improvement Frameworks",
-      "JCI/PhilHealth Accreditation Standards",
-      "Performance Metrics & KPI Training",
-    ],
-    managerSupport: [
-      "Support quality improvement initiatives",
-      "Provide access to quality tools and data",
-      "Celebrate improvements and successes",
-    ],
-    timeline: "3–6 months",
-  },
-  {
-    skillId: "data-analytics",
-    threshold: 3,
-    actions: [
-      "Complete data analytics training",
-      "Learn advanced Excel functions",
-      "Practice with hospital reporting tools",
-    ],
-    resources: [
-      "Excel for Healthcare Data Analysis",
-      "Hospital Dashboard Training",
-      "Analytics Software Tutorials",
-    ],
-    managerSupport: [
-      "Provide access to data sources",
-      "Assign analytics projects",
-      "Share insights from data analysis",
-    ],
-    timeline: "2–3 months",
-  },
+  // Planning & Problem Solving
+  s(
+    2,
+    "planning",
+    "Decision Making",
+    "I address concerns in an appropriate, timely, and professional manner after adequately contemplating available courses of action.",
+  ),
+  s(
+    5,
+    "planning",
+    "Analysis",
+    "I select and use appropriate techniques for analysis.",
+  ),
+  s(
+    17,
+    "planning",
+    "Information Management",
+    "I ensure information is complete, accurate, and managed in a systematic and orderly manner.",
+  ),
+  s(
+    27,
+    "planning",
+    "Planning & Monitoring",
+    "I set up and monitor time frames and plans.",
+  ),
+  s(
+    29,
+    "planning",
+    "Anticipating Obstacles",
+    "I anticipate unexpected hurdles or obstacles to a plan or project.",
+  ),
+  s(
+    35,
+    "planning",
+    "Problem Solving",
+    "I identify problems early on and generate alternate solutions to problems and challenges.",
+  ),
 ];
 
 export const CATEGORY_LABELS = {
-  clinical: "Clinical & Medical Skills",
-  administrative: "Administrative & Management",
-  technical: "Technical & Digital Skills",
-  soft: "Soft Skills & Leadership",
-  compliance: "Compliance & Regulatory",
+  communication: "Communication",
+  service: "Service & Integrity",
+  leadership: "Leadership & Collaboration",
+  growth: "Adaptability & Growth",
+  planning: "Planning & Problem Solving",
 };
 
 export const CATEGORY_COLORS = {
-  clinical: "bg-rose-50 border-rose-200 text-rose-700",
-  administrative: "bg-violet-50 border-violet-200 text-violet-700",
-  technical: "bg-sky-50 border-sky-200 text-sky-700",
-  soft: "bg-amber-50 border-amber-200 text-amber-700",
-  compliance: "bg-emerald-50 border-emerald-200 text-emerald-700",
+  communication: "bg-sky-50 border-sky-200 text-sky-700",
+  service: "bg-emerald-50 border-emerald-200 text-emerald-700",
+  leadership: "bg-violet-50 border-violet-200 text-violet-700",
+  growth: "bg-amber-50 border-amber-200 text-amber-700",
+  planning: "bg-rose-50 border-rose-200 text-rose-700",
+};
+
+export const RATING_LABELS = {
+  1: "Very Poor",
+  2: "Poor",
+  3: "Fair",
+  4: "Good",
+  5: "Excellent",
+};
+
+// Recommendations are per category (a gap in any item shows its category's plan)
+export const RECOMMENDATIONS = {
+  communication: {
+    actions: [
+      "Attend business writing and public speaking workshops",
+      "Practice active listening and feedback techniques",
+      "Volunteer to present in team meetings",
+    ],
+    resources: [
+      "Online communication courses (sync + async)",
+      "Office writing style guide",
+      "Presentation skills training",
+    ],
+    managerSupport: [
+      "Give regular one-on-one feedback",
+      "Provide chances to present or draft memos",
+      "Model clear communication",
+    ],
+    timeline: "2–3 months",
+  },
+  service: {
+    actions: [
+      "Attend RA 6713 (Code of Conduct) orientation",
+      "Take customer service excellence training",
+      "Review confidentiality and data handling rules",
+    ],
+    resources: [
+      "RA 6713 and Civil Service guidelines",
+      "Citizen's Charter",
+      "Client feedback results",
+    ],
+    managerSupport: [
+      "Discuss real service scenarios",
+      "Recognize good service behavior",
+      "Clarify confidentiality expectations",
+    ],
+    timeline: "1–2 months",
+  },
+  leadership: {
+    actions: [
+      "Join coaching, mentoring or leadership programs",
+      "Practice giving constructive feedback",
+      "Lead a small team task or project",
+    ],
+    resources: [
+      "Leadership and supervisory courses",
+      "Mentoring programs",
+      "Team management readings",
+    ],
+    managerSupport: [
+      "Assign a mentor",
+      "Delegate progressively larger responsibilities",
+      "Review progress in regular check-ins",
+    ],
+    timeline: "3–6 months",
+  },
+  growth: {
+    actions: [
+      "Set a personal learning goal each quarter",
+      "Ask for feedback and act on it",
+      "Take part in job rotation or new assignments",
+    ],
+    resources: [
+      "Learning and development calendar",
+      "Change management primers",
+      "Peer learning sessions",
+    ],
+    managerSupport: [
+      "Agree on an Individual Development Plan",
+      "Give stretch assignments",
+      "Encourage idea sharing",
+    ],
+    timeline: "3–6 months",
+  },
+  planning: {
+    actions: [
+      "Take basic project planning and time management training",
+      "Practice problem-solving frameworks (e.g., root cause analysis)",
+      "Improve records and filing/data management habits",
+    ],
+    resources: [
+      "Excel and data management training",
+      "Planning templates and checklists",
+      "Problem-solving workshops",
+    ],
+    managerSupport: [
+      "Help set timelines and milestones",
+      "Review plans before execution",
+      "Debrief problems and solutions together",
+    ],
+    timeline: "2–4 months",
+  },
 };
