@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FaceDetection } from "@mediapipe/face_detection";
 import { Camera } from "@mediapipe/camera_utils";
-import { registerFace } from "@/services/faceService";
+import { registerFace, lookupEmployee } from "@/services/faceService";
 
 export default function FaceRegister() {
   const videoRef = useRef(null);
@@ -10,6 +10,27 @@ export default function FaceRegister() {
 
   const [name, setName] = useState("");
   const [employeeNumber, setEmployeeNumber] = useState("");
+
+  useEffect(() => {
+    setName("");
+    const value = employeeNumber.trim();
+    if (!value) return undefined;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const { employee } = await lookupEmployee(value);
+        if (!cancelled) setName(employee?.name ?? "");
+      } catch {
+        if (!cancelled) setName("");
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [employeeNumber]);
   const [status, setStatus] = useState("Position your face in the frame");
   const [statusType, setStatusType] = useState("idle");
   const [faceDetected, setFaceDetected] = useState(false);
@@ -26,6 +47,17 @@ export default function FaceRegister() {
   }, []);
 
   useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus(
+        "Camera needs HTTPS. Open this page via https:// or localhost.",
+      );
+      setStatusType("error");
+      return undefined;
+    }
+
     const faceDetection = new FaceDetection({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
@@ -100,19 +132,39 @@ export default function FaceRegister() {
       }
     });
 
-    const camera = new Camera(videoRef.current, {
+    let cancelled = false;
+
+    const camera = new Camera(video, {
       onFrame: async () => {
-        await faceDetection.send({ image: videoRef.current });
+        if (cancelled) return;
+        await faceDetection.send({ image: video });
       },
       width: 320,
       height: 240,
     });
 
-    camera.start();
+    const started = camera.start().catch((error) => {
+      if (cancelled) return;
+      console.error("Failed to start camera:", error);
+      setStatus(
+        error?.name === "NotReadableError"
+          ? "Camera is in use by another app or tab. Close it and reload."
+          : "Unable to access the camera. Check browser permissions.",
+      );
+      setStatusType("error");
+    });
+
+    return () => {
+      cancelled = true;
+      started.finally(() => {
+        camera.stop();
+        faceDetection.close();
+      });
+    };
   }, []);
 
-  const FRAMES_TO_CAPTURE = 8; // between REGISTER_MIN/MAX on the backend
-  const CAPTURE_INTERVAL_MS = 250; // spread over ~2 seconds
+  const FRAMES_TO_CAPTURE = 8;
+  const CAPTURE_INTERVAL_MS = 250;
 
   const captureFrame = () => {
     const canvas = document.createElement("canvas");
@@ -125,7 +177,6 @@ export default function FaceRegister() {
   const captureBurst = async (count, intervalMs) => {
     const frames = [];
     for (let i = 0; i < count; i++) {
-      // Skip capturing if the face has dropped out of frame
       if (faceDetectedRef.current) {
         frames.push(captureFrame());
       }
@@ -136,7 +187,7 @@ export default function FaceRegister() {
 
   const handleRegister = async () => {
     if (!name.trim()) {
-      setStatus("Please enter a staff name");
+      setStatus("Enter a valid employee number — no matching employee found");
       setStatusType("error");
       return;
     }
@@ -164,15 +215,15 @@ export default function FaceRegister() {
       }
 
       setStatus("Registering face…");
-      await registerFace(name, employeeNumber, frames); // now sends an array
-      setStatus(`"${name}" registered successfully`);
+      const saved = await registerFace(employeeNumber, frames);
+      setStatus(`"${saved?.name || name}" registered successfully`);
       setStatusType("success");
       setName("");
       setEmployeeNumber("");
     } catch (error) {
       console.error(error);
       setStatus(
-        error?.response?.data?.error ||
+        error?.response?.data?.message ||
           "Registration failed — please try again",
       );
       setStatusType("error");
@@ -722,9 +773,9 @@ export default function FaceRegister() {
               <input
                 type="text"
                 className="name-input"
-                placeholder="e.g. Dr. Maria Santos"
+                placeholder="Filled in from the employee number"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                readOnly
                 onKeyDown={(e) => e.key === "Enter" && handleRegister()}
               />
             </div>

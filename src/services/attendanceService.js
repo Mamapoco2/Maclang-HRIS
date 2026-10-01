@@ -1,4 +1,3 @@
-// src/api/attendance.js
 import api from "@/api/api";
 
 export const recordAttendance = async (name, image) => {
@@ -6,29 +5,17 @@ export const recordAttendance = async (name, image) => {
   return data;
 };
 
-export const getAttendanceRecords = async () => {
-  const { data } = await api.get("/attendance-records");
-  return data;
-};
-
-export const getEmployeeDtr = async (employeeNumber, month, year) => {
-  const { data } = await api.get("/employee-dtr", {
-    params: {
-      employee_number: employeeNumber,
-      month: String(month),
-      year: String(year),
-    },
+export const getAttendanceRecords = async ({ from, to, q } = {}) => {
+  const { data } = await api.get("/dtr/records", {
+    params: { per_page: 500, from, to, q },
   });
-  return data;
+  return Array.isArray(data?.data) ? data.data : [];
 };
 
 export const getEmployeeDtrCutoff = async (employeeNumber, month, year) => {
-  const { data } = await api.get("/employee-dtr-cutoff", {
-    params: {
-      employee_number: employeeNumber,
-      month: String(month),
-      year: String(year),
-    },
-  });
+  const { data } = await api.get(
+    `/dtr/employees/${encodeURIComponent(employeeNumber)}/dtr`,
+    { params: { month, year } },
+  );
   return data;
 };

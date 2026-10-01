@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getAttendanceRecords } from "@/services/attendanceService";
+import { useAuthenticatedImage } from "@/hooks/useAuthenticatedImage";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function ViewDTR() {
   const [records, setRecords] = useState([]);
@@ -10,6 +12,8 @@ export default function ViewDTR() {
   const [dateTo, setDateTo] = useState("");
   const [previewImage, setPreviewImage] = useState(null);
 
+  const debouncedSearch = useDebounce(search.trim(), 400);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -17,11 +21,19 @@ export default function ViewDTR() {
       try {
         setLoading(true);
         setError("");
-        const data = await getAttendanceRecords();
-        if (isMounted) setRecords(Array.isArray(data) ? data : []);
+        const data = await getAttendanceRecords({
+          from: dateFrom || undefined,
+          to: dateTo || undefined,
+          q: debouncedSearch || undefined,
+        });
+        if (isMounted) setRecords(data);
       } catch (err) {
         console.error(err);
-        if (isMounted) setError("Failed to load attendance records");
+        if (isMounted) {
+          setError(
+            err?.response?.data?.message || "Failed to load attendance records",
+          );
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -32,27 +44,7 @@ export default function ViewDTR() {
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return records.filter((record) => {
-      const matchesName = !q || record.name?.toLowerCase().includes(q);
-      const recordDate = record.date ? new Date(record.date) : null;
-      const fromDate = dateFrom ? new Date(dateFrom) : null;
-      const toDate = dateTo ? new Date(dateTo) : null;
-
-      if (toDate) {
-        // Make end-date inclusive for the whole day.
-        toDate.setHours(23, 59, 59, 999);
-      }
-
-      const matchesFrom = !fromDate || (recordDate && recordDate >= fromDate);
-      const matchesTo = !toDate || (recordDate && recordDate <= toDate);
-
-      return matchesName && matchesFrom && matchesTo;
-    });
-  }, [records, search, dateFrom, dateTo]);
+  }, [debouncedSearch, dateFrom, dateTo]);
 
   const hasActiveFilters = search || dateFrom || dateTo;
 
@@ -145,10 +137,6 @@ export default function ViewDTR() {
             <p className="mt-3 text-xs text-slate-500">
               Showing{" "}
               <span className="font-medium text-slate-700">
-                {filtered.length}
-              </span>{" "}
-              of{" "}
-              <span className="font-medium text-slate-700">
                 {records.length}
               </span>{" "}
               records
@@ -232,7 +220,7 @@ export default function ViewDTR() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((record) => (
+                  {records.map((record) => (
                     <tr
                       key={record.id}
                       className="transition-colors hover:bg-slate-50"
@@ -248,12 +236,13 @@ export default function ViewDTR() {
                       </td>
                       <td className="px-4 py-3">
                         <PhotoThumb
-                          src={record.time_in_image}
+                          attendanceId={record.id}
+                          type="in"
+                          available={record.has_time_in_image}
                           alt={`${record.name} time in`}
-                          onClick={() =>
-                            record.time_in_image &&
+                          onPreview={(src) =>
                             setPreviewImage({
-                              src: record.time_in_image,
+                              src,
                               label: `${record.name} — Time In (${record.date})`,
                             })
                           }
@@ -264,12 +253,13 @@ export default function ViewDTR() {
                       </td>
                       <td className="px-4 py-3">
                         <PhotoThumb
-                          src={record.time_out_image}
+                          attendanceId={record.id}
+                          type="out"
+                          available={record.has_time_out_image}
                           alt={`${record.name} time out`}
-                          onClick={() =>
-                            record.time_out_image &&
+                          onPreview={(src) =>
                             setPreviewImage({
-                              src: record.time_out_image,
+                              src,
                               label: `${record.name} — Time Out (${record.date})`,
                             })
                           }
@@ -278,7 +268,7 @@ export default function ViewDTR() {
                     </tr>
                   ))}
 
-                  {filtered.length === 0 && (
+                  {records.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-4 py-12">
                         <div className="flex flex-col items-center justify-center gap-2 text-center">
@@ -365,8 +355,12 @@ function TimeBadge({ value, tone }) {
   );
 }
 
-function PhotoThumb({ src, alt, onClick }) {
-  if (!src) {
+function PhotoThumb({ attendanceId, type, available, alt, onPreview }) {
+  const { url: src, loading } = useAuthenticatedImage(
+    available ? `/dtr/attendances/${attendanceId}/image/${type}` : null,
+  );
+
+  if (!available || (!loading && !src)) {
     return (
       <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-[10px] text-slate-400">
         No image
@@ -374,10 +368,14 @@ function PhotoThumb({ src, alt, onClick }) {
     );
   }
 
+  if (loading) {
+    return <div className="h-16 w-16 animate-pulse rounded-lg bg-slate-100" />;
+  }
+
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => onPreview(src)}
       className="group relative h-16 w-16 overflow-hidden rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
     >
       <img

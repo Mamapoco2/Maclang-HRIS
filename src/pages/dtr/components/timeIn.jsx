@@ -160,7 +160,15 @@ export default function TimeIn() {
   // ── Camera + MediaPipe setup ───────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return undefined;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus(
+        "Camera needs HTTPS. Open this page via https:// or localhost.",
+      );
+      setStatusType("error");
+      return undefined;
+    }
 
     const faceDetection = new FaceDetection({
       locateFile: (f) =>
@@ -260,10 +268,14 @@ export default function TimeIn() {
     });
     faceMesh.onResults(processMeshResults);
 
+    let cancelled = false;
+
     const camera = new Camera(video, {
       onFrame: async () => {
+        if (cancelled) return;
         await faceDetection.send({ image: video });
 
+        if (cancelled) return;
         // ── Performance: only run FaceMesh when a challenge is active ─────
         if (livenessStateRef.current.challenge !== null) {
           await faceMesh.send({ image: video });
@@ -273,9 +285,34 @@ export default function TimeIn() {
       height: 240,
     });
 
-    camera.start();
-    setStatus("Ready to scan");
-    setStatusType("idle");
+    const started = camera
+      .start()
+      .then(() => {
+        if (cancelled) return;
+        setStatus("Ready to scan");
+        setStatusType("idle");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to start camera:", error);
+        setStatus(
+          error?.name === "NotReadableError"
+            ? "Camera is in use by another app or tab. Close it and reload."
+            : "Unable to access the camera. Check browser permissions.",
+        );
+        setStatusType("error");
+      });
+
+    // Camera.start() is async, so stop only after it settles. Otherwise the
+    // StrictMode remount grabs the device while the first stream is still opening.
+    return () => {
+      cancelled = true;
+      started.finally(() => {
+        camera.stop();
+        faceDetection.close();
+        faceMesh.close();
+      });
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
