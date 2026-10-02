@@ -632,10 +632,10 @@ export default function EmployeeDtr() {
             <div className="employee-dtr-sig-block-b flex w-full max-w-[520px] flex-col items-center">
               <div className="employee-dtr-sig-b-rule mb-1.5 w-full border-t border-black" />
               <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.2px]">
-                {DTR_VERIFIER_NAME}
+                {result?.verifier?.name || DTR_VERIFIER_NAME}
               </div>
               <div className="text-[10px] uppercase tracking-[0.2px]">
-                {DTR_VERIFIER_TITLE}
+                {result?.verifier?.position || DTR_VERIFIER_TITLE}
               </div>
             </div>
           </div>

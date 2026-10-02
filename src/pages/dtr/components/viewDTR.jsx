@@ -336,6 +336,16 @@ export default function ViewDTR() {
   );
 }
 
+function formatTime12h(value) {
+  if (!value) return "";
+  const match = String(value).match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return String(value);
+  const hours = Number(match[1]);
+  if (hours > 23) return String(value);
+  const suffix = hours >= 12 ? "PM" : "AM";
+  return `${String(hours % 12 || 12).padStart(2, "0")}:${match[2]} ${suffix}`;
+}
+
 function TimeBadge({ value, tone }) {
   if (!value) {
     return <span className="text-slate-400">—</span>;
@@ -350,7 +360,7 @@ function TimeBadge({ value, tone }) {
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${toneClasses}`}
     >
-      {value}
+      {formatTime12h(value)}
     </span>
   );
 }
