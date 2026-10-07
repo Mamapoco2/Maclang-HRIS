@@ -27,8 +27,12 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { plantillaPositionService } from "@/services/plantillaService";
 import { addSlotDefaults, ROLE_OPTIONS } from "../helpers/constants";
-import { fetchAllUnits, resolveInheritedConfig } from "../helpers/plantillaHelpers";
-import { DeptSelectContent } from "./DeptSelectContent";
+import {
+  fetchAllUnits,
+  parseDisplayTarget,
+  resolveInheritedConfig,
+} from "../helpers/plantillaHelpers";
+import { HierarchyTargetField } from "./HierarchyTargetField";
 
 export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
   const form = useForm({ defaultValues: addSlotDefaults });
@@ -45,7 +49,6 @@ export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
   const [loadingSteps, setLoadingSteps] = useState(false);
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deptSearch, setDeptSearch] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -69,7 +72,6 @@ export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
   useEffect(() => {
     if (open) {
       form.reset(addSlotDefaults);
-      setDeptSearch("");
     }
   }, [open]);
 
@@ -100,9 +102,7 @@ export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
             salary_grade_id: Number(inherited.sg_id),
             step_increment_id: Number(inherited.step_id),
             role: data.role || null,
-            display_department_id: data.display_department_id
-              ? Number(data.display_department_id)
-              : null,
+            ...parseDisplayTarget(data.display_target),
           }
         : {
             salary_grade_id: data.salary_grade_id
@@ -112,9 +112,7 @@ export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
               ? Number(data.step_increment_id)
               : null,
             role: data.role || null,
-            display_department_id: data.display_department_id
-              ? Number(data.display_department_id)
-              : null,
+            ...parseDisplayTarget(data.display_target),
           };
 
       await plantillaPositionService.addSlots(
@@ -376,15 +374,9 @@ export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
 
             <FormField
               control={form.control}
-              name="display_department_id"
+              name="display_target"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Department{" "}
-                    <span className="text-gray-300 normal-case font-normal">
-                      (optional)
-                    </span>
-                  </FormLabel>
                   {watchedRole && (
                     <p className="text-[11px] text-indigo-500">
                       {isStaffRole
@@ -392,27 +384,12 @@ export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
                         : "This position will appear as a Vacant node in the org chart under this department."}
                     </p>
                   )}
-                  <Select
-                    onValueChange={field.onChange}
+                  <HierarchyTargetField
+                    units={departments}
+                    loading={loadingDepts}
                     value={field.value}
-                    disabled={loadingDepts}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="text-sm border-gray-200">
-                        <SelectValue
-                          placeholder={
-                            loadingDepts ? "Loading..." : "Select department"
-                          }
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <DeptSelectContent
-                      departments={departments}
-                      loading={loadingDepts}
-                      search={deptSearch}
-                      onSearch={setDeptSearch}
-                    />
-                  </Select>
+                    onChange={field.onChange}
+                  />
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}

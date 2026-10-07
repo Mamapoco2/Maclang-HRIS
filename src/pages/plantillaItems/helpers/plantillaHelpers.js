@@ -1,4 +1,4 @@
-import api from "@/api/api";
+import { getActiveUnits, getAllUnits } from "./departmentStore";
 import { BASE_POSITION_HEADERS, PAGE_SIZE } from "./constants";
 
 // ─── Item list ──────────────────────────────────────────────────────────────
@@ -109,20 +109,13 @@ export function resolveInheritedConfig(positions = []) {
 
 // ─── Directorate / Division / Department hierarchy ─────────────────────────
 
+// Options for the Directorate/Division and Department/Section/Unit dropdowns now
+// come from the Plantilla Positions Department Database (see departmentStore.js),
+// not from the shared /divisions and /departments endpoints. Active units only,
+// so Inactive/Obsolete entries can't be picked for new items or slots.
+// Swap the body for an API call once the backend exists.
 export async function fetchAllUnits() {
-  const [divRes, deptRes] = await Promise.all([
-    api.get("/divisions"),
-    api.get("/departments"),
-  ]);
-  const divData = divRes.data;
-  const deptData = deptRes.data;
-  const divisions = (
-    Array.isArray(divData) ? divData : (divData.data ?? [])
-  ).map((d) => ({ ...d, kind: "division" }));
-  const departments = (
-    Array.isArray(deptData) ? deptData : (deptData.data ?? [])
-  ).map((d) => ({ ...d, kind: "department" }));
-  return [...divisions, ...departments];
+  return getActiveUnits();
 }
 
 export function unitValue(unit) {
@@ -155,7 +148,12 @@ export function resolveUnitForDepartment(dept) {
     };
   }
   if (dept?.division_id) {
-    return { id: dept.division_id, type: "DIVISION" };
+    // Look the parent up in the Department Database so we get its real name,
+    // type and status (including Inactive parents of already-linked records).
+    const parent = getAllUnits().find(
+      (u) => u.kind === "division" && Number(u.id) === Number(dept.division_id),
+    );
+    return parent ?? { id: dept.division_id, type: "DIVISION" };
   }
   return null;
 }

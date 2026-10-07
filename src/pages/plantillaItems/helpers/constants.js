@@ -48,6 +48,14 @@ export const DEPT_TYPES = [
 
 export const OFFICE_TYPES = ["DEPARTMENT", "SECTION", "UNIT", "CLUSTER"];
 
+// Department Database: allowed types per tier
+export const DIVISION_TYPES = ["OFFICE", "DIRECTORATE", "DIVISION"];
+
+export const UNIT_STATUS_STYLES = {
+  ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  INACTIVE: "bg-slate-100 text-slate-500 border-slate-200",
+};
+
 // ─── Dropdown option lists ──────────────────────────────────────────────────
 export const ROLE_OPTIONS = [
   "CHIEF",
@@ -101,5 +109,5 @@ export const addSlotDefaults = {
   salary_grade_id: "",
   step_increment_id: "",
   role: "",
-  display_department_id: "",
+  display_target: "",
 };
