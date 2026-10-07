@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { getEmployeeDtrCutoff } from "@/services/attendanceService";
 
 const MONTHS = [
@@ -25,9 +26,6 @@ const currentMonthDate = new Date(
 );
 const currentMonth = currentMonthDate.getMonth() + 1;
 const currentYear = currentMonthDate.getFullYear();
-
-const DTR_VERIFIER_NAME = "DAVE ANTHONY A. VERGARA, MD";
-const DTR_VERIFIER_TITLE = "OIC, MEDICAL CENTER CHIEF I";
 
 const SHORT_MON = [
   "Jan",
@@ -110,9 +108,6 @@ function resolveDateForDay(day, range) {
     return new Date(start.getFullYear(), start.getMonth(), day);
   }
 
-  // Range crosses a month boundary (e.g. 26th of one month through
-  // the 10th of the next): days >= start's day-of-month belong to
-  // the start month, days <= end's day-of-month belong to the end month.
   if (day >= start.getDate()) {
     return new Date(start.getFullYear(), start.getMonth(), day);
   }
@@ -183,7 +178,7 @@ export default function EmployeeDtr() {
     if (dateTo) {
       const to = new Date(dateTo);
       if (Number.isNaN(to.getTime())) return false;
-      to.setHours(23, 59, 59, 999); // inclusive end date
+      to.setHours(23, 59, 59, 999);
       if (recordDate > to) return false;
     }
 
@@ -212,6 +207,7 @@ export default function EmployeeDtr() {
       if (isDateInRange(e?.date)) map.set(e.day, e);
     });
     return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, dateFrom, dateTo]);
 
   const rightEntriesByDay = useMemo(() => {
@@ -220,6 +216,7 @@ export default function EmployeeDtr() {
       if (isDateInRange(e?.date)) map.set(e.day, e);
     });
     return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, dateFrom, dateTo]);
 
   const handleLoad = async () => {
@@ -247,8 +244,16 @@ export default function EmployeeDtr() {
     }
   };
 
+  const sheet = (
+    <DtrSheet
+      result={result}
+      leftEntriesByDay={leftEntriesByDay}
+      rightEntriesByDay={rightEntriesByDay}
+    />
+  );
+
   return (
-    <div className="employee-dtr-page flex justify-center px-10 pb-10 pt-8 md:px-6">
+    <div className="employee-dtr-page flex justify-center px-3 pb-8 pt-4 sm:px-6 sm:pt-8 lg:px-10">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 
@@ -260,156 +265,210 @@ export default function EmployeeDtr() {
           --line-strong: #b0bec8;
           --bg: #f0f4f8;
           --surface: #ffffff;
-          --accent: #1a56a0;
-          --accent-light: #e8f0fa;
+          --accent: #0284c7;
+          --accent-light: #e0f2fe;
           --danger: #c0392b;
           font-family: 'DM Sans', sans-serif;
         }
 
-        /* ── Controls card ── */
         .dtr-controls-card {
           background: var(--surface);
           border: 1px solid var(--line);
-          border-radius: 14px;
+          border-radius: 20px;
           padding: 24px 28px;
           box-shadow: 0 1px 4px rgba(0,0,0,0.06);
           margin-bottom: 20px;
         }
-
         .dtr-controls-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 20px;
-          padding-bottom: 16px;
+          display: flex; align-items: center; gap: 10px;
+          margin-bottom: 20px; padding-bottom: 16px;
           border-bottom: 1px solid var(--line);
         }
-
         .dtr-controls-icon {
-          width: 34px; height: 34px;
-          border-radius: 8px;
+          width: 34px; height: 34px; border-radius: 8px;
           background: var(--accent-light);
           display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-          color: var(--accent);
+          flex-shrink: 0; color: var(--accent);
         }
-
         .dtr-controls-icon svg { width: 18px; height: 18px; }
-
         .dtr-controls-title { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
         .dtr-controls-sub { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
-
         .dtr-fields { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
-
         .dtr-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
-
         .dtr-label {
           font-size: 11.5px; font-weight: 600; color: var(--ink-3);
           text-transform: uppercase; letter-spacing: 0.04em;
         }
-
         .dtr-input, .dtr-select {
           font-family: 'DM Sans', sans-serif;
           font-size: 13.5px; font-weight: 500; color: var(--ink);
           background: var(--surface);
           border: 1.5px solid var(--line);
-          border-radius: 8px;
-          padding: 8px 12px;
-          outline: none;
+          border-radius: 8px; padding: 8px 12px; outline: none;
           transition: border-color 0.15s, box-shadow 0.15s;
-          appearance: none; -webkit-appearance: none;
-          width: 100%;
+          appearance: none; -webkit-appearance: none; width: 100%;
         }
-
         .dtr-input:focus, .dtr-select:focus {
           border-color: var(--accent);
-          box-shadow: 0 0 0 3px rgba(26,86,160,0.1);
+          box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
         }
-
         .dtr-select {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8fa0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat;
           background-position: right 12px center;
           padding-right: 32px;
         }
-
         .dtr-actions { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
-
         .dtr-btn {
           font-family: 'DM Sans', sans-serif;
           font-size: 13.5px; font-weight: 600;
-          padding: 8.5px 18px;
-          border-radius: 8px; border: none;
+          padding: 8.5px 18px; border-radius: 8px; border: none;
           cursor: pointer;
           transition: background 0.15s, transform 0.1s, opacity 0.15s;
-          white-space: nowrap;
-          display: flex; align-items: center; gap: 6px;
+          white-space: nowrap; display: flex; align-items: center; gap: 6px;
         }
         .dtr-btn:active { transform: scale(0.97); }
         .dtr-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-        .dtr-btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(26,86,160,0.25); }
-        .dtr-btn-primary:hover:not(:disabled) { background: #174a8e; }
-
+        .dtr-btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(2,132,199,0.3); }
+        .dtr-btn-primary:hover:not(:disabled) { background: #0369a1; }
         .dtr-btn-ghost { background: var(--surface); color: var(--ink-2); border: 1.5px solid var(--line); }
         .dtr-btn-ghost:hover { background: #f4f7fb; border-color: var(--line-strong); }
 
-        /* ── Error ── */
         .dtr-error-bar {
-          background: #fdf0ef;
-          border: 1px solid #f0c5c2;
-          border-radius: 8px;
-          padding: 10px 14px;
-          font-size: 13px;
-          color: var(--danger);
-          display: flex; align-items: center; gap: 8px;
-          margin-bottom: 16px;
+          background: #fdf0ef; border: 1px solid #f0c5c2; border-radius: 8px;
+          padding: 10px 14px; font-size: 13px; color: var(--danger);
+          display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
         }
-
-        /* ── Cutoff bar ── */
         .dtr-cutoff-bar {
           display: flex; align-items: center; gap: 10px;
-          background: var(--accent-light);
-          border: 1px solid #c4d8f3;
-          border-radius: 8px;
-          padding: 9px 14px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 12.5px;
-          color: var(--accent);
-          font-weight: 500;
-          margin-bottom: 20px;
+          background: var(--accent-light); border: 1px solid #bae6fd;
+          border-radius: 8px; padding: 9px 14px;
+          font-family: 'DM Sans', sans-serif; font-size: 12.5px;
+          color: var(--accent); font-weight: 500; margin-bottom: 20px;
         }
         .dtr-cutoff-bar strong { font-weight: 700; color: var(--ink); }
         .dtr-cutoff-range { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ink-2); }
         .dtr-cutoff-sep { color: #b0bec8; }
 
-        /* ── Paper ── */
         .dtr-paper {
-          background: white;
-          border: 1px solid var(--line);
-          border-radius: 14px;
-          padding: 28px 28px 24px;
+          background: white; border: 1px solid var(--line);
+          border-radius: 14px; padding: 28px 28px 24px;
           box-shadow: 0 1px 6px rgba(0,0,0,0.07);
         }
 
         @keyframes dtr-spin { to { transform: rotate(360deg); } }
         .dtr-spin { animation: dtr-spin 0.8s linear infinite; }
 
-        /* ── Print ── */
+        @media (max-width: 768px) {
+          .dtr-controls-card { padding: 16px; border-radius: 16px; }
+          .dtr-field { max-width: none !important; min-width: calc(50% - 7px); }
+          .dtr-field:first-child { min-width: 100%; }
+          .dtr-input, .dtr-select { font-size: 16px; padding: 11px 12px; }
+          .dtr-select { padding-right: 32px; }
+          .dtr-actions { width: 100%; }
+          .dtr-btn { flex: 1; justify-content: center; min-height: 46px; font-size: 15px; }
+          .dtr-cutoff-bar { flex-wrap: wrap; gap: 6px 10px; }
+          .dtr-paper { padding: 14px 10px; }
+        }
+
+        /* ───────── PRINT SA SCREEN: nakatago yung print-only copy ───────── */
+        @media screen {
+          .dtr-print-root { display: none !important; }
+        }
+
+        /* ───────── PRINT ─────────
+           Yung print copy ay naka-portal diretso sa <body>, kaya walang
+           sidebar/parent offset na makakapagtabingi sa sheet.            */
         @media print {
-          @page { size: A4 portrait; margin: 5mm; }
-          body { background: #fff !important; }
-          .navbar, .dtr-controls-card, .dtr-error-bar, .dtr-cutoff-bar { display: none !important; }
-          .employee-dtr-page { padding: 0 !important; display: block !important; }
-          .employee-dtr-container { max-width: none !important; width: 100% !important; }
-          .dtr-paper { border: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box; box-shadow: none !important; border-radius: 0 !important; }
-          .employee-dtr-copies { gap: 8mm !important; grid-template-columns: 1fr 1fr !important; width: 100% !important; }
-          .employee-dtr-copy { display: flex !important; flex-direction: column !important; align-items: center !important; box-sizing: border-box; width: 100% !important; min-width: 0 !important; transform: none !important; padding: 4px 0 !important; }
-          .employee-dtr-copy-inner { width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: center; }
-          .employee-dtr-form, .employee-dtr-form table, .employee-dtr-form th, .employee-dtr-form td { font-family: "Times New Roman", Times, serif !important; }
-          .employee-dtr-copy table { width: 100% !important; margin-left: auto !important; margin-right: auto !important; }
-          .employee-dtr-shared-signature { break-inside: avoid; page-break-inside: avoid; }
-          .employee-dtr-sig-spacer { height: 16mm !important; min-height: 16mm !important; }
+          @page { size: A4 portrait; margin: 0; }
+
+          html, body {
+            width: 210mm !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+          }
+
+          /* itago ang buong app (sidebar, controls, etc.) */
+          body > *:not(.dtr-print-root) { display: none !important; }
+
+          .dtr-print-root {
+            display: block !important;
+            position: static !important;
+            width: 210mm !important;
+            margin: 0 auto !important;
+            padding: 5mm 0 0 0 !important;
+            background: #fff !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .dtr-paper {
+            width: 210mm !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            box-sizing: border-box !important;
+            overflow: visible !important;
+          }
+
+          /* dalawang kopya, magkatabi, naka-center: 99 + 2 + 99 = 200mm */
+          .dtr-print-root .employee-dtr-copies {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: center !important;
+            width: 200mm !important;
+            max-width: 200mm !important;
+            gap: 2mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .employee-dtr-copy {
+            flex: 0 0 99mm !important;
+            width: 99mm !important;
+            min-width: 99mm !important;
+            max-width: 99mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .employee-dtr-copy-inner {
+            width: 99mm !important;
+            min-width: 99mm !important;
+            max-width: 99mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .employee-dtr-copy table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            margin: 2mm 0 0 0 !important;
+          }
+
+          .dtr-print-root .employee-dtr-shared-signature {
+            width: 100% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          .dtr-print-root .employee-dtr-sig-spacer {
+            height: 16mm !important;
+            min-height: 16mm !important;
+          }
         }
       `}</style>
 
@@ -600,44 +659,55 @@ export default function EmployeeDtr() {
           </div>
         )}
 
-        {/* ── Paper ── */}
-        <div className="dtr-paper">
-          {/* fallback cutoff text when no result yet */}
+        {/* ── On-screen preview ── */}
+        {sheet}
+      </div>
 
-          <div className="employee-dtr-copies grid grid-cols-2 gap-6">
-            <DtrCopy
-              employeeName={result?.employee?.name || ""}
-              entriesByDay={leftEntriesByDay}
-              cutoffRange={result?.left_range}
-            />
-            <DtrCopy
-              employeeName={result?.employee?.name || ""}
-              entriesByDay={rightEntriesByDay}
-              cutoffRange={result?.right_range}
-            />
+      {/* ── Print-only copy: nasa <body> mismo, para walang offset ng parent ── */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div className="dtr-print-root">{sheet}</div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+// ── Paper (dalawang DTR + shared signature) ──────────────────────────────────
+function DtrSheet({ result, leftEntriesByDay, rightEntriesByDay }) {
+  return (
+    <div className="dtr-paper">
+      <div className="employee-dtr-copies grid grid-cols-1 gap-6 md:grid-cols-2">
+        <DtrCopy
+          employeeName={result?.employee?.name || ""}
+          entriesByDay={leftEntriesByDay}
+          cutoffRange={result?.left_range}
+        />
+        <DtrCopy
+          employeeName={result?.employee?.name || ""}
+          entriesByDay={rightEntriesByDay}
+          cutoffRange={result?.right_range}
+        />
+      </div>
+
+      <div className='employee-dtr-shared-signature employee-dtr-form mt-8 flex w-full max-w-full flex-col items-center pt-1 text-center font-["Times New Roman",Times,serif]'>
+        <div className="employee-dtr-sig-block-a flex w-full max-w-[250px] flex-col items-center">
+          <div className="employee-dtr-sig-top-rule mb-1.5 w-full border-t border-black" />
+          <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.5px]">
+            SIGNATURE
           </div>
-
-          {/* Shared signature — unchanged */}
-          <div className='employee-dtr-shared-signature employee-dtr-form mt-8 flex w-full max-w-full flex-col items-center pt-1 text-center font-["Times New Roman",Times,serif]'>
-            <div className="employee-dtr-sig-block-a flex w-full max-w-[520px] flex-col items-center">
-              <div className="employee-dtr-sig-top-rule mb-1.5 w-full border-t border-black" />
-              <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.5px]">
-                SIGNATURE
-              </div>
-              <div className="text-[10px] leading-[1.4]">
-                Verified as to the prescribed office hours.
-              </div>
-            </div>
-            <div className="employee-dtr-sig-spacer h-10 w-full" />
-            <div className="employee-dtr-sig-block-b flex w-full max-w-[520px] flex-col items-center">
-              <div className="employee-dtr-sig-b-rule mb-1.5 w-full border-t border-black" />
-              <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.2px]">
-                {result?.verifier?.name || DTR_VERIFIER_NAME}
-              </div>
-              <div className="text-[10px] uppercase tracking-[0.2px]">
-                {result?.verifier?.position || DTR_VERIFIER_TITLE}
-              </div>
-            </div>
+          <div className="text-[10px] leading-[1.4]">
+            Verified as to the prescribed office hours.
+          </div>
+        </div>
+        <div className="employee-dtr-sig-spacer h-10 w-full" />
+        <div className="employee-dtr-sig-block-b flex w-full max-w-[250px] flex-col items-center">
+          <div className="employee-dtr-sig-b-rule mb-1.5 w-full border-t border-black" />
+          <div className="mt-1 min-h-[14px] text-[11px] font-bold uppercase tracking-[0.2px]">
+            {result?.verifier?.name}
+          </div>
+          <div className="min-h-[14px] text-[11px] uppercase tracking-[0.2px]">
+            {result?.verifier?.position}
           </div>
         </div>
       </div>
@@ -645,7 +715,7 @@ export default function EmployeeDtr() {
   );
 }
 
-// ── DtrCopy — completely original, zero changes ──────────────────────────────
+// ── DtrCopy — walang binago ──────────────────────────────────────────────────
 function DtrCopy({ employeeName, entriesByDay, cutoffRange }) {
   const monthRangeText = formatCutoffRangeDisplay(cutoffRange) || "";
   const dtrCellValue = (day, entry, rawValue) => {
@@ -673,7 +743,7 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange }) {
               </span>
             </div>
           </div>
-          <div className="mt-1.5 text-[9px] font-bold uppercase tracking-[0.5px]">
+          <div className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.5px]">
             NAME
           </div>
         </div>
@@ -707,7 +777,7 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange }) {
               &nbsp;
             </span>
           </div>
-          <div className="flex w-full items-end justify-between gap-1 pl-5">
+          <div className="flex w-full items-end justify-between gap-1">
             <span className="flex-[0_0_46%] pb-px text-left text-[9.5px] font-bold leading-[1.15]">
               Saturdays:
             </span>
@@ -717,52 +787,58 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange }) {
           </div>
         </div>
 
-        <table className="employee-dtr-grid-table mt-2 w-full border-collapse">
+        <table className="employee-dtr-grid-table mt-2 w-full border-collapse border-[2px] border-black">
           <thead>
             <tr>
               <th
-                rowSpan={2}
+                rowSpan={3}
                 className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
               >
                 Days
               </th>
               <th
+                colSpan={6}
+                className="border border-black px-[2px] py-[1px] h-[16px]"
+              ></th>
+            </tr>
+            <tr>
+              <th
                 colSpan={2}
-                className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center"
+                className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
               >
                 Morning
               </th>
               <th
                 colSpan={2}
-                className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center"
+                className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
               >
                 Afternoon
               </th>
               <th
                 colSpan={2}
-                className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center"
+                className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
               >
                 Overtime
               </th>
             </tr>
             <tr>
-              <th className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center">
+              <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
                 Arrived
               </th>
-              <th className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center">
+              <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
                 Departure
               </th>
-              <th className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center">
+              <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
                 Arrived
               </th>
-              <th className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center">
+              <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
                 Departure
               </th>
-              <th className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center">
+              <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
                 Hours
               </th>
-              <th className="border border-black px-[2px] py-[1px] text-[10px] font-bold text-center">
-                Minutes
+              <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
+                minutes
               </th>
             </tr>
           </thead>
@@ -771,35 +847,37 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange }) {
               const day = idx + 1;
               const entry = entriesByDay.get(day);
               const dayLabel = String(day).padStart(2, "0");
+              const cell =
+                "h-[22px] border border-black px-[2px] py-[3px] text-center text-[10px]";
               return (
                 <tr key={day}>
                   <td
-                    className="h-4 border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
+                    className={`${cell} font-bold`}
                     style={{ paddingLeft: 4 }}
                   >
                     {dayLabel}
                   </td>
-                  <td className="h-4 border border-black px-[2px] py-[1px] text-center text-[10px]">
+                  <td className={cell}>
                     {dtrCellValue(day, entry, entry?.am_arrival)}
                   </td>
-                  <td className="h-4 border border-black px-[2px] py-[1px] text-center text-[10px]">
+                  <td className={cell}>
                     {dtrCellValue(day, entry, entry?.am_departure)}
                   </td>
-                  <td className="h-4 border border-black px-[2px] py-[1px] text-center text-[10px]">
+                  <td className={cell}>
                     {dtrCellValue(day, entry, entry?.pm_arrival)}
                   </td>
-                  <td className="h-4 border border-black px-[2px] py-[1px] text-center text-[10px]">
+                  <td className={cell}>
                     {dtrCellValue(day, entry, entry?.pm_departure)}
                   </td>
-                  <td className="h-4 border border-black px-[2px] py-[1px] text-center text-[10px]" />
-                  <td className="h-4 border border-black px-[2px] py-[1px] text-center text-[10px]" />
+                  <td className={cell} />
+                  <td className={cell} />
                 </tr>
               );
             })}
           </tbody>
         </table>
 
-        <p className="mt-2.5 min-h-[34px] w-full px-0.5 text-[9px] italic leading-[1.25]">
+        <p className="indent-8 mt-2.5 min-h-[34px] w-full px-0.5 text-[9px] italic leading-[1.25]">
           I certify on my honor that the above is a true and correct report of
           the hours of work performed, record of which was made daily at the
           time of arrival and departure from office.

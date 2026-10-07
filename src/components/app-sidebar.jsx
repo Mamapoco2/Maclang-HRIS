@@ -414,9 +414,20 @@ const NAV_MAIN = [
   },
   {
     title: "DTR",
-    url: "/dtrRecords",
     icon: IconFileText,
     permission: "dtr.view",
+    items: [
+      {
+        title: "DTR Management",
+        url: "/dtrRecords",
+        permission: "dtr.view",
+      },
+      {
+        title: "Print DTR",
+        url: "/printDTR",
+        permission: "dtr.view",
+      },
+    ],
   },
 ];
 

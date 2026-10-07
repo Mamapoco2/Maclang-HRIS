@@ -64,6 +64,7 @@ import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding
 import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplicationsPage";
 import DTRPage from "../pages/dtr/dtrPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
+import PrintDTR from "../pages/dtr/components/employeeDtr";
 import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
 import UserManagementPage from "../pages/accounts/components/userManagementPage";
 
@@ -501,7 +502,16 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
-          </Route>
+
+            <Route
+              path="/printDTR"
+              element={
+                <PermissionRoute permission="dtr.view">
+                  <PrintDTR />
+                </PermissionRoute>
+              }
+            />
+          </Route>{" "}
         </Route>
       </Routes>
     </Router>

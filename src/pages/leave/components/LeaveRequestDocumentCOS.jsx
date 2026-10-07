@@ -1,378 +1,746 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { normalizeLeaveRequest } from "./LeaveRequestDocument";
-import { useAuthenticatedImage } from "@/hooks/useAuthenticatedImage";
+import { getEmployeeDtrCutoff } from "@/services/attendanceService";
 
-function formatDate(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const currentDate = new Date();
+const isSecondCutoffWindow = currentDate.getDate() >= 26;
+const currentMonthDate = new Date(
+  currentDate.getFullYear(),
+  currentDate.getMonth() + (isSecondCutoffWindow ? 1 : 0),
+  1,
+);
+const currentMonth = currentMonthDate.getMonth() + 1;
+const currentYear = currentMonthDate.getFullYear();
+
+const SHORT_MON = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function ymdToLocalDate(ymd) {
+  if (!ymd) return null;
+  const p = String(ymd).split(/[-T]/);
+  const y = Number(p[0]),
+    m = Number(p[1]),
+    d = Number(p[2]);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
 }
 
-function formatDateParts(value) {
-  if (!value) return { mm: "", dd: "", yyyy: "" };
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return { mm: "", dd: "", yyyy: "" };
-  return {
-    mm: String(d.getMonth() + 1).padStart(2, "0"),
-    dd: String(d.getDate()).padStart(2, "0"),
-    yyyy: String(d.getFullYear()),
+function d2day(n) {
+  return String(n).padStart(2, "0");
+}
+
+function toDateInputValue(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getCutoffDateFrom(month, year) {
+  return new Date(year, month - 2, 26);
+}
+
+function formatCutoffRangeDisplay(range) {
+  if (!range?.start || !range?.end) return "";
+  const start = ymdToLocalDate(range.start);
+  const end = ymdToLocalDate(range.end);
+  if (!start || !end) return "";
+  const y1 = start.getFullYear(),
+    y2 = end.getFullYear();
+  const m1 = start.getMonth(),
+    m2 = end.getMonth();
+  if (y1 === y2) {
+    if (m1 === m2)
+      return `${SHORT_MON[m1]} ${d2day(start.getDate())} - ${d2day(end.getDate())}, ${y1}`;
+    return `${SHORT_MON[m1]} ${d2day(start.getDate())} - ${SHORT_MON[m2]} ${d2day(end.getDate())}, ${y1}`;
+  }
+  return `${SHORT_MON[m1]} ${d2day(start.getDate())}, ${y1} - ${SHORT_MON[m2]} ${d2day(end.getDate())}, ${y2}`;
+}
+
+function formatDateRange(range) {
+  if (!range?.start || !range?.end) return "MM/DD/YYYY - MM/DD/YYYY";
+  const start = new Date(range.start),
+    end = new Date(range.end);
+  const s = `${String(start.getMonth() + 1).padStart(2, "0")}/${String(start.getDate()).padStart(2, "0")}/${start.getFullYear()}`;
+  const e = `${String(end.getMonth() + 1).padStart(2, "0")}/${String(end.getDate()).padStart(2, "0")}/${end.getFullYear()}`;
+  return `${s} - ${e}`;
+}
+
+function resolveDateForDay(day, range) {
+  if (!range?.start || !range?.end) return null;
+  const start = ymdToLocalDate(range.start);
+  const end = ymdToLocalDate(range.end);
+  if (!start || !end) return null;
+
+  const sameMonth =
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth();
+
+  if (sameMonth) {
+    if (day < start.getDate() || day > end.getDate()) return null;
+    return new Date(start.getFullYear(), start.getMonth(), day);
+  }
+
+  if (day >= start.getDate()) {
+    return new Date(start.getFullYear(), start.getMonth(), day);
+  }
+  if (day <= end.getDate()) {
+    return new Date(end.getFullYear(), end.getMonth(), day);
+  }
+  return null;
+}
+
+function isWeekendDay(day, range) {
+  const date = resolveDateForDay(day, range);
+  if (!date) return false;
+  const dow = date.getDay();
+  return dow === 0 || dow === 6;
+}
+
+function formatDtrCellDisplay(raw) {
+  if (raw == null) return "";
+  let s = String(raw).trim();
+  if (!s) return "";
+  const dtExtract = s.match(
+    /^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/,
+  );
+  if (dtExtract)
+    s = `${dtExtract[2]}:${dtExtract[3]}${dtExtract[4] ? `:${dtExtract[4]}` : ""}`;
+  if (!/^\d{1,2}:\d{2}/.test(s)) return s.toUpperCase();
+  let m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)\s*$/i);
+  if (m) {
+    const h = parseInt(m[1], 10),
+      min = m[2].padStart(2, "0"),
+      ap = m[4].toUpperCase();
+    return `${String(h).padStart(2, "0")}:${min} ${ap}`;
+  }
+  m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return s;
+  let h24 = parseInt(m[1], 10);
+  const min = m[2].padStart(2, "0");
+  if (h24 > 23) return s;
+  const ap = h24 >= 12 ? "PM" : "AM";
+  let h12 = h24 % 12;
+  if (h12 === 0) h12 = 12;
+  return `${String(h12).padStart(2, "0")}:${min} ${ap}`;
+}
+
+function getStoredEmployeeNumber() {
+  try {
+    const raw = localStorage.getItem("dtr:lastRecognized");
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    return parsed?.employee_number || parsed?.employeeNumber || "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Props (lahat optional):
+ *  - employeeNumber : kung ibibigay, automatic na ma-load ang DTR at mailalagay ang name
+ *  - employeeName   : ipapakita agad habang naglo-load pa (fallback)
+ *  - autoLoad       : default true
+ * Kung walang prop, gagamitin ang last recognized employee sa localStorage.
+ */
+export default function EmployeeDtr({
+  employeeNumber: initialEmployeeNumber = "",
+  employeeName: initialEmployeeName = "",
+  autoLoad = true,
+}) {
+  const [autoEmpNo] = useState(() =>
+    autoLoad ? initialEmployeeNumber || getStoredEmployeeNumber() : "",
+  );
+  const [employeeNumber, setEmployeeNumber] = useState(
+    () => initialEmployeeNumber || getStoredEmployeeNumber(),
+  );
+  const [month, setMonth] = useState(currentMonth);
+  const [year, setYear] = useState(currentYear);
+  const [dateFrom, setDateFrom] = useState(() =>
+    toDateInputValue(getCutoffDateFrom(currentMonth, currentYear)),
+  );
+  const [dateTo, setDateTo] = useState(() => toDateInputValue(new Date()));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+
+  const isDateInRange = (dateValue) => {
+    if (!dateFrom && !dateTo) return true;
+    if (!dateValue) return false;
+    const recordDate = new Date(dateValue);
+    if (Number.isNaN(recordDate.getTime())) return false;
+
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      if (Number.isNaN(from.getTime()) || recordDate < from) return false;
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo);
+      if (Number.isNaN(to.getTime())) return false;
+      to.setHours(23, 59, 59, 999);
+      if (recordDate > to) return false;
+    }
+
+    return true;
   };
-}
 
-function formatCurrency(value) {
-  if (value === null || value === undefined || value === "") return "";
-  const num = Number(value);
-  if (Number.isNaN(num)) return String(value);
-  return num.toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+  useEffect(() => {
+    setDateFrom(toDateInputValue(getCutoffDateFrom(month, year)));
+    setDateTo(toDateInputValue(new Date()));
+  }, [month, year]);
 
-function fullName(lr) {
-  return [lr.lastName, lr.firstName, lr.middleName].filter(Boolean).join(", ");
-}
+  const leftEntriesByDay = useMemo(() => {
+    const map = new Map();
+    (result?.left_entries || []).forEach((e) => {
+      if (isDateInRange(e?.date)) map.set(e.day, e);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, dateFrom, dateTo]);
 
-function Checkbox({ checked, children }) {
+  const rightEntriesByDay = useMemo(() => {
+    const map = new Map();
+    (result?.right_entries || []).forEach((e) => {
+      if (isDateInRange(e?.date)) map.set(e.day, e);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, dateFrom, dateTo]);
+
+  const loadDtr = async (empNo) => {
+    const emp = String(empNo ?? "").trim();
+    if (!emp) {
+      setError("Employee number is required.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      const data = await getEmployeeDtrCutoff(emp, month, year);
+      setResult(data);
+      if (!data.employee)
+        setError("No employee found for that employee number.");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load DTR. Please try again.");
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoad = () => loadDtr(employeeNumber);
+
+  // Automatic load: pagbukas ng page (kung may employee number galing prop/localStorage)
+  // at tuwing papalitan ang month/year pagkatapos ma-load ang DTR.
+  useEffect(() => {
+    const emp = (autoEmpNo || employeeNumber).trim();
+    if (!emp) return;
+    if (!autoEmpNo && !result) return;
+    loadDtr(emp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEmpNo, month, year]);
+
+  const displayName = result?.employee?.name || initialEmployeeName || "";
+
+  const sheet = (
+    <DtrSheet
+      result={result}
+      employeeName={displayName}
+      leftEntriesByDay={leftEntriesByDay}
+      rightEntriesByDay={rightEntriesByDay}
+    />
+  );
+
   return (
-    <div className="flex items-start gap-1.5 py-0.5">
-      <span
-        aria-hidden="true"
-        className={`csform6cos-box mt-0.5 inline-flex size-3.5 shrink-0 items-center justify-center border-2 border-black text-[10px] leading-none ${
-          checked ? "bg-black text-white" : "bg-white"
-        }`}
-      >
-        {checked ? "✓" : ""}
-      </span>
-      <span className="text-[11px] leading-tight">{children}</span>
+    <div className="employee-dtr-page flex justify-center px-3 pb-8 pt-4 sm:px-6 sm:pt-8 lg:px-10">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+        .dtr-ui {
+          --ink: #0f1923;
+          --ink-2: #3d4d5c;
+          --ink-3: #7a8fa0;
+          --line: #d3dce6;
+          --line-strong: #b0bec8;
+          --bg: #f0f4f8;
+          --surface: #ffffff;
+          --accent: #0284c7;
+          --accent-light: #e0f2fe;
+          --danger: #c0392b;
+          font-family: 'DM Sans', sans-serif;
+        }
+
+        .dtr-controls-card {
+          background: var(--surface);
+          border: 1px solid var(--line);
+          border-radius: 20px;
+          padding: 24px 28px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+          margin-bottom: 20px;
+        }
+        .dtr-controls-header {
+          display: flex; align-items: center; gap: 10px;
+          margin-bottom: 20px; padding-bottom: 16px;
+          border-bottom: 1px solid var(--line);
+        }
+        .dtr-controls-icon {
+          width: 34px; height: 34px; border-radius: 8px;
+          background: var(--accent-light);
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; color: var(--accent);
+        }
+        .dtr-controls-icon svg { width: 18px; height: 18px; }
+        .dtr-controls-title { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+        .dtr-controls-sub { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+        .dtr-fields { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+        .dtr-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+        .dtr-label {
+          font-size: 11.5px; font-weight: 600; color: var(--ink-3);
+          text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .dtr-input, .dtr-select {
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13.5px; font-weight: 500; color: var(--ink);
+          background: var(--surface);
+          border: 1.5px solid var(--line);
+          border-radius: 8px; padding: 8px 12px; outline: none;
+          transition: border-color 0.15s, box-shadow 0.15s;
+          appearance: none; -webkit-appearance: none; width: 100%;
+        }
+        .dtr-input:focus, .dtr-select:focus {
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+        }
+        .dtr-select {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8fa0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 12px center;
+          padding-right: 32px;
+        }
+        .dtr-actions { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+        .dtr-btn {
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13.5px; font-weight: 600;
+          padding: 8.5px 18px; border-radius: 8px; border: none;
+          cursor: pointer;
+          transition: background 0.15s, transform 0.1s, opacity 0.15s;
+          white-space: nowrap; display: flex; align-items: center; gap: 6px;
+        }
+        .dtr-btn:active { transform: scale(0.97); }
+        .dtr-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .dtr-btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(2,132,199,0.3); }
+        .dtr-btn-primary:hover:not(:disabled) { background: #0369a1; }
+        .dtr-btn-ghost { background: var(--surface); color: var(--ink-2); border: 1.5px solid var(--line); }
+        .dtr-btn-ghost:hover { background: #f4f7fb; border-color: var(--line-strong); }
+
+        .dtr-error-bar {
+          background: #fdf0ef; border: 1px solid #f0c5c2; border-radius: 8px;
+          padding: 10px 14px; font-size: 13px; color: var(--danger);
+          display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+        }
+        .dtr-cutoff-bar {
+          display: flex; align-items: center; gap: 10px;
+          background: var(--accent-light); border: 1px solid #bae6fd;
+          border-radius: 8px; padding: 9px 14px;
+          font-family: 'DM Sans', sans-serif; font-size: 12.5px;
+          color: var(--accent); font-weight: 500; margin-bottom: 20px;
+        }
+        .dtr-cutoff-bar strong { font-weight: 700; color: var(--ink); }
+        .dtr-cutoff-range { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ink-2); }
+        .dtr-cutoff-sep { color: #b0bec8; }
+
+        .dtr-paper {
+          background: white; border: 1px solid var(--line);
+          border-radius: 14px; padding: 28px 28px 24px;
+          box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+        }
+
+        @keyframes dtr-spin { to { transform: rotate(360deg); } }
+        .dtr-spin { animation: dtr-spin 0.8s linear infinite; }
+
+        @media (max-width: 768px) {
+          .dtr-controls-card { padding: 16px; border-radius: 16px; }
+          .dtr-field { max-width: none !important; min-width: calc(50% - 7px); }
+          .dtr-field:first-child { min-width: 100%; }
+          .dtr-input, .dtr-select { font-size: 16px; padding: 11px 12px; }
+          .dtr-select { padding-right: 32px; }
+          .dtr-actions { width: 100%; }
+          .dtr-btn { flex: 1; justify-content: center; min-height: 46px; font-size: 15px; }
+          .dtr-cutoff-bar { flex-wrap: wrap; gap: 6px 10px; }
+          .dtr-paper { padding: 14px 10px; }
+        }
+
+        /* ───────── PRINT SA SCREEN: nakatago yung print-only copy ───────── */
+        @media screen {
+          .dtr-print-root { display: none !important; }
+        }
+
+        /* ───────── PRINT ─────────
+           Yung print copy ay naka-portal diretso sa <body>, kaya walang
+           sidebar/parent offset na makakapagtabingi sa sheet.            */
+        @media print {
+          @page { size: A4 portrait; margin: 0; }
+
+          html, body {
+            width: 210mm !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+          }
+
+          /* itago ang buong app (sidebar, controls, etc.) */
+          body > *:not(.dtr-print-root) { display: none !important; }
+
+          .dtr-print-root {
+            display: block !important;
+            position: static !important;
+            width: 210mm !important;
+            margin: 0 auto !important;
+            padding: 5mm 0 0 0 !important;
+            background: #fff !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .dtr-paper {
+            width: 210mm !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            box-sizing: border-box !important;
+            overflow: visible !important;
+          }
+
+          /* dalawang kopya, magkatabi, naka-center: 99 + 2 + 99 = 200mm */
+          .dtr-print-root .employee-dtr-copies {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: center !important;
+            width: 200mm !important;
+            max-width: 200mm !important;
+            gap: 2mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .employee-dtr-copy {
+            flex: 0 0 99mm !important;
+            width: 99mm !important;
+            min-width: 99mm !important;
+            max-width: 99mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .employee-dtr-copy-inner {
+            width: 99mm !important;
+            min-width: 99mm !important;
+            max-width: 99mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          .dtr-print-root .employee-dtr-copy table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            margin: 2mm 0 0 0 !important;
+          }
+
+          .dtr-print-root .employee-dtr-shared-signature {
+            width: 100% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          .dtr-print-root .employee-dtr-sig-spacer {
+            height: 16mm !important;
+            min-height: 16mm !important;
+          }
+        }
+      `}</style>
+
+      <div className="employee-dtr-container w-full max-w-[1240px]">
+        {/* ── Controls ── */}
+        <div className="dtr-ui dtr-controls-card">
+          <div className="dtr-controls-header">
+            <div className="dtr-controls-icon">
+              <svg
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+            </div>
+            <div>
+              <div className="dtr-controls-title">Daily Time Record</div>
+              <div className="dtr-controls-sub">
+                CS Form No. 48 — View and print employee DTR
+              </div>
+            </div>
+          </div>
+
+          <div className="dtr-fields">
+            <div className="dtr-field" style={{ maxWidth: 180 }}>
+              <label className="dtr-label">Employee No.</label>
+              <input
+                className="dtr-input"
+                value={employeeNumber}
+                onChange={(e) => setEmployeeNumber(e.target.value)}
+                placeholder="e.g. EMP-0001"
+                onKeyDown={(e) => e.key === "Enter" && handleLoad()}
+              />
+            </div>
+            <div className="dtr-field" style={{ maxWidth: 180 }}>
+              <label className="dtr-label">Month</label>
+              <select
+                className="dtr-select"
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+              >
+                {MONTHS.map((m, i) => (
+                  <option key={m} value={i + 1}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="dtr-field" style={{ maxWidth: 120 }}>
+              <label className="dtr-label">Year</label>
+              <input
+                className="dtr-input"
+                type="number"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+              />
+            </div>
+            <div className="dtr-field" style={{ maxWidth: 180 }}>
+              <label className="dtr-label">Date From</label>
+              <input
+                className="dtr-input"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+            <div className="dtr-field" style={{ maxWidth: 180 }}>
+              <label className="dtr-label">Date To</label>
+              <input
+                className="dtr-input"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+            <div className="dtr-actions">
+              <button
+                className="dtr-btn dtr-btn-primary"
+                onClick={handleLoad}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      className="dtr-spin"
+                    >
+                      <path
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        strokeOpacity={0.3}
+                      />
+                      <path strokeLinecap="round" d="M21 12a9 9 0 00-9-9" />
+                    </svg>
+                    Loading…
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <path strokeLinecap="round" d="m21 21-4.35-4.35" />
+                    </svg>
+                    View DTR
+                  </>
+                )}
+              </button>
+              <button
+                className="dtr-btn dtr-btn-ghost"
+                onClick={() => window.print()}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"
+                  />
+                  <rect x="6" y="14" width="12" height="8" rx="1" />
+                </svg>
+                Print
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Error ── */}
+        {error && (
+          <div className="dtr-ui dtr-error-bar">
+            <svg
+              width="15"
+              height="15"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        {/* ── Cutoff bar ── */}
+        {result && (
+          <div className="dtr-ui dtr-cutoff-bar">
+            <svg
+              width="14"
+              height="14"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+            <strong>Cutoff periods:</strong>
+            <span className="dtr-cutoff-range">
+              {formatDateRange(result?.left_range)}
+            </span>
+            <span className="dtr-cutoff-sep">|</span>
+            <span className="dtr-cutoff-range">
+              {formatDateRange(result?.right_range)}
+            </span>
+          </div>
+        )}
+
+        {/* ── On-screen preview ── */}
+        {sheet}
+      </div>
+
+      {/* ── Print-only copy: nasa <body> mismo, para walang offset ng parent ── */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div className="dtr-print-root">{sheet}</div>,
+          document.body,
+        )}
     </div>
   );
 }
 
-function PlainItem({ children }) {
-  return <div className="py-0.5 text-[11px] leading-tight">{children}</div>;
-}
-
-function DatePartCell({ value }) {
-  return (
-    <td className="border-2 border-black p-1 text-center text-[10px]">
-      {value || "\u00A0"}
-    </td>
-  );
-}
-
-function FormBody({
-  lr,
-  details,
-  hasRecommendation,
-  recommendationSignatureUrl,
-  applicantSignatureUrl,
+// ── Paper (dalawang DTR + shared signature) ──────────────────────────────────
+function DtrSheet({
+  result,
+  employeeName,
+  leftEntriesByDay,
+  rightEntriesByDay,
 }) {
-  const COS_LEAVE_TYPES = ["vacation", "sick", "maternity", "paternity"];
-  const isOthers = !COS_LEAVE_TYPES.includes(lr.leaveType);
-  const from = formatDateParts(lr.inclusiveDatesFrom);
-  const to = formatDateParts(lr.inclusiveDatesTo);
-
   return (
-    <div className="csform6cos-serif">
-      <style>{`
-        .csform6cos-serif,
-        .csform6cos-serif * {
-          font-family: "Times New Roman", Times, serif !important;
-        }
-      `}</style>
-      <header className="mb-2 flex items-start justify-end text-[9px]">
-        <div className="text-right">OCG-OP-CPO Form No. 15</div>
-      </header>
-
-      <h1 className="text-center text-xl font-bold tracking-wide">
-        APPLICATION FOR LEAVE
-      </h1>
-      <div className="mb-3 text-center text-[21px]">
-        (for Consultant and Contractual)
+    <div className="dtr-paper">
+      <div className="employee-dtr-copies grid grid-cols-1 gap-6 md:grid-cols-2">
+        <DtrCopy
+          employeeName={employeeName || ""}
+          entriesByDay={leftEntriesByDay}
+          cutoffRange={result?.left_range}
+        />
+        <DtrCopy
+          employeeName={employeeName || ""}
+          entriesByDay={rightEntriesByDay}
+          cutoffRange={result?.right_range}
+        />
       </div>
-      <div className="text-[11px] pt-5">
-        <table className="w-full border-collapse text-[11px]">
-          <tbody>
-            <tr>
-              <td className="w-1/4 border-2 border-black p-1.5 align-top">
-                <div className="text-[10px] font-semibold">1. OFFICE</div>
-                <div className="mt-3 text-[11px]">
-                  {`${lr.office || ""}`.trim() || "\u00A0"}
-                </div>
-              </td>
-              <td className="border-2 border-black p-1.5 align-top">
-                <div className="text-[10px] font-semibold">
-                  2. a) NAME{" "}
-                  <span className="text-[9px] font-normal italic">(Last)</span>
-                </div>
-                <div className="mt-3 text-center text-[11px]">
-                  {lr.lastName || "\u00A0"}
-                </div>
-              </td>
-              <td className="border-2 border-black p-1.5 align-top">
-                <div className="text-[9px] font-normal italic">(First)</div>
-                <div className="mt-3 text-center text-[11px]">
-                  {lr.firstName || "\u00A0"}
-                </div>
-              </td>
-              <td className="border-2 border-black p-1.5 align-top">
-                <div className="text-[9px] font-normal italic">(Middle)</div>
-                <div className="mt-3 text-center text-[11px]">
-                  {lr.middleName || "\u00A0"}
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td className="border-2 border-black p-1.5 align-top">
-                <div className="text-[10px] font-semibold">
-                  3. DATE OF FILING
-                </div>
-                <div className="mt-3 text-[11px]">
-                  {formatDate(lr.dateFiled) || "\u00A0"}
-                </div>
-              </td>
-              <td className="border-2 border-black p-1.5 align-top" colSpan={2}>
-                <div className="text-[10px] font-semibold">4. POSITION</div>
-                <div className="mt-3 text-[11px]">
-                  {lr.position || "\u00A0"}
-                </div>
-              </td>
-              <td className="border-2 border-black p-1.5 align-top">
-                <div className="text-[10px] font-semibold">
-                  5. SALARY (Monthly)
-                </div>
-                <div className="mt-3 text-[11px]">
-                  {formatCurrency(lr.salary) || "\u00A0"}
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
 
-        <div className="border-b-2 border-l-2 border-r-2 border-black">
-          <div className="border-b-2 border-black text-center">
-            <div className="inline-block py-2 text-[11px] font-bold leading-none">
-              DETAILS OF APPLICATION
-            </div>
+      <div className='employee-dtr-shared-signature employee-dtr-form mt-8 flex w-full max-w-full flex-col items-center pt-1 text-center font-["Times New Roman",Times,serif]'>
+        <div className="employee-dtr-sig-block-a flex w-full max-w-[250px] flex-col items-center">
+          <div className="employee-dtr-sig-top-rule mb-1.5 w-full border-t border-black" />
+          <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.5px]">
+            SIGNATURE
           </div>
-
-          {/* 6.a/6.b/6.c  |  6.d */}
-          <div className="grid grid-cols-2 border-b-2 border-black">
-            <div className="border-r-2 border-black p-2">
-              <div className="mb-1 text-[10px] font-bold">
-                6. a) TYPE OF LEAVE
-              </div>
-              <Checkbox checked={lr.leaveType === "vacation"}>
-                Vacation
-              </Checkbox>
-              <Checkbox checked={isOthers}>Others (Specify)</Checkbox>
-              <div className="ml-5 space-y-2 pb-1">
-                <div className="border-b-2 border-black text-[11px]">
-                  {isOthers ? lr.othersSpecify || "\u00A0" : "\u00A0"}
-                </div>
-                <div className="border-b-2 border-black text-[11px]">
-                  &nbsp;
-                </div>
-              </div>
-              <Checkbox checked={lr.leaveType === "sick"}>Sick</Checkbox>
-              <Checkbox checked={lr.leaveType === "maternity"}>
-                Maternity
-              </Checkbox>
-              <Checkbox checked={lr.leaveType === "paternity"}>
-                Paternity
-              </Checkbox>
-
-              <div className="mt-4 mb-1 flex flex-wrap items-baseline gap-1 text-[10px] font-bold">
-                <span>6. b) NUMBER OF WORKING DAYS</span>
-                <span className="flex flex-1 items-baseline gap-1 pl-4">
-                  APPLIED FOR
-                  <span className="flex-1 border-b-2 border-black px-1 text-center text-[11px] font-normal">
-                    {lr.numberOfDays ?? "\u00A0"}
-                  </span>
-                </span>
-              </div>
-
-              <div className="mb-1 mt-3 text-[10px] font-bold">
-                6. c) INCLUSIVE DATES:
-              </div>
-              <table className="w-full border-collapse text-[10px]">
-                <thead>
-                  <tr>
-                    <th
-                      className="border-2 border-black p-1 font-semibold"
-                      colSpan={3}
-                    >
-                      FROM
-                    </th>
-                    <th
-                      className="border-2 border-black p-1 font-semibold"
-                      colSpan={3}
-                    >
-                      TO
-                    </th>
-                  </tr>
-                  <tr>
-                    <th className="border-2 border-black p-1 font-normal">
-                      MM
-                    </th>
-                    <th className="border-2 border-black p-1 font-normal">
-                      DD
-                    </th>
-                    <th className="border-2 border-black p-1 font-normal">
-                      YYYY
-                    </th>
-                    <th className="border-2 border-black p-1 font-normal">
-                      MM
-                    </th>
-                    <th className="border-2 border-black p-1 font-normal">
-                      DD
-                    </th>
-                    <th className="border-2 border-black p-1 font-normal">
-                      YYYY
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <DatePartCell value={from.mm} />
-                    <DatePartCell value={from.dd} />
-                    <DatePartCell value={from.yyyy} />
-                    <DatePartCell value={to.mm} />
-                    <DatePartCell value={to.dd} />
-                    <DatePartCell value={to.yyyy} />
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex flex-col justify-between p-2 text-[11px]">
-              <div>
-                <div className="mb-1 text-[10px] font-bold">
-                  6. d) WHERE LEAVE WILL BE SPENT
-                </div>
-
-                <div className="mb-3">
-                  <div className="text-center font-semibold">
-                    1. IN CASE OF VACATION LEAVE
-                  </div>
-                  <PlainItem>Within the Philippines</PlainItem>
-                  <PlainItem>
-                    Abroad (specify){" "}
-                    <span className="border-b-2 border-black pb-0.5">
-                      {details.vacationLocation === "abroad"
-                        ? details.abroadSpecify
-                        : "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"}
-                    </span>
-                  </PlainItem>
-                </div>
-
-                <div>
-                  <div className="text-center font-semibold">
-                    1. IN CASE OF SICK LEAVE
-                  </div>
-                  <PlainItem>
-                    In Hospital (specify){" "}
-                    <span className="border-b-2 border-black pb-0.5">
-                      {details.sickType === "hospital"
-                        ? details.illness
-                        : "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"}
-                    </span>
-                  </PlainItem>
-                  <PlainItem>
-                    Out Patient (specify){" "}
-                    <span className="border-b-2 border-black pb-0.5">
-                      {details.sickType === "outpatient"
-                        ? details.illness
-                        : "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"}
-                    </span>
-                  </PlainItem>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-col items-center text-[9px]">
-                {applicantSignatureUrl ? (
-                  <img
-                    src={applicantSignatureUrl}
-                    alt={`Signature of ${fullName(lr) || "applicant"}`}
-                    className="csform6cos-signature h-10 max-w-[160px] object-contain"
-                  />
-                ) : (
-                  <div className="h-10" />
-                )}
-                <div className="w-full border-b-2 border-black pb-1 text-center">
-                  {fullName(lr) || "\u00A0"}
-                </div>
-                <div className="pt-1">(Signature of Applicant)</div>
-              </div>
-            </div>
+          <div className="text-[10px] leading-[1.4]">
+            Verified as to the prescribed office hours.
           </div>
-
-          <div className="border-b-2 border-black text-center">
-            <div className="inline-block py-2 text-[11px] font-bold leading-none">
-              DETAILS OF ACTION ON APPLICATION
-            </div>
+        </div>
+        <div className="employee-dtr-sig-spacer h-10 w-full" />
+        <div className="employee-dtr-sig-block-b flex w-full max-w-[250px] flex-col items-center">
+          <div className="employee-dtr-sig-b-rule mb-1.5 w-full border-t border-black" />
+          <div className="mt-1 min-h-[14px] text-[11px] font-bold uppercase tracking-[0.2px]">
+            {result?.verifier?.name}
           </div>
-
-          {/* 7.a / 7.b */}
-          <div className="grid grid-cols-2 border-b-2 border-black">
-            <div className="border-r-2 border-black p-2 text-[11px]">
-              <div className="mb-1 text-[10px] font-bold">
-                7. a) CERTIFICATION:
-              </div>
-              <div className="italic">For documentation purposes only.</div>
-            </div>
-
-            <div className="p-2 text-[11px]">
-              <div className="mb-1 text-[10px] font-bold">
-                7. b) RECOMMENDATION
-              </div>
-              <PlainItem>Approved</PlainItem>
-              <PlainItem>
-                Disapproved due to{" "}
-                <span className="border-b-2 border-black pb-0.5">
-                  {hasRecommendation &&
-                  lr.recommendation.decision === "disapproval"
-                    ? lr.recommendation.disapprovalReason
-                    : "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"}
-                </span>
-              </PlainItem>
-            </div>
-          </div>
-
-          {/* 7.c */}
-          <div className="p-2 text-[11px]">
-            <div className="mb-1 text-[10px] font-bold">
-              7. c) APPROVED FOR:
-            </div>
-            <div className="min-h-[110px]">
-              {hasRecommendation ? lr.recommendation.remarks : ""}
-            </div>
-            <div className="flex flex-col items-center pb-2">
-              {hasRecommendation && recommendationSignatureUrl ? (
-                <img
-                  src={recommendationSignatureUrl}
-                  alt={`Signature of ${lr.recommendation.officerName ?? "authorized official"}`}
-                  className="csform6cos-signature h-10 max-w-[160px] object-contain"
-                />
-              ) : (
-                <div className="h-10" />
-              )}
-              <div className="w-72 border-b-2 border-black pb-1 text-center text-[10px]">
-                {hasRecommendation
-                  ? (lr.recommendation.officerName ?? "\u00A0")
-                  : "\u00A0"}
-              </div>
-              <div className="pt-1 text-center text-[9px]">
-                (Authorized Official)
-              </div>
-            </div>
+          <div className="min-h-[14px] text-[11px] uppercase tracking-[0.2px]">
+            {result?.verifier?.position}
           </div>
         </div>
       </div>
@@ -380,137 +748,174 @@ function FormBody({
   );
 }
 
-export default function LeaveRequestDocumentCOS({
-  leaveRequest,
-  printAreaId = "csform6cos-print-area",
-}) {
-  const lr = normalizeLeaveRequest(leaveRequest);
-  const details = lr.details ?? {};
-  const hasRecommendation = Boolean(lr.recommendation);
-
-  const applicantSignature = useAuthenticatedImage(lr.signatureUrl);
-  const recommendationSignature = useAuthenticatedImage(
-    lr.recommendation?.signatureUrl,
-  );
-
-  const portalRootId = `${printAreaId}-portal-root`;
-
-  const PRINT_MARGIN_VERTICAL_MM = 10;
-  const PRINT_MARGIN_HORIZONTAL_MM = 12;
-  const printRef = useRef(null);
-
-  useEffect(() => {
-    const node = printRef.current;
-    if (!node) return;
-
-    const PAGE_WIDTH_MM = 216;
-    const PAGE_HEIGHT_MM = 279;
-    const MM_TO_PX = 96 / 25.4;
-    const pageWidthPx =
-      (PAGE_WIDTH_MM - PRINT_MARGIN_HORIZONTAL_MM * 2) * MM_TO_PX;
-    const pageHeightPx =
-      (PAGE_HEIGHT_MM - PRINT_MARGIN_VERTICAL_MM * 2) * MM_TO_PX;
-
-    node.style.setProperty("--print-scale", "1");
-    const naturalWidth = node.offsetWidth;
-    const naturalHeight = node.scrollHeight;
-    const scaleToFillWidth = pageWidthPx / naturalWidth;
-    const scaleToFillHeight = pageHeightPx / naturalHeight;
-    const scale = Math.min(scaleToFillWidth, scaleToFillHeight);
-    node.style.setProperty("--print-scale", scale.toFixed(3));
-  }, [leaveRequest]);
+// ── DtrCopy — walang binago ──────────────────────────────────────────────────
+function DtrCopy({ employeeName, entriesByDay, cutoffRange }) {
+  const monthRangeText = formatCutoffRangeDisplay(cutoffRange) || "";
+  const dtrCellValue = (day, entry, rawValue) => {
+    const weekend = isWeekendDay(day, cutoffRange);
+    if (!entry) return weekend ? "OFF" : "";
+    const formatted = formatDtrCellDisplay(rawValue);
+    return formatted || (weekend ? "OFF" : "");
+  };
 
   return (
-    <>
-      <div
-        id={printAreaId}
-        className="w-full h-full max-w-[850px] bg-white p-5 text-black shadow-sm"
-      >
-        <FormBody
-          lr={lr}
-          details={details}
-          hasRecommendation={hasRecommendation}
-          recommendationSignatureUrl={recommendationSignature.url}
-          applicantSignatureUrl={applicantSignature.url}
-        />
-      </div>
+    <div className="employee-dtr-copy flex flex-col items-center px-1 py-2">
+      <div className='employee-dtr-copy-inner employee-dtr-form flex w-full max-w-full flex-col items-center font-["Times New Roman",Times,serif]'>
+        <div className="mb-2 w-full text-left text-[10px] font-bold leading-[1.1]">
+          Civil Service Form No. 48
+        </div>
+        <div className="mb-2.5 w-full text-center text-[17px] font-bold uppercase leading-[1.2] tracking-[0.5px]">
+          DAILY TIME RECORD
+        </div>
 
-      {createPortal(
-        <div id={portalRootId}>
-          <div
-            id={`${printAreaId}-print-page`}
-            className="csform6cos-print-page"
-          >
-            <div
-              id={`${printAreaId}-print-copy`}
-              ref={printRef}
-              className="csform6cos-print-copy w-[740px] bg-white p-5 text-black"
-              style={{ transform: "scale(var(--print-scale, 1))" }}
-            >
-              <FormBody
-                lr={lr}
-                details={details}
-                hasRecommendation={hasRecommendation}
-                recommendationSignatureUrl={recommendationSignature.url}
-                applicantSignatureUrl={applicantSignature.url}
-              />
+        <div className="employee-dtr-name-block mb-2.5 w-full text-center">
+          <div className="flex w-full justify-center">
+            <div className="inline-block w-fit max-w-full border-b-[1.5px] border-black px-2.5 pb-0.5 text-center">
+              <span className="text-[12px] font-bold uppercase leading-[1.1] tracking-[0.2px]">
+                {employeeName || "\u00a0"}
+              </span>
             </div>
           </div>
+          <div className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.5px]">
+            NAME
+          </div>
+        </div>
 
-          <style>{`
-            .csform6cos-print-page {
-              position: fixed;
-              top: 0;
-              left: -100000px;
-              visibility: hidden;
-              pointer-events: none;
-            }
+        <div className="employee-dtr-header-fields mt-1.5 w-full self-stretch mb-2.5">
+          <div className="mb-1 flex w-full items-end justify-between gap-1">
+            <span className="flex-[0_0_46%] pb-px text-left text-[9.5px] font-bold leading-[1.15]">
+              For the month of
+            </span>
+            <span className="flex flex-1 items-end justify-center">
+              <span className="inline-block border-b border-black pb-px text-center text-[9.5px] font-bold leading-[1.2]">
+                {monthRangeText}
+              </span>
+            </span>
+          </div>
+          <div className="mb-1 flex w-full items-end justify-between gap-1">
+            <span className="flex-[0_0_46%] pb-px text-left text-[9.5px] font-bold leading-[1.15]">
+              Official Hours:
+            </span>
+            <span className="flex flex-1 items-end justify-center">
+              <span className="inline-block border-b border-black pb-px text-center text-[9.5px] font-bold leading-[1.2]">
+                8:00 AM - 5:00 PM
+              </span>
+            </span>
+          </div>
+          <div className="mb-1 flex w-full items-end justify-between gap-1">
+            <span className="flex-[0_0_46%] pb-px text-left text-[9.5px] font-bold leading-[1.15]">
+              For Arrival & Departure Days:
+            </span>
+            <span className="block min-h-[18px] flex-1 border-b border-black">
+              &nbsp;
+            </span>
+          </div>
+          <div className="flex w-full items-end justify-between gap-1">
+            <span className="flex-[0_0_46%] pb-px text-left text-[9.5px] font-bold leading-[1.15]">
+              Saturdays:
+            </span>
+            <span className="block min-h-[18px] flex-1 border-b border-black">
+              &nbsp;
+            </span>
+          </div>
+        </div>
 
-            @media print {
-              @page { size: letter portrait; margin: 0; }
+        <table className="employee-dtr-grid-table mt-2 w-full border-collapse border-[2px] border-black">
+          <thead>
+            <tr>
+              <th
+                rowSpan={3}
+                className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
+              >
+                Days
+              </th>
+              <th
+                colSpan={6}
+                className="border border-black px-[2px] py-[1px] h-[16px]"
+              ></th>
+            </tr>
+            <tr>
+              <th
+                colSpan={2}
+                className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
+              >
+                Morning
+              </th>
+              <th
+                colSpan={2}
+                className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
+              >
+                Afternoon
+              </th>
+              <th
+                colSpan={2}
+                className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold"
+              >
+                Overtime
+              </th>
+            </tr>
+            <tr>
+              <th className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold">
+                Arrived
+              </th>
+              <th className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold">
+                Departure
+              </th>
+              <th className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold">
+                Arrived
+              </th>
+              <th className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold">
+                Departure
+              </th>
+              <th className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold">
+                Hours
+              </th>
+              <th className="border border-black px-[2px] py-[1px] text-center text-[10px] font-bold">
+                minutes
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 31 }).map((_, idx) => {
+              const day = idx + 1;
+              const entry = entriesByDay.get(day);
+              const dayLabel = String(day).padStart(2, "0");
+              const cell =
+                "h-[22px] border border-black px-[2px] py-[3px] text-center text-[10px]";
+              return (
+                <tr key={day}>
+                  <td
+                    className={`${cell} font-bold`}
+                    style={{ paddingLeft: 4 }}
+                  >
+                    {dayLabel}
+                  </td>
+                  <td className={cell}>
+                    {dtrCellValue(day, entry, entry?.am_arrival)}
+                  </td>
+                  <td className={cell}>
+                    {dtrCellValue(day, entry, entry?.am_departure)}
+                  </td>
+                  <td className={cell}>
+                    {dtrCellValue(day, entry, entry?.pm_arrival)}
+                  </td>
+                  <td className={cell}>
+                    {dtrCellValue(day, entry, entry?.pm_departure)}
+                  </td>
+                  <td className={cell} />
+                  <td className={cell} />
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-              body > *:not(#${portalRootId}) {
-                display: none !important;
-              }
-
-              .csform6cos-print-page {
-                position: fixed !important;
-                top: ${PRINT_MARGIN_VERTICAL_MM}mm !important;
-                right: ${PRINT_MARGIN_HORIZONTAL_MM}mm !important;
-                bottom: ${PRINT_MARGIN_VERTICAL_MM}mm !important;
-                left: ${PRINT_MARGIN_HORIZONTAL_MM}mm !important;
-                width: auto !important;
-                height: auto !important;
-                visibility: visible !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-
-              .csform6cos-print-copy {
-                transform-origin: center center !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                box-sizing: border-box !important;
-              }
-
-              .csform6cos-box {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-
-              .csform6cos-signature {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-            }
-          `}</style>
-        </div>,
-        document.body,
-      )}
-    </>
+        <p className="indent-8 mt-2.5 min-h-[34px] w-full px-0.5 text-[9px] italic leading-[1.25]">
+          I certify on my honor that the above is a true and correct report of
+          the hours of work performed, record of which was made daily at the
+          time of arrival and departure from office.
+        </p>
+      </div>
+    </div>
   );
 }
