@@ -103,6 +103,7 @@ export const PERMISSIONS = Object.freeze({
 
   // ── DTR ──────────────────────────────────────────────────
   DTR_VIEW: "dtr.view",
+  DTR_MANAGE: "dtr.manage",
 
   // ── Bug Reports ──────────────────────────────────────────
   BUG_REPORTS_VIEW: "bug-reports.view",
