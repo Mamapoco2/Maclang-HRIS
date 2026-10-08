@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import api from "@/api/api";
 
 export default function AuthImage({ attendanceId, type, alt, style }) {
   const [src, setSrc] = useState(null);
@@ -8,13 +9,21 @@ export default function AuthImage({ attendanceId, type, alt, style }) {
     let url = null;
     let cancelled = false;
 
-    apiBlob(`/dtr/attendances/${attendanceId}/image/${type}`)
-      .then((blob) => {
+    setSrc(null);
+    setFailed(false);
+
+    api
+      .get(`/dtr/attendances/${attendanceId}/image/${type}`, {
+        responseType: "blob",
+      })
+      .then(({ data }) => {
         if (cancelled) return;
-        url = URL.createObjectURL(blob);
+        url = URL.createObjectURL(data);
         setSrc(url);
       })
-      .catch(() => !cancelled && setFailed(true));
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
 
     return () => {
       cancelled = true;

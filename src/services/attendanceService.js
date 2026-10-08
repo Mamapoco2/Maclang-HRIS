@@ -1,7 +1,11 @@
 import api from "@/api/api";
 
-export const recordAttendance = async (name, image) => {
-  const { data } = await api.post("/attendance", { name, image });
+export const recordAttendance = async (ticket, image) => {
+  const { data } = await api.post("/dtr/kiosk/punch", {
+    ticket,
+    image,
+  });
+
   return data;
 };
 
@@ -52,11 +56,4 @@ export const updateAttendanceRecord = async (id, formData) => {
   });
 
   return data;
-};
-
-export const lookupDtrEmployee = async (employeeNumber) => {
-  const { data } = await api.get("/dtr/employees-by-number", {
-    params: { employee_number: employeeNumber },
-  });
-  return data?.employee ?? null;
 };
