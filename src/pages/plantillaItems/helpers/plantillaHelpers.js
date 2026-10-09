@@ -59,6 +59,31 @@ export function buildPageList(totalPages, safePage) {
     }, []);
 }
 
+// ─── Item numbers ───────────────────────────────────────────────────────────
+
+export function formatItemNumber(baseItemNumber, slotNumber, totalSlots) {
+  return totalSlots > 1
+    ? `${baseItemNumber}-${slotNumber}`
+    : String(baseItemNumber);
+}
+
+export function getItemShiftRange(items, baseItemNumber) {
+  const isWholeNumber = (value) => /^[1-9]\d{0,8}$/.test(String(value));
+  if (!isWholeNumber(baseItemNumber)) return null;
+
+  const taken = new Set(
+    items.map((item) => String(item.base_item_number)).filter(isWholeNumber),
+  );
+
+  const from = Number(baseItemNumber);
+  if (!taken.has(String(from))) return null;
+
+  let to = from;
+  while (taken.has(String(to + 1))) to++;
+
+  return { from, to };
+}
+
 // ─── Positions sub-table ────────────────────────────────────────────────────
 
 export function itemHasSteps(positions = []) {
@@ -109,11 +134,6 @@ export function resolveInheritedConfig(positions = []) {
 
 // ─── Directorate / Division / Department hierarchy ─────────────────────────
 
-// Options for the Directorate/Division and Department/Section/Unit dropdowns now
-// come from the Plantilla Positions Department Database (see departmentStore.js),
-// not from the shared /divisions and /departments endpoints. Active units only,
-// so Inactive/Obsolete entries can't be picked for new items or slots.
-// Swap the body for an API call once the backend exists.
 export async function fetchAllUnits() {
   return getActiveUnits();
 }
@@ -148,8 +168,6 @@ export function resolveUnitForDepartment(dept) {
     };
   }
   if (dept?.division_id) {
-    // Look the parent up in the Department Database so we get its real name,
-    // type and status (including Inactive parents of already-linked records).
     const parent = getAllUnits().find(
       (u) => u.kind === "division" && Number(u.id) === Number(dept.division_id),
     );

@@ -11,7 +11,11 @@ import {
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { plantillaPositionService } from "@/services/plantillaService";
-import { getPositionHeaders, itemHasSteps } from "../helpers/plantillaHelpers";
+import {
+  formatItemNumber,
+  getPositionHeaders,
+  itemHasSteps,
+} from "../helpers/plantillaHelpers";
 import { getAssignedToDisplay } from "../helpers/formatters";
 import { StatusBadge } from "./StatusBadge";
 import { PositionModal } from "./PositionModal";
@@ -71,6 +75,11 @@ export function PositionsSubTable({ item, onRefresh }) {
                   const canDelete =
                     statusKey !== "FILLED" && statusKey !== "UNFILLED";
                   const assignedTo = getAssignedToDisplay(pos);
+                  const itemNumber = formatItemNumber(
+                    item.base_item_number,
+                    pos.slot_number,
+                    positions.length,
+                  );
 
                   return (
                     <TableRow
@@ -79,7 +88,7 @@ export function PositionsSubTable({ item, onRefresh }) {
                     >
                       <TableCell className="text-center">
                         <div className="font-mono text-xs font-semibold text-indigo-600">
-                          {item.base_item_number}-{pos.slot_number}
+                          {itemNumber}
                         </div>
                       </TableCell>
 
@@ -137,7 +146,12 @@ export function PositionsSubTable({ item, onRefresh }) {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
-                            onClick={() => setEditPos(pos)}
+                            onClick={() =>
+                              setEditPos({
+                                ...pos,
+                                position_slot_name: itemNumber,
+                              })
+                            }
                             title="Edit slot"
                           >
                             <Pencil size={12} />
@@ -147,7 +161,12 @@ export function PositionsSubTable({ item, onRefresh }) {
                             size="icon"
                             className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30"
                             disabled={!canDelete}
-                            onClick={() => setDeletePos(pos)}
+                            onClick={() =>
+                              setDeletePos({
+                                ...pos,
+                                position_slot_name: itemNumber,
+                              })
+                            }
                             title={
                               canDelete
                                 ? "Remove slot"

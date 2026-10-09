@@ -28,7 +28,11 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { plantillaPositionService as plantillaItemService } from "@/services/plantillaService";
 import { itemDefaults } from "../helpers/constants";
-import { fetchAllUnits, parseDisplayTarget } from "../helpers/plantillaHelpers";
+import {
+  fetchAllUnits,
+  getItemShiftRange,
+  parseDisplayTarget,
+} from "../helpers/plantillaHelpers";
 import { HierarchyTargetField } from "./HierarchyTargetField";
 
 function AddItemForm({ open, onOpenChange, onSuccess }) {
@@ -38,6 +42,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [salaryGrades, setSalaryGrades] = useState([]);
   const [steps, setSteps] = useState([]);
+  const [existingItems, setExistingItems] = useState([]);
   const [loadingGrades, setLoadingGrades] = useState(false);
   const [loadingSteps, setLoadingSteps] = useState(false);
 
@@ -57,6 +62,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
 
         setDepartments(units);
         setSalaryGrades(gradesRes.data ?? gradesRes);
+        setExistingItems(items);
 
         if (items.length > 0) {
           const nextNumber =
@@ -85,6 +91,10 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
   }, [open, form]);
 
   const watchedSgId = form.watch("salary_grade_id");
+  const shiftRange = getItemShiftRange(
+    existingItems,
+    form.watch("base_item_number"),
+  );
 
   useEffect(() => {
     if (!watchedSgId) {
@@ -103,7 +113,7 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
   const handleSubmit = async (data) => {
     setSaving(true);
     try {
-      await plantillaItemService.createPlantillaItem({
+      const res = await plantillaItemService.createPlantillaItem({
         base_item_number: data.base_item_number,
         title: data.title,
         description: data.description,
@@ -116,7 +126,11 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
           : null,
         ...parseDisplayTarget(data.display_target),
       });
-      toast.success("Plantilla item added and slots provisioned.");
+      toast.success(
+        Object.keys(res?.renumbered ?? {}).length > 0
+          ? res.message
+          : "Plantilla item added and slots provisioned.",
+      );
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
@@ -146,17 +160,36 @@ function AddItemForm({ open, onOpenChange, onSuccess }) {
             <FormField
               control={form.control}
               name="base_item_number"
-              rules={{ required: "Item number is required" }}
+              rules={{
+                required: "Item number is required",
+                pattern: {
+                  value: /^[1-9]\d*$/,
+                  message: "Use a whole number without a leading zero.",
+                },
+              }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Item Number
                   </FormLabel>
-                  <Input
-                    readOnly
-                    className="font-mono text-sm border-gray-200 bg-slate-50"
-                    {...field}
-                  />
+                  <FormControl>
+                    <Input
+                      inputMode="numeric"
+                      maxLength={9}
+                      className="font-mono text-sm border-gray-200"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.value.replace(/\D/g, ""))
+                      }
+                    />
+                  </FormControl>
+                  {shiftRange && (
+                    <p className="text-xs text-amber-600">
+                      {shiftRange.from === shiftRange.to
+                        ? `Item ${shiftRange.from} already exists and will move to ${shiftRange.to + 1}.`
+                        : `Items ${shiftRange.from}-${shiftRange.to} will move down by one (to ${shiftRange.from + 1}-${shiftRange.to + 1}).`}
+                    </p>
+                  )}
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
