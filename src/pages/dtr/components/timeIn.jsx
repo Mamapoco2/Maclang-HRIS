@@ -1,24 +1,77 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
 import { FaceDetection } from "@mediapipe/face_detection";
 import { FaceMesh } from "@mediapipe/face_mesh";
-import { Camera } from "@mediapipe/camera_utils";
-import { recognizeFace } from "@/services/faceService";
-import { recordAttendance } from "@/services/attendanceService";
-import { useLiveness } from "@/hooks/useLiveness";
+import { recognizeFace } from "../../services/faceService";
+import { recordAttendance } from "../../services/attendanceService";
+import { useLiveness } from "../../hooks/useLiveness";
+import AlertDialog from "../components/AlertDialog";
+import { CAMERA_RESPONSIVE_CSS } from "./cameraResponsive";
+import { unlockAudio, playSuccess, playError } from "../../services/sounds";
+import { hapticTick, hapticSuccess, hapticError } from "../../services/haptics";
+
+// ── Per-platform settings ────────────────────────────────────────────────────
+// WEB values are exactly what you had before (web behaviour is unchanged).
+// NATIVE values are tuned for speed in the Android app only.
+const IS_NATIVE = Capacitor.isNativePlatform();
+
+const WEB_CFG = {
+  cameraW: 1280,
+  cameraH: 720,
+  fps: 30,
+  jpegQuality: 0.95,
+  frames: 3, // frames sent to /recognize
+  frameDelayMs: 150, // gap between those frames
+  minFrameMs: 0, // 0 = no throttle on the MediaPipe loop
+  challenges: 2, // liveness challenges required
+  idleSleepAfterMs: 0, // idle power-saving is off on the web
+  idleFrameMs: 300,
+  idleReloadMs: 0,
+};
+
+const NATIVE_CFG = {
+  cameraW: 640, // matches the 640px the server downsizes to anyway
+  cameraH: 480,
+  fps: 30,
+  jpegQuality: 0.85,
+  frames: 3,
+  frameDelayMs: 60,
+  minFrameMs: 50, // ~20 fps cap while idle so slow phones don't heat up
+  challenges: 1, // set to 2 for stricter liveness (slower)
+  idleSleepAfterMs: 10000, // no face for 10s → slow down to ~3 fps (less heat)
+  idleFrameMs: 300,
+  idleReloadMs: 30 * 60 * 1000, // after 30 min with no face, reload to clear memory
+};
+
+const CFG = IS_NATIVE ? NATIVE_CFG : WEB_CFG;
+
+// Stop waiting if the server hangs, instead of spinning forever
+const RECOGNIZE_TIMEOUT_MS = 15000;
+const RECORD_TIMEOUT_MS = 20000;
+
+function withTimeout(promise, ms) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Request timed out")), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
 
 export default function TimeIn() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
   const recognizedNameRef = useRef(null);
+  const recognizedTicketRef = useRef(null);
   const faceStableCounter = useRef(0);
   const faceVisibleRef = useRef(false);
 
-  // ── Performance: debounce recognition — fire once per face appearance ──────
-  const recognitionFiredRef = useRef(false); // reset when face leaves frame
+  const recognitionFiredRef = useRef(false);
   const recognitionInFlightRef = useRef(false);
+  const recordingRef = useRef(false);
 
-  // ── Performance: cache known faces so we don't re-fetch every call ─────────
   const knownFacesCacheRef = useRef(null);
 
   const livenessStateRef = useRef({
@@ -32,6 +85,8 @@ export default function TimeIn() {
   const [status, setStatus] = useState("Ready to scan");
   const [statusType, setStatusType] = useState("idle");
   const [recognizedName, setRecognizedName] = useState(null);
+  const [punchResult, setPunchResult] = useState(null);
+  const [recording, setRecording] = useState(false);
   const [time, setTime] = useState(new Date());
 
   const {
@@ -45,9 +100,18 @@ export default function TimeIn() {
     startChallenge,
     resetChallenge,
     processMeshResults,
-  } = useLiveness();
+  } = useLiveness({ challengesRequired: CFG.challenges });
 
-  // Keep ref in sync with hook state
+  // The camera effect below runs once, so it reads these through refs.
+  // (Before, it kept the first-render values, so the on-camera challenge
+  // label and progress dots never updated.)
+  const challengeLabelRef = useRef(null);
+  const challengeProgressRef = useRef(challengeProgress);
+  useEffect(() => {
+    challengeLabelRef.current = challengeLabel;
+    challengeProgressRef.current = challengeProgress;
+  }, [challengeLabel, challengeProgress]);
+
   useEffect(() => {
     livenessStateRef.current.ok = livenessOk;
     livenessStateRef.current.rejected = livenessRejected;
@@ -55,13 +119,11 @@ export default function TimeIn() {
     livenessStateRef.current.isLockedOut = isLockedOut;
   }, [livenessOk, livenessRejected, challenge, isLockedOut]);
 
-  // Clock
   useEffect(() => {
     const tick = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(tick);
   }, []);
 
-  // Status messages
   useEffect(() => {
     if (isLockedOut) {
       setStatus(`Too many failures — locked out for ${lockoutSecondsLeft}s`);
@@ -86,12 +148,10 @@ export default function TimeIn() {
     recognizedName,
   ]);
 
-  // ── Performance: pre-fetch and cache known faces on mount ─────────────────
   useEffect(() => {
     async function warmCache() {
       try {
-        // Adjust this import path to wherever you fetch known faces from
-        const { getKnownFaces } = await import("@/services/faceService");
+        const { getKnownFaces } = await import("../../services/faceService");
         knownFacesCacheRef.current = await getKnownFaces();
       } catch (e) {
         console.warn("Could not pre-fetch known faces:", e);
@@ -100,7 +160,33 @@ export default function TimeIn() {
     warmCache();
   }, []);
 
-  // ── Recognition: fires once per face appearance after liveness passes ──────
+  // ── Capture a frame as JPEG (camera resolution) ────────────────────────────
+  const captureImage = () => {
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    return canvas.toDataURL("image/jpeg", CFG.jpegQuality);
+  };
+
+  // Capture N frames a few ms apart for accurate multi-frame recognition.
+  // Backend requires an ARRAY of 3–5 images (see Laravel: min:3|max:5).
+  const captureFrames = useCallback(
+    async (count = CFG.frames, delayMs = CFG.frameDelayMs) => {
+      const frames = [];
+      for (let i = 0; i < count; i++) {
+        frames.push(captureImage());
+        if (i < count - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+      return frames;
+    },
+    [],
+  );
+
+  // Recognition: fires once per face appearance after liveness passes
   const attemptRecognition = useCallback(async () => {
     const ls = livenessStateRef.current;
     if (
@@ -122,13 +208,17 @@ export default function TimeIn() {
       setStatus("Verifying identity…");
       setStatusType("scanning");
 
-      const image = captureImage();
-      // Use cached known faces if available, otherwise let the service fetch
-      const result = await recognizeFace(image, knownFacesCacheRef.current);
+      const images = await captureFrames();
+      const result = await withTimeout(
+        recognizeFace(images),
+        RECOGNIZE_TIMEOUT_MS,
+      );
 
       if (result.match) {
         recognizedNameRef.current = result.name;
+        recognizedTicketRef.current = result.ticket;
         setRecognizedName(result.name);
+        hapticTick();
         setStatus("Identity verified");
         setStatusType("success");
       } else {
@@ -136,21 +226,26 @@ export default function TimeIn() {
         setRecognizedName(null);
         setStatus("Face not recognized");
         setStatusType("error");
-        // Allow retry after a short delay
+        hapticError();
         setTimeout(() => {
           recognitionFiredRef.current = false;
         }, 3000);
       }
     } catch (err) {
       console.error("Recognition error:", err);
-      setStatus("Recognition failed — please try again");
+      setStatus(
+        err?.message === "Request timed out"
+          ? "Server is taking too long — please try again"
+          : "Recognition failed — please try again",
+      );
       setStatusType("error");
+      hapticError();
       recognizedNameRef.current = null;
       recognitionFiredRef.current = false;
     } finally {
       recognitionInFlightRef.current = false;
     }
-  }, []);
+  }, [captureFrames]);
 
   // Watch for liveness becoming ok and trigger recognition immediately
   useEffect(() => {
@@ -160,19 +255,18 @@ export default function TimeIn() {
   // ── Camera + MediaPipe setup ───────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return undefined;
+    if (!video) return;
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setStatus(
-        "Camera needs HTTPS. Open this page via https:// or localhost.",
-      );
-      setStatusType("error");
-      return undefined;
-    }
+    let running = true;
+    let stream = null;
+    let rafId = null;
+    let lastRun = 0;
+    let uiScale = 1;
+    let uiFrame = 0;
+    let lastFaceAt = Date.now();
 
     const faceDetection = new FaceDetection({
-      locateFile: (f) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${f}`,
+      locateFile: (f) => `/mediapipe/face_detection/${f}`,
     });
     faceDetection.setOptions({ model: "short", minDetectionConfidence: 0.4 });
 
@@ -181,11 +275,27 @@ export default function TimeIn() {
       if (!canvas || !video) return;
 
       const ctx = canvas.getContext("2d");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Only resize when the video size changes — assigning width/height
+      // re-allocates the canvas, which is slow if done on every frame.
+      if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
+      if (canvas.height !== video.videoHeight)
+        canvas.height = video.videoHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // On small screens the canvas is shown much smaller, which makes
+      // brackets/labels tiny. Scale them up (never below 1 → desktop unchanged).
+      // Layout reads are slow, so this is recomputed only every 30 frames.
+      if (uiFrame++ % 30 === 0) {
+        const cssPerPx =
+          Math.max(
+            canvas.clientWidth / canvas.width,
+            canvas.clientHeight / canvas.height,
+          ) || 1;
+        uiScale = Math.min(3, Math.max(1, 1 / cssPerPx / 1.8));
+      }
+
       if (results.detections.length > 0) {
+        lastFaceAt = Date.now();
         faceStableCounter.current++;
         faceVisibleRef.current = true;
 
@@ -217,14 +327,23 @@ export default function TimeIn() {
                 ? "#f59e0b"
                 : "#94a3b8";
 
-        drawCornerBrackets(ctx, x, y, w, h, color);
+        drawCornerBrackets(ctx, x, y, w, h, color, uiScale);
         drawScanLine(ctx, x, y, w, h, color);
-        drawProgressDots(ctx, x, y, w, challengeProgress);
+        drawProgressDots(ctx, x, y, w, challengeProgressRef.current, uiScale);
 
         if (recognizedNameRef.current) {
-          drawLabel(ctx, recognizedNameRef.current, x, y, w, h, color);
-        } else if (challengeLabel) {
-          drawLabel(ctx, challengeLabel, x, y, w, h, "#f59e0b");
+          drawLabel(ctx, recognizedNameRef.current, x, y, w, h, color, uiScale);
+        } else if (challengeLabelRef.current) {
+          drawLabel(
+            ctx,
+            challengeLabelRef.current,
+            x,
+            y,
+            w,
+            h,
+            "#f59e0b",
+            uiScale,
+          );
         }
 
         ctx.shadowBlur = 0;
@@ -233,7 +352,8 @@ export default function TimeIn() {
           faceStableCounter.current = 0;
           faceVisibleRef.current = false;
           recognizedNameRef.current = null;
-          recognitionFiredRef.current = false; // ← allow fresh recognition next time
+          recognizedTicketRef.current = null;
+          recognitionFiredRef.current = false; // allow fresh recognition next time
 
           const prevCooldown = livenessStateRef.current.cooldownUntil;
           livenessStateRef.current = {
@@ -257,8 +377,7 @@ export default function TimeIn() {
     });
 
     const faceMesh = new FaceMesh({
-      locateFile: (f) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`,
+      locateFile: (f) => `/mediapipe/face_mesh/${f}`,
     });
     faceMesh.setOptions({
       maxNumFaces: 1,
@@ -266,61 +385,179 @@ export default function TimeIn() {
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5,
     });
-    faceMesh.onResults(processMeshResults);
+    // Pass the video so the blink detector always knows the frame width/height
+    faceMesh.onResults((results) => processMeshResults(results, video));
 
-    let cancelled = false;
+    // Start loading both models right now, in parallel with the camera
+    // permission prompt and camera start-up. They load one after the other
+    // (loading both at once makes the two WASM modules collide).
+    const modelsReady = (async () => {
+      await faceDetection.initialize();
+      await faceMesh.initialize();
+    })();
+    modelsReady.catch(() => {}); // the real error is handled in startCamera
 
-    const camera = new Camera(video, {
-      onFrame: async () => {
-        if (cancelled) return;
-        await faceDetection.send({ image: video });
+    // The first send() on each model compiles GPU shaders and is slow.
+    // Do it once on a blank frame so the first real scan and blink are instant.
+    async function warmUp() {
+      try {
+        const blank = document.createElement("canvas");
+        blank.width = 160;
+        blank.height = 120;
+        const bctx = blank.getContext("2d");
+        bctx.fillStyle = "#000";
+        bctx.fillRect(0, 0, blank.width, blank.height);
+        await faceDetection.send({ image: blank });
+        await faceMesh.send({ image: blank });
+      } catch (err) {
+        console.warn("Warm-up skipped:", err);
+      }
+    }
 
-        if (cancelled) return;
-        // ── Performance: only run FaceMesh when a challenge is active ─────
-        if (livenessStateRef.current.challenge !== null) {
-          await faceMesh.send({ image: video });
+    // How long to wait between frames:
+    //  - during a liveness challenge: no wait (blink detection wants max fps)
+    //  - while waiting for the Confirm tap: slow down to save battery
+    //  - nobody in front of the camera for a while (Android app): idle at ~3 fps
+    //  - otherwise: the platform setting (CFG.minFrameMs)
+    function frameInterval() {
+      if (livenessStateRef.current.challenge !== null) return 0;
+      if (recognizedNameRef.current) return 250;
+      // Nobody in front of the camera for a while → idle at ~3 fps instead of
+      // running the models flat out all day (less heat, less throttling).
+      if (
+        CFG.idleSleepAfterMs &&
+        Date.now() - lastFaceAt > CFG.idleSleepAfterMs
+      ) {
+        return CFG.idleFrameMs;
+      }
+      return CFG.minFrameMs;
+    }
+
+    // Frame loop: one detection at a time, no overlapping sends
+    async function loop() {
+      if (!running) return;
+
+      // Long idle: reload the page to release memory the camera + models have
+      // built up. Only when nothing is in progress. (Android app only.)
+      if (
+        CFG.idleReloadMs &&
+        Date.now() - lastFaceAt > CFG.idleReloadMs &&
+        !recognitionInFlightRef.current &&
+        !recordingRef.current &&
+        recognizedNameRef.current === null &&
+        livenessStateRef.current.challenge === null
+      ) {
+        window.location.replace("/");
+        return;
+      }
+
+      const now = performance.now();
+      if (video.readyState >= 2 && now - lastRun >= frameInterval()) {
+        lastRun = now;
+        try {
+          await faceDetection.send({ image: video });
+          // Only run FaceMesh when a challenge is active
+          if (livenessStateRef.current.challenge !== null) {
+            await faceMesh.send({ image: video });
+          }
+        } catch (err) {
+          console.error("MediaPipe frame error:", err);
         }
-      },
-      width: 320,
-      height: 240,
-    });
+      }
+      if (running) rafId = requestAnimationFrame(loop);
+    }
 
-    const started = camera
-      .start()
-      .then(() => {
-        if (cancelled) return;
+    async function startCamera() {
+      try {
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: { exact: "user" },
+            width: { ideal: CFG.cameraW },
+            height: { ideal: CFG.cameraH },
+            frameRate: { ideal: CFG.fps },
+          },
+        };
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          // Device may not support exact facingMode (e.g. desktop webcams)
+          if (
+            err.name === "OverconstrainedError" ||
+            err.name === "NotFoundError"
+          ) {
+            constraints.video.facingMode = "user";
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          } else {
+            throw err;
+          }
+        }
+
+        if (!running) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        video.srcObject = stream;
+        await video.play();
+
+        const settings = stream.getVideoTracks()[0].getSettings();
+        console.info("Camera settings:", settings);
+
+        // Usually already finished while the camera was starting
+        setStatus("Loading face detection…");
+        setStatusType("scanning");
+        try {
+          await Promise.race([
+            modelsReady,
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("timeout")), 30000),
+            ),
+          ]);
+        } catch (err) {
+          console.error("MediaPipe load error:", err);
+          setStatus(
+            "Face detection could not load — please close and reopen the app",
+          );
+          setStatusType("error");
+          return;
+        }
+        if (!running) return;
+
+        await warmUp();
+        if (!running) return;
+
         setStatus("Ready to scan");
         setStatusType("idle");
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        console.error("Failed to start camera:", error);
-        setStatus(
-          error?.name === "NotReadableError"
-            ? "Camera is in use by another app or tab. Close it and reload."
-            : "Unable to access the camera. Check browser permissions.",
-        );
+        loop();
+      } catch (err) {
+        console.error("Camera error:", err);
+        setStatus("Camera unavailable — check permissions and connection");
         setStatusType("error");
-      });
+      }
+    }
 
-    // Camera.start() is async, so stop only after it settles. Otherwise the
-    // StrictMode remount grabs the device while the first stream is still opening.
+    startCamera();
+
+    // Cleanup: stop loop, release camera, free MediaPipe
     return () => {
-      cancelled = true;
-      started.finally(() => {
-        camera.stop();
-        faceDetection.close();
-        faceMesh.close();
-      });
+      running = false;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      video.srcObject = null;
+      faceDetection.close();
+      faceMesh.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Canvas helpers ─────────────────────────────────────────────────────────
-  function drawCornerBrackets(ctx, x, y, w, h, color) {
-    const cs = 16;
+  function drawCornerBrackets(ctx, x, y, w, h, color, k = 1) {
+    // Scale with the video so brackets stay proportional at 720p
+    const cs = Math.max(16 * k, w * 0.12);
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3 * k;
     ctx.shadowColor = color;
     ctx.shadowBlur = 6;
     [
@@ -347,16 +584,16 @@ export default function TimeIn() {
     ctx.fillRect(x, scanY - 8, w, 16);
   }
 
-  // ── New: draw challenge progress dots below the face box ──────────────────
-  function drawProgressDots(ctx, x, y, w, progress) {
+  // Challenge progress dots above the face box
+  function drawProgressDots(ctx, x, y, w, progress, k = 1) {
     if (!progress || progress.total === 0) return;
-    const dotR = 4;
-    const gap = 14;
+    const dotR = 6 * k;
+    const gap = 18 * k;
     const total = progress.total;
     const done = progress.current;
     const totalWidth = total * dotR * 2 + (total - 1) * gap;
     const startX = x + w / 2 - totalWidth / 2 + dotR;
-    const dotY = y - 20;
+    const dotY = y - 28 * k;
 
     ctx.shadowBlur = 0;
     for (let i = 0; i < total; i++) {
@@ -368,12 +605,12 @@ export default function TimeIn() {
     }
   }
 
-  function drawLabel(ctx, text, x, y, w, h, color) {
+  function drawLabel(ctx, text, x, y, w, h, color, k = 1) {
     ctx.shadowBlur = 8;
     ctx.fillStyle = color;
-    ctx.font = "bold 12px 'DM Sans', sans-serif";
+    ctx.font = `bold ${Math.round(20 * k)}px 'DM Sans', sans-serif`;
     ctx.textAlign = "center";
-    const textY = y > 30 ? y - 10 : y + h + 18;
+    const textY = y > 48 * k ? y - 40 * k : y + h + 28 * k;
     const cx = x + w / 2;
     ctx.save();
     ctx.scale(-1, 1);
@@ -381,33 +618,58 @@ export default function TimeIn() {
     ctx.restore();
   }
 
-  const captureImage = () => {
-    const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
-    return canvas.toDataURL("image/jpeg");
-  };
-
   const handleAttendance = async () => {
+    unlockAudio(); // keeps sound allowed after the awaits below
+    if (recordingRef.current) return; // ignore double taps
     if (!recognizedName) {
       setStatus("No face detected — please look at the camera");
       setStatusType("error");
       return;
     }
+
+    recordingRef.current = true;
+    setRecording(true);
     try {
       setStatus("Recording attendance…");
       setStatusType("scanning");
       const image = captureImage();
-      const attendance = await recordAttendance(recognizedName, image);
-      setStatus(
-        `${attendance.type} recorded at ${attendance.time_in || attendance.time_out}`,
+      const attendance = await withTimeout(
+        recordAttendance(recognizedTicketRef.current, image),
+        RECORD_TIMEOUT_MS,
       );
-      setStatusType("success");
+      const recorded = ["TIME_IN", "TIME_OUT"].includes(attendance.type);
+
+      setStatus(attendance.message || `${attendance.type} recorded`);
+      setStatusType(recorded ? "success" : "error");
+      setPunchResult({
+        recorded,
+        type: attendance.type,
+        name: recognizedName,
+        message: attendance.message,
+      });
+
+      if (recorded) {
+        playSuccess(attendance.type);
+        hapticSuccess();
+      } else {
+        playError();
+        hapticError();
+      }
+
+      // The ticket is single-use, so the next punch needs a fresh scan.
+      recognizedTicketRef.current = null;
+      recognizedNameRef.current = null;
+      recognitionFiredRef.current = false;
+      setRecognizedName(null);
     } catch (err) {
       console.error("Attendance error:", err);
-      setStatus("Failed to record attendance");
+      setStatus(err?.message || "Failed to record attendance");
       setStatusType("error");
+      playError();
+      hapticError();
+    } finally {
+      recordingRef.current = false;
+      setRecording(false);
     }
   };
 
@@ -455,79 +717,19 @@ export default function TimeIn() {
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        .hosp-root{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f1f5f9;font-family:'DM Sans',sans-serif;padding:24px}
-        .top-bar{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-        .hospital-brand{display:flex;align-items:center;gap:10px}
-        .cross-icon{width:34px;height:34px;background:#0ea5e9;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(14,165,233,.35)}
-        .cross-icon svg{width:18px;height:18px;fill:white}
-        .brand-name{font-size:14px;font-weight:600;color:#0f172a;letter-spacing:-.2px;line-height:1.2}
-        .brand-sub{font-size:11px;color:#94a3b8}
-        .live-pill{display:flex;align-items:center;gap:6px;background:white;border:1px solid #e2e8f0;border-radius:99px;padding:5px 12px;font-size:11px;font-weight:500;color:#475569;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-        .live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:blink-dot 1.4s ease-in-out infinite;flex-shrink:0}
-        @keyframes blink-dot{0%,100%{opacity:1}50%{opacity:.3}}
-        .card{width:100%;max-width:480px;background:white;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 8px 32px rgba(0,0,0,.08);overflow:hidden}
-        .card-header{background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%);padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
-        .card-title{font-size:18px;font-weight:600;color:white;letter-spacing:-.3px}
-        .card-subtitle{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px}
-        .clock-wrap{text-align:right}
-        .clock-time{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:white;line-height:1;letter-spacing:1px}
-        .clock-date{font-size:10px;color:rgba(255,255,255,.65);margin-top:3px}
-        .card-body{padding:24px}
-        .section-label{font-size:11px;font-weight:500;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
-        .video-wrapper{position:relative;border-radius:10px;overflow:hidden;background:#0f172a;aspect-ratio:4/3;border:1px solid #e2e8f0}
-        .video-wrapper video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
-        .video-wrapper canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1);z-index:2}
-        .vid-badge{position:absolute;z-index:3;font-size:10px;font-weight:500;font-family:'DM Mono',monospace;letter-spacing:.5px}
-        .vid-badge.tl{top:10px;left:10px;background:rgba(0,0,0,.45);color:#94a3b8;padding:3px 7px;border-radius:4px}
-        .vid-badge.tr{top:10px;right:10px;background:rgba(14,165,233,.85);color:white;padding:3px 8px;border-radius:4px;display:flex;align-items:center;gap:5px}
-        .liveness-badge{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:4;font-size:11px;font-weight:600;padding:4px 12px;border-radius:99px;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:background .3s,color .3s}
-        .challenge-banner{margin-top:10px;padding:10px 14px;border-radius:8px;background:#fffbeb;border:1px solid #fcd34d;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:500;color:#92400e;transition:opacity .3s}
-        .challenge-banner.hidden{opacity:0;pointer-events:none}
-        .challenge-dots{display:flex;gap:6px;align-items:center}
-        .challenge-dot{width:8px;height:8px;border-radius:50%;transition:background .3s}
-        .status-row{margin-top:10px;padding:11px 14px;border-radius:8px;display:flex;align-items:center;gap:10px;transition:background .3s,border-color .3s;border:1px solid}
-        .status-icon{font-size:13px;font-weight:600;width:20px;text-align:center;flex-shrink:0}
-        @keyframes spin-icon{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        .status-icon.scanning{display:inline-block;animation:spin-icon 1s linear infinite}
-        .status-text{font-size:13px;font-weight:500}
-        .divider{height:1px;background:#f1f5f9;margin:18px 0}
-        .identity-card{border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:opacity .35s,border-color .35s,background .35s;background:#f8fafc;min-height:64px}
-        .identity-card.visible{border-color:#bae6fd;background:#f0f9ff}
-        .avatar-ring{width:44px;height:44px;border-radius:50%;background:#e0f2fe;border:2px solid #bae6fd;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
-        .identity-card.visible .avatar-ring{border-color:#7dd3fc}
-        .id-role{font-size:10px;font-weight:500;color:#0284c7;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
-        .id-name{font-size:16px;font-weight:600;color:#0f172a;letter-spacing:-.2px}
-        .id-placeholder{font-size:13px;color:#cbd5e1;font-style:italic}
-        .confirm-btn{margin-top:16px;width:100%;padding:13px 20px;background:#0ea5e9;border:none;border-radius:10px;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:.2px;cursor:pointer;transition:background .2s,transform .1s,box-shadow .2s;box-shadow:0 2px 8px rgba(14,165,233,.3);display:flex;align-items:center;justify-content:center;gap:8px}
-        .confirm-btn:hover:not(:disabled){background:#0284c7;box-shadow:0 4px 14px rgba(14,165,233,.4)}
-        .confirm-btn:active:not(:disabled){transform:scale(.98)}
-        .confirm-btn:disabled{background:#e2e8f0;color:#94a3b8;cursor:not-allowed;box-shadow:none}
-        .card-footer{padding:12px 24px;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
-        .footer-text{font-size:11px;color:#94a3b8}
-        .footer-badge{font-size:10px;font-weight:500;color:#0284c7;background:#e0f2fe;border-radius:4px;padding:2px 7px}
-      `}</style>
-
-      <div className="hosp-root">
-        <div className="top-bar">
-          <div className="hospital-brand">
-            <div className="cross-icon">
-              <svg viewBox="0 0 24 24">
-                <path d="M19 8h-4V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4h4a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z" />
-              </svg>
-            </div>
-            <div>
-              <div className="brand-name">
-                Rosario Maclang Bautista General Hospital
-              </div>
-              <div className="brand-sub">Staff Attendance Portal</div>
-            </div>
+      <style>{CAMERA_RESPONSIVE_CSS}</style>
+      <div className="hosp-root" style={{ "--cam-reserve": "320px" }}>
+        <div className="hospital-brand">
+          <div className="cross-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 8h-4V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4h4a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z" />
+            </svg>
           </div>
-          <div className="live-pill">
-            <span className="live-dot" />
-            Camera Active
+          <div>
+            <div className="brand-name">
+              Rosario Maclang Bautista General Hospital
+            </div>
+            <div className="brand-sub">Staff Attendance Portal</div>
           </div>
         </div>
 
@@ -543,113 +745,121 @@ export default function TimeIn() {
             </div>
           </div>
 
-          <div className="card-body">
-            <div className="section-label">Camera Feed</div>
+          <div className="card-body two-col">
+            <div className="col-main">
+              <div className="section-label">Camera Feed</div>
 
-            <div className="video-wrapper">
-              <video ref={videoRef} autoPlay muted playsInline />
-              <canvas ref={canvasRef} />
-              <span className="vid-badge tl">CAM · 01</span>
-              <span className="vid-badge tr">
-                <span className="live-dot" style={{ width: 5, height: 5 }} />
-                LIVE
-              </span>
-              {livenessBadge && (
-                <span
-                  className="liveness-badge"
-                  style={{
-                    color: livenessBadge.color,
-                    background: livenessBadge.bg,
-                  }}
-                >
-                  {livenessBadge.text}
+              <div className="video-wrapper">
+                <video ref={videoRef} autoPlay muted playsInline />
+                <canvas ref={canvasRef} />
+                <span className="vid-badge tl">CAM · 01</span>
+                <span className="vid-badge tr">
+                  <span className="live-dot" style={{ width: 5, height: 5 }} />
+                  LIVE
                 </span>
-              )}
-            </div>
-
-            {/* Challenge banner with HTML progress dots mirroring canvas dots */}
-            <div
-              className={`challenge-banner ${challengeLabel ? "" : "hidden"}`}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 18 }}>
-                  {challenge === "blink"
-                    ? "👁"
-                    : challenge === "turn_left"
-                      ? "←"
-                      : "→"}
-                </span>
-                <span>{challengeLabel ?? "Liveness check"}</span>
-              </div>
-              <div className="challenge-dots">
-                {Array.from({ length: challengeProgress.total }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="challenge-dot"
+                {livenessBadge && (
+                  <span
+                    className="liveness-badge"
                     style={{
-                      background:
-                        i < challengeProgress.current
-                          ? "#0ea5e9"
-                          : i === challengeProgress.current
-                            ? "#f59e0b"
-                            : "#e2e8f0",
+                      color: livenessBadge.color,
+                      background: livenessBadge.bg,
                     }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div
-              className="status-row"
-              style={{ background: s.bg, borderColor: s.border }}
-            >
-              <span
-                className={`status-icon ${statusType === "scanning" ? "scanning" : ""}`}
-                style={{ color: s.color }}
-              >
-                {s.icon}
-              </span>
-              <span className="status-text" style={{ color: s.color }}>
-                {status}
-              </span>
-            </div>
-
-            <div className="divider" />
-            <div className="section-label">Staff Identity</div>
-
-            <div className={`identity-card ${recognizedName ? "visible" : ""}`}>
-              <div className="avatar-ring">👤</div>
-              <div>
-                {recognizedName ? (
-                  <>
-                    <div className="id-role">Verified Staff</div>
-                    <div className="id-name">{recognizedName}</div>
-                  </>
-                ) : (
-                  <div className="id-placeholder">Awaiting face detection…</div>
+                  >
+                    {livenessBadge.text}
+                  </span>
                 )}
               </div>
-            </div>
 
-            <button
-              className="confirm-btn"
-              onClick={handleAttendance}
-              disabled={!recognizedName}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              {/* Challenge banner with HTML progress dots mirroring canvas dots */}
+              <div
+                className={`challenge-banner ${challengeLabel ? "" : "hidden"}`}
               >
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              Confirm Attendance
-            </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>
+                    {challenge === "blink"
+                      ? "👁"
+                      : challenge === "turn_left"
+                        ? "←"
+                        : "→"}
+                  </span>
+                  <span>{challengeLabel ?? "Liveness check"}</span>
+                </div>
+                <div className="challenge-dots">
+                  {Array.from({ length: challengeProgress.total }).map(
+                    (_, i) => (
+                      <div
+                        key={i}
+                        className="challenge-dot"
+                        style={{
+                          background:
+                            i < challengeProgress.current
+                              ? "#0ea5e9"
+                              : i === challengeProgress.current
+                                ? "#f59e0b"
+                                : "#e2e8f0",
+                        }}
+                      />
+                    ),
+                  )}
+                </div>
+              </div>
+
+              <div
+                className="status-row"
+                style={{ background: s.bg, borderColor: s.border }}
+              >
+                <span
+                  className={`status-icon ${statusType === "scanning" ? "scanning" : ""}`}
+                  style={{ color: s.color }}
+                >
+                  {s.icon}
+                </span>
+                <span className="status-text" style={{ color: s.color }}>
+                  {status}
+                </span>
+              </div>
+            </div>
+            <div className="col-side">
+              <div className="section-label">Staff Identity</div>
+
+              <div
+                className={`identity-card ${recognizedName ? "visible" : ""}`}
+              >
+                <div className="avatar-ring">👤</div>
+                <div>
+                  {recognizedName ? (
+                    <>
+                      <div className="id-role">Verified Staff</div>
+                      <div className="id-name">{recognizedName}</div>
+                    </>
+                  ) : (
+                    <div className="id-placeholder">
+                      Awaiting face detection…
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button
+                className="confirm-btn"
+                onClick={handleAttendance}
+                disabled={!recognizedName || recording}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                {recording ? "Recording…" : "Confirm Attendance"}
+              </button>
+            </div>
           </div>
 
           <div className="card-footer">
@@ -660,6 +870,30 @@ export default function TimeIn() {
           </div>
         </div>
       </div>
+
+      <AlertDialog
+        open={Boolean(punchResult)}
+        tone={punchResult?.recorded ? "success" : "info"}
+        title={
+          punchResult?.type === "TIME_IN"
+            ? "Time In recorded"
+            : punchResult?.type === "TIME_OUT"
+              ? "Time Out recorded"
+              : "Attendance not recorded"
+        }
+        autoCloseMs={6000}
+        onClose={() => setPunchResult(null)}
+      >
+        {punchResult?.recorded ? (
+          <>
+            <strong>{punchResult.name}</strong>
+            <br />
+            {punchResult.message}
+          </>
+        ) : (
+          punchResult?.message
+        )}
+      </AlertDialog>
     </>
   );
 }
