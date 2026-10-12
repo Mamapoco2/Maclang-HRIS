@@ -42,7 +42,6 @@ export const plantillaPositionService = {
           department_ids: pos.department_ids ?? [],
           approved_slots: 0,
           filled_count: 0,
-          vacant_count: 0,
           unfilled_count: 0,
           positions: [],
         });
@@ -55,7 +54,6 @@ export const plantillaPositionService = {
       group.approved_slots += 1;
 
       if (status === "FILLED") group.filled_count += 1;
-      else if (status === "VACANT") group.vacant_count += 1;
       else group.unfilled_count += 1;
     }
 
@@ -72,16 +70,12 @@ export const plantillaPositionService = {
     return res.data;
   },
 
-  // FIX: Accept optional slot config so inherited SG/Step/role/dept are
-  // forwarded to the backend instead of being silently dropped.
   async addSlots(baseItemNumber, count, slotConfig = {}) {
     const payload = {
       base_item_number: baseItemNumber,
       count,
     };
 
-    // Only include defined, non-null values so the backend can apply its own
-    // defaults for fields the caller didn't specify.
     if (slotConfig.salary_grade_id != null)
       payload.salary_grade_id = slotConfig.salary_grade_id;
     if (slotConfig.step_increment_id != null)
@@ -116,8 +110,8 @@ export const plantillaPositionService = {
     return res.data;
   },
 
-  async approvePosition(id) {
-    const res = await api.post(`/plantilla-positions/${id}/approve`);
+  async getPositionHistory(id) {
+    const res = await api.get(`/plantilla-positions/${id}/history`);
     return res.data;
   },
 

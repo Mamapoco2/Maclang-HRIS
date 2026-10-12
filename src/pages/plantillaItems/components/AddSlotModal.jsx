@@ -173,12 +173,6 @@ export function AddSlotModal({ open, onOpenChange, item, onSuccess }) {
                   </span>
                 </span>
                 <span className="text-xs text-amber-500">
-                  Vacant:{" "}
-                  <span className="font-semibold font-mono">
-                    {item?.vacant_count ?? 0}
-                  </span>
-                </span>
-                <span className="text-xs text-red-500">
                   Unfilled:{" "}
                   <span className="font-semibold font-mono">
                     {item?.unfilled_count ?? 0}

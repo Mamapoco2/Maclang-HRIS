@@ -28,12 +28,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   IconUserPlus,
   IconClipboardList,
   IconCheck,
@@ -41,21 +35,19 @@ import {
   IconLoader2,
   IconTrash,
   IconPlus,
-  IconUser,
   IconPencil,
   IconX,
 } from "@tabler/icons-react";
 import {
   getOnboardingSummary,
   getOnboardings,
-  createOnboarding,
   updateOnboarding,
   deleteOnboarding,
   toggleTask,
   addTask,
   updateTask,
   deleteTask,
-} from "@/services/onboardingService";
+} from "@/services/plantillaOnboardingService";
 import { getEcho } from "@/lib/echo";
 import { toast } from "sonner";
 
@@ -64,6 +56,18 @@ const STATUS_VARIANT = {
   "In Progress": "secondary",
   Pending: "outline",
 };
+
+const TYPE_STYLE = {
+  NEW: "bg-blue-50 text-blue-700 border-blue-200",
+  PROMOTION: "bg-amber-50 text-amber-700 border-amber-200",
+};
+
+const getErrorMessage = (err, fallback) =>
+  (
+    err?.response?.data?.errors?.status?.[0] ??
+    err?.response?.data?.message ??
+    fallback
+  ).toUpperCase();
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -89,7 +93,6 @@ const toDateTimeLocal = (value) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-const EMPTY_FORM = { name: "", position: "", department: "", start_date: "" };
 const EMPTY_CONFIRM = {
   open: false,
   title: "",
@@ -103,9 +106,6 @@ export default function OnboardingPage() {
   const [onboardings, setOnboardings] = useState([]);
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [selected, setSelected] = useState(null);
   const [showTasks, setShowTasks] = useState(false);
   const [newTask, setNewTask] = useState("");
@@ -121,7 +121,6 @@ export default function OnboardingPage() {
 
   const [confirm, setConfirm] = useState(EMPTY_CONFIRM);
 
-  // Keep selected in sync with realtime updates
   const selectedRef = useRef(null);
   selectedRef.current = selected;
 
@@ -139,11 +138,9 @@ export default function OnboardingPage() {
   useEffect(() => {
     loadAll();
 
-    // Subscribe to Reverb channel
     const echo = getEcho();
-    const channel = echo.channel("onboardings");
+    const channel = echo.private("plantilla-onboardings");
 
-    // Another user updated/created an onboarding
     channel.listen(".onboarding.updated", (e) => {
       const updated = e.onboarding;
 
@@ -152,24 +149,19 @@ export default function OnboardingPage() {
         if (exists) {
           return prev.map((o) => (o.id === updated.id ? updated : o));
         }
-        // New record added by someone else — prepend it
         return [updated, ...prev];
       });
 
-      // Keep tasks dialog in sync if it's open for this onboarding
       if (selectedRef.current?.id === updated.id) {
         setSelected(updated);
       }
 
-      // Refresh summary counts
       getOnboardingSummary().then(setSummary);
     });
 
-    // Another user deleted an onboarding
     channel.listen(".onboarding.deleted", (e) => {
       setOnboardings((prev) => prev.filter((o) => o.id !== e.id));
 
-      // Close tasks dialog if it was open for the deleted record
       if (selectedRef.current?.id === e.id) {
         setShowTasks(false);
         setSelected(null);
@@ -180,7 +172,7 @@ export default function OnboardingPage() {
     });
 
     return () => {
-      echo.leaveChannel("onboardings");
+      echo.leave("plantilla-onboardings");
     };
   }, []);
 
@@ -200,25 +192,6 @@ export default function OnboardingPage() {
   );
 
   // ── Onboarding CRUD ──────────────────────────────────────────────────────
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await createOnboarding(form);
-      toast.success("NEW HIRE ADDED SUCCESSFULLY.");
-      setForm(EMPTY_FORM);
-      setShowForm(false);
-      await loadAll();
-    } catch (err) {
-      toast.error(
-        err?.response?.data?.message?.toUpperCase() ??
-          "FAILED TO ADD NEW HIRE.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDelete = (emp) => {
     openConfirm({
@@ -245,7 +218,7 @@ export default function OnboardingPage() {
       },
       Completed: {
         title: "MARK AS COMPLETED?",
-        description: `Mark ${emp.name.toUpperCase()}'s onboarding as fully completed? This will also set the completion date to now.`,
+        description: `Mark ${emp.name.toUpperCase()}'s onboarding as completed? This will update the employee record in Employee Management.`,
       },
     };
 
@@ -261,8 +234,8 @@ export default function OnboardingPage() {
             prev.map((o) => (o.id === emp.id ? updated : o)),
           );
           toast.success(`STATUS UPDATED TO ${status.toUpperCase()}.`);
-        } catch {
-          toast.error("FAILED TO UPDATE STATUS.");
+        } catch (err) {
+          toast.error(getErrorMessage(err, "FAILED TO UPDATE STATUS."));
         }
       },
     });
@@ -329,8 +302,8 @@ export default function OnboardingPage() {
             setOnboardings((prev) =>
               prev.map((o) => (o.id === updated.id ? updated : o)),
             );
-          } catch {
-            toast.error("FAILED TO UPDATE TASK.");
+          } catch (err) {
+            toast.error(getErrorMessage(err, "FAILED TO UPDATE TASK."));
           }
         },
       });
@@ -342,11 +315,13 @@ export default function OnboardingPage() {
           setOnboardings((prev) =>
             prev.map((o) => (o.id === updated.id ? updated : o)),
           );
-          if (updated.status === "Completed") {
-            toast.success("ALL TASKS COMPLETED! ONBOARDING MARKED AS DONE.");
+          if (updated.provisioned_at) {
+            toast.success(
+              "ALL REQUIREMENTS COMPLETE. EMPLOYEE RECORD HAS BEEN UPDATED.",
+            );
           }
-        } catch {
-          toast.error("FAILED TO UPDATE TASK.");
+        } catch (err) {
+          toast.error(getErrorMessage(err, "FAILED TO UPDATE TASK."));
         }
       })();
     }
@@ -363,8 +338,8 @@ export default function OnboardingPage() {
       );
       setNewTask("");
       toast.success("TASK ADDED.");
-    } catch {
-      toast.error("FAILED TO ADD TASK.");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "FAILED TO ADD TASK."));
     } finally {
       setAddingTask(false);
     }
@@ -401,8 +376,8 @@ export default function OnboardingPage() {
           setEditingTaskId(null);
           setEditingTitle("");
           toast.success("TASK UPDATED.");
-        } catch {
-          toast.error("FAILED TO UPDATE TASK.");
+        } catch (err) {
+          toast.error(getErrorMessage(err, "FAILED TO UPDATE TASK."));
         } finally {
           setSavingTaskId(null);
         }
@@ -423,8 +398,8 @@ export default function OnboardingPage() {
             prev.map((o) => (o.id === updated.id ? updated : o)),
           );
           toast.success("TASK DELETED.");
-        } catch {
-          toast.error("FAILED TO DELETE TASK.");
+        } catch (err) {
+          toast.error(getErrorMessage(err, "FAILED TO DELETE TASK."));
         }
       },
     });
@@ -436,17 +411,17 @@ export default function OnboardingPage() {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          EMPLOYEE ONBOARDING
+          PSB ONBOARDING
         </h1>
         <p className="text-muted-foreground">
-          MANAGE AND TRACK ONBOARDING PROGRESS OF NEW EMPLOYEES.
+          TRACK THE ONBOARDING REQUIREMENTS OF COMPLETED PSB APPLICATIONS.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4 mt-4">
         {[
           {
-            title: "NEW HIRES",
+            title: "TOTAL",
             value: summary.new_hires ?? 0,
             icon: <IconUserPlus size={18} />,
             desc: "TOTAL ONBOARDING RECORDS",
@@ -461,7 +436,7 @@ export default function OnboardingPage() {
             title: "COMPLETED",
             value: summary.completed ?? 0,
             icon: <IconCheck size={18} />,
-            desc: "EMPLOYEES FULLY ONBOARDED",
+            desc: "EMPLOYEE RECORDS UPDATED",
           },
           {
             title: "PENDING TASKS",
@@ -490,7 +465,6 @@ export default function OnboardingPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Button onClick={() => setShowForm(true)}>ADD NEW HIRE</Button>
       </div>
 
       <Card className="mt-4">
@@ -510,7 +484,7 @@ export default function OnboardingPage() {
                   <TableHead>POSITION</TableHead>
                   <TableHead>DEPARTMENT</TableHead>
                   <TableHead>START DATE & TIME</TableHead>
-                  <TableHead>SOURCE</TableHead>
+                  <TableHead>TYPE</TableHead>
                   <TableHead>PROGRESS</TableHead>
                   <TableHead>STATUS</TableHead>
                   <TableHead className="text-right">ACTIONS</TableHead>
@@ -614,29 +588,7 @@ export default function OnboardingPage() {
                     ) : (
                       <TableRow key={emp.id}>
                         <TableCell className="font-medium">
-                          <div className="flex items-center gap-1.5">
-                            {(emp.name ?? "").toUpperCase()}
-                            {emp.applicant && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 cursor-default">
-                                      <IconUser size={10} />
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="top"
-                                    className="text-xs"
-                                  >
-                                    FROM APPLICANT:{" "}
-                                    {(
-                                      emp.applicant.full_name ?? ""
-                                    ).toUpperCase()}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
+                          {(emp.name ?? "").toUpperCase()}
                         </TableCell>
                         <TableCell>
                           {(emp.position ?? "").toUpperCase()}
@@ -655,15 +607,11 @@ export default function OnboardingPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {emp.applicant ? (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">
-                              HIRED APPLICANT
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400 italic">
-                              MANUAL ENTRY
-                            </span>
-                          )}
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium border ${TYPE_STYLE[emp.type] ?? "bg-gray-50 text-gray-600 border-gray-200"}`}
+                          >
+                            {emp.type ?? "-"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -700,7 +648,9 @@ export default function OnboardingPage() {
                           <Button
                             size="sm"
                             onClick={() => handleStatusChange(emp, "Completed")}
-                            disabled={emp.status === "Completed"}
+                            disabled={
+                              emp.status === "Completed" || emp.progress < 100
+                            }
                           >
                             COMPLETE
                           </Button>
@@ -731,66 +681,6 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
 
-      {/* ── Add New Hire Dialog ─────────────────────────────────────────── */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>ADD NEW HIRE</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="grid gap-4 pt-2">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">FULL NAME</label>
-              <Input
-                value={form.name}
-                onChange={(e) =>
-                  setForm({ ...form, name: e.target.value.toUpperCase() })
-                }
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">POSITION</label>
-                <Input
-                  value={form.position}
-                  onChange={(e) =>
-                    setForm({ ...form, position: e.target.value.toUpperCase() })
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">DEPARTMENT</label>
-                <Input
-                  value={form.department}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      department: e.target.value.toUpperCase(),
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">START DATE & TIME</label>
-              <Input
-                type="datetime-local"
-                value={form.start_date}
-                onChange={(e) =>
-                  setForm({ ...form, start_date: e.target.value })
-                }
-              />
-            </div>
-            <Button type="submit" disabled={saving}>
-              {saving && (
-                <IconLoader2 size={14} className="animate-spin mr-2" />
-              )}
-              {saving ? "SAVING..." : "ADD NEW HIRE"}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       {/* ── Tasks Dialog ────────────────────────────────────────────────── */}
       <Dialog
         open={showTasks}
@@ -807,9 +697,12 @@ export default function OnboardingPage() {
             <DialogTitle>
               {(selected?.name ?? "").toUpperCase()} — ONBOARDING TASKS
             </DialogTitle>
-            {selected?.applicant && (
-              <p className="text-xs text-emerald-600 font-medium mt-0.5 flex items-center gap-1">
-                <IconUser size={12} /> PROMOTED FROM APPLICANT RECORD
+            {selected?.type && (
+              <p className="text-xs text-gray-500 font-medium mt-0.5">
+                {selected.type} {"\u2022"}{" "}
+                {selected.provisioned_at
+                  ? "EMPLOYEE RECORD UPDATED"
+                  : "EMPLOYEE RECORD UPDATES WHEN ALL REQUIREMENTS ARE CHECKED"}
               </p>
             )}
           </DialogHeader>
@@ -873,8 +766,9 @@ export default function OnboardingPage() {
                       <input
                         type="checkbox"
                         checked={task.completed}
+                        disabled={!!selected.provisioned_at}
                         onChange={() => handleToggleTask(task)}
-                        className="w-4 h-4 accent-blue-600 cursor-pointer mt-0.5 shrink-0"
+                        className="w-4 h-4 accent-blue-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 mt-0.5 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <span
@@ -889,7 +783,9 @@ export default function OnboardingPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div
+                        className={`flex items-center gap-1 shrink-0 ${selected.provisioned_at ? "hidden" : ""}`}
+                      >
                         <Button
                           size="sm"
                           variant="ghost"
@@ -914,7 +810,9 @@ export default function OnboardingPage() {
             )}
           </div>
 
-          <div className="flex gap-2 pt-2 border-t">
+          <div
+            className={`flex gap-2 pt-2 border-t ${selected?.provisioned_at ? "hidden" : ""}`}
+          >
             <Input
               placeholder="ADD A TASK..."
               value={newTask}

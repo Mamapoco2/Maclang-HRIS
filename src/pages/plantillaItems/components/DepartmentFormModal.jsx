@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Dialog,
@@ -21,6 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Network, Plus, Pencil, Lock } from "lucide-react";
@@ -31,18 +41,13 @@ import { saveDivision, saveDepartment } from "../helpers/departmentStore";
 const LABEL = "text-xs font-semibold uppercase tracking-widest text-gray-400";
 const titleCase = (t) => t.charAt(0) + t.slice(1).toLowerCase();
 
-/**
- * Add / edit a Department Database entry.
- *   tier "division"   → Directorate / Division
- *   tier "department" → Department / Section / Unit (needs a parent division)
- */
 export function DepartmentFormModal({
   open,
   onOpenChange,
   tier,
-  unit, // present when editing
+  unit, 
   defaultDivisionId,
-  divisions, // all divisions (for the parent dropdown)
+  divisions, 
 }) {
   const isEdit = !!unit;
   const isDept = tier === "department";
@@ -62,16 +67,28 @@ export function DepartmentFormModal({
     });
   }, [open, unit, defaultDivisionId, form]);
 
-  // Parent can't be moved once plantilla records point at this unit.
   const parentLocked = isEdit && isDept && unit.linked_count > 0;
   const parentOptions = divisions.filter(
     (d) => d.status === "ACTIVE" || d.id === Number(unit?.division_id),
   );
 
-  const onSubmit = (data) => {
+  const [confirmData, setConfirmData] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) setConfirmData(null);
+  }, [open]);
+
+  const onSubmit = (data) => setConfirmData(data);
+
+  const save = async () => {
+    const data = confirmData;
+    setSaving(true);
     const res = isDept
-      ? saveDepartment({ id: unit?.id, ...data, division_id: Number(data.division_id) })
-      : saveDivision({ id: unit?.id, ...data });
+      ? await saveDepartment({ id: unit?.id, ...data, division_id: Number(data.division_id) })
+      : await saveDivision({ id: unit?.id, ...data });
+    setSaving(false);
+    setConfirmData(null);
 
     if (!res.ok) {
       form.setError("name", { message: res.error });
@@ -86,6 +103,13 @@ export function DepartmentFormModal({
   const heading = `${isEdit ? "Edit" : "Add"} ${
     isDept ? "Department / Section / Unit" : "Directorate / Division"
   }`;
+
+  const entityLabel = isDept ? "Department / Section / Unit" : "Directorate / Division";
+  const confirmTitle = isEdit ? "Save changes?" : `Add this ${entityLabel}?`;
+  const confirmAction = isEdit ? "Save Changes" : isDept ? "Add Unit" : "Add Division";
+  const parentName = isDept
+    ? divisions.find((d) => d.id === Number(confirmData?.division_id))?.name
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,7 +174,10 @@ export function DepartmentFormModal({
               control={form.control}
               name="name"
               rules={{
-                validate: (v) => v.trim().length > 0 || "Name is required",
+                validate: (v) =>
+                  v.trim().length === 0
+                    ? "Name is required"
+                    : v.trim().length <= 255 || "Name must be 255 characters or fewer",
               }}
               render={({ field }) => (
                 <FormItem>
@@ -247,6 +274,7 @@ export function DepartmentFormModal({
               </Button>
               <Button
                 type="submit"
+                disabled={form.formState.isSubmitting}
                 className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white h-9"
               >
                 <Network size={13} className="mr-1.5" />
@@ -256,6 +284,48 @@ export function DepartmentFormModal({
           </form>
         </Form>
       </DialogContent>
+
+      <AlertDialog open={!!confirmData} onOpenChange={(v) => !v && !saving && setConfirmData(null)}>
+        <AlertDialogContent className="sm:max-w-[420px] bg-white border border-slate-200 shadow-xl rounded-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-900 text-base font-semibold">
+              {confirmTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="text-sm text-slate-600 leading-relaxed space-y-2">
+                <p>
+                  {isEdit ? "Update" : "Add"} <b>{confirmData?.name?.trim()}</b>
+                  {parentName && (
+                    <>
+                      {" "}
+                      {isEdit ? "under" : "to"} <b>{parentName}</b>
+                    </>
+                  )}
+                  ?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={saving}
+              className="text-sm border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 h-9 px-4"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={saving}
+              onClick={(e) => {
+                e.preventDefault();
+                save();
+              }}
+              className="text-sm text-white h-9 px-4 bg-emerald-600 hover:bg-emerald-700"
+            >
+              {saving ? "Saving…" : confirmAction}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

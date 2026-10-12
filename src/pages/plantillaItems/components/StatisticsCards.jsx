@@ -1,9 +1,4 @@
-import {
-  LayoutList,
-  CheckCircle2,
-  CircleDashed,
-  AlertCircle,
-} from "lucide-react";
+import { LayoutList, CheckCircle2, CircleDashed } from "lucide-react";
 
 const STAT_CARDS = [
   {
@@ -21,24 +16,17 @@ const STAT_CARDS = [
     bgCls: "bg-emerald-50",
   },
   {
-    label: "Vacant",
-    key: "vacant",
+    label: "Unfilled",
+    key: "unfilled",
     icon: CircleDashed,
     iconCls: "text-amber-500",
     bgCls: "bg-amber-50",
-  },
-  {
-    label: "Unfilled",
-    key: "unfilled",
-    icon: AlertCircle,
-    iconCls: "text-red-500",
-    bgCls: "bg-red-50",
   },
 ];
 
 export function StatisticsCards({ stats, loading }) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 py-5">
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 px-6 py-5">
       {STAT_CARDS.map(({ label, key, icon: Icon, iconCls, bgCls }) => (
         <div
           key={key}

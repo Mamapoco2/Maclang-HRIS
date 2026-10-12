@@ -143,6 +143,13 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
     null;
 
   const isPlantillaPosition = resolvedPositionType === "plantilla";
+  const positionItemNumber = isPlantillaPosition
+    ? (positionInfo?.item_number ?? legacyPositionInfo?.item_number ?? null)
+    : null;
+  const positionDisplay =
+    positionItemNumber && positionTitle
+      ? `${positionItemNumber} \u00b7 ${positionTitle}`
+      : positionTitle;
   const positionRowLabel = isPlantillaPosition
     ? "Plantilla Position"
     : "Position";
@@ -295,7 +302,7 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
               <InfoRow
                 icon={Briefcase}
                 label={positionRowLabel}
-                value={positionTitle}
+                value={positionDisplay}
               />
 
               {isPlantillaPosition && (

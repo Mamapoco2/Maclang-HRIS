@@ -14,7 +14,7 @@ export const positionLabel = (pos) => {
   if (!pos) return "";
   const slot = pos.position_slot_name ?? pos.item_number ?? "";
   const title = pos.position_title ?? pos.title ?? "";
-  return slot && title ? `${slot} — ${title}` : slot || title;
+  return slot && title ? `${slot} \u00b7 ${title}` : slot || title;
 };
 
 export const toMoneyString = (v) => {

@@ -37,13 +37,12 @@ export const employeeService = {
         pos.status ??
         ""
       ).toUpperCase();
-      const isVacant =
-        computedStatus === "VACANT" || computedStatus === "UNFILLED";
+      const isUnfilled = computedStatus === "UNFILLED";
 
       return {
         ...pos,
         item_number: pos.item_number ?? pos.position_slot_name ?? "",
-        is_assignable: pos.is_assignable ?? isVacant,
+        is_assignable: pos.is_assignable ?? isUnfilled,
         is_current_employee:
           pos.is_current_employee ??
           (employeeId != null &&

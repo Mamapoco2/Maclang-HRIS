@@ -138,11 +138,10 @@ export default function ViewDTR() {
 
   const handleSave = async (id, values) => {
     // updateAttendanceRecord expects FormData (it adds _method=PUT itself).
-    // Empty strings reach Laravel as null, which clears the time.
     const formData = new FormData();
-    formData.append("date", values.date);
-    formData.append("time_in", values.time_in || "");
-    formData.append("time_out", values.time_out || "");
+    formData.append("work_date", values.date);
+    formData.append("time_in", values.time_in);
+    if (values.time_out) formData.append("time_out", values.time_out);
 
     const response = await updateAttendanceRecord(id, formData);
     const serverRecord =
@@ -422,20 +421,29 @@ function EditDialog({ record, onClose, onSave }) {
     e.preventDefault();
     setErr("");
     if (!date) return setErr("Choose a date.");
-    if (!timeIn && !timeOut)
-      return setErr("Enter at least a time in or a time out.");
-    if (timeIn && timeOut && timeOut <= timeIn) {
+    if (!timeIn) return setErr("Time in is required.");
+    if (record.time_out && !timeOut)
+      return setErr("Time out cannot be removed once it has been recorded.");
+    if (timeOut && timeOut <= timeIn) {
       return setErr("Time out must be later than time in.");
     }
     try {
       setSaving(true);
       await onSave(record.id, {
         date,
-        time_in: timeIn || null,
+        time_in: timeIn,
         time_out: timeOut || null,
       });
     } catch (e2) {
-      setErr(e2?.message || "Could not save changes. Try again.");
+      const firstValidation = e2?.response?.data?.errors
+        ? Object.values(e2.response.data.errors)[0]?.[0]
+        : null;
+      setErr(
+        firstValidation ||
+          e2?.response?.data?.message ||
+          e2?.message ||
+          "Could not save changes. Try again.",
+      );
       setSaving(false);
     }
   };
@@ -472,6 +480,7 @@ function EditDialog({ record, onClose, onSave }) {
                 type="time"
                 value={timeIn}
                 onChange={(e) => setTimeIn(e.target.value)}
+                required
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -485,7 +494,7 @@ function EditDialog({ record, onClose, onSave }) {
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            Photos stay attached to this record. Clear a time to remove it.
+            Photos stay attached to this record.
           </p>
           {err && (
             <p role="alert" className="text-sm text-red-600">
@@ -533,16 +542,15 @@ function AddDialog({ onClose, onCreate }) {
     setErr("");
     if (!employeeNumber.trim()) return setErr("Enter the employee number.");
     if (!date) return setErr("Choose a date.");
-    if (!timeIn && !timeOut)
-      return setErr("Enter at least a time in or a time out.");
-    if (timeIn && timeOut && timeOut <= timeIn) {
+    if (!timeIn) return setErr("Time in is required.");
+    if (timeOut && timeOut <= timeIn) {
       return setErr("Time out must be later than time in.");
     }
 
     const formData = new FormData();
     formData.append("employee_number", employeeNumber.trim());
-    formData.append("date", date);
-    if (timeIn) formData.append("time_in", timeIn);
+    formData.append("work_date", date);
+    formData.append("time_in", timeIn);
     if (timeOut) formData.append("time_out", timeOut);
     if (timeInImage) formData.append("time_in_image", timeInImage);
     if (timeOutImage) formData.append("time_out_image", timeOutImage);

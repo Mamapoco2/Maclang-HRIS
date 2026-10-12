@@ -80,7 +80,6 @@ export default function PlantillaItemTable({ items, loading, search, onRefresh }
               paginated.map((item) => {
                 const isOpen = expanded.has(item.id);
                 const filledCnt = item.filled_count ?? 0;
-                const vacantCnt = item.vacant_count ?? 0;
                 const unfilledCnt = item.unfilled_count ?? 0;
 
                 return (
@@ -134,18 +133,7 @@ export default function PlantillaItemTable({ items, loading, search, onRefresh }
                         <span
                           className={cn(
                             "font-mono text-sm font-semibold",
-                            vacantCnt > 0 ? "text-amber-500" : "text-slate-300",
-                          )}
-                        >
-                          {vacantCnt}
-                        </span>
-                      </TableCell>
-
-                      <TableCell className="text-center">
-                        <span
-                          className={cn(
-                            "font-mono text-sm font-semibold",
-                            unfilledCnt > 0 ? "text-red-500" : "text-slate-300",
+                            unfilledCnt > 0 ? "text-amber-500" : "text-slate-300",
                           )}
                         >
                           {unfilledCnt}
