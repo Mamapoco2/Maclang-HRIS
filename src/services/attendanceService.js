@@ -1,14 +1,5 @@
 import api from "@/api/api";
 
-export const recordAttendance = async (ticket, image) => {
-  const { data } = await api.post("/dtr/kiosk/punch", {
-    ticket,
-    image,
-  });
-
-  return data;
-};
-
 export const getAttendanceRecords = async ({ from, to, q } = {}) => {
   const { data } = await api.get("/dtr/records", {
     params: {

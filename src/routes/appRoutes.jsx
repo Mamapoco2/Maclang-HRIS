@@ -62,7 +62,6 @@ import NonPlantillaApplicantsPage from "../pages/hiring/non-plantilla/applicants
 import NonPlantillaApplicationsPage from "../pages/hiring/non-plantilla/application/components/applicationPage";
 import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding/onboardingPage";
 import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplicationsPage";
-import DTRPage from "../pages/dtr/dtrPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
 import PrintDTR from "../pages/dtr/components/employeeDtr";
 import DTRShiftsPage from "../pages/dtr/components/shiftsPage";
@@ -87,7 +86,6 @@ function AppRoutes() {
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/dtr/*" element={<DTRPage />} />
         </Route>
 
         <Route path="/status/403" element={<Status403 />} />
