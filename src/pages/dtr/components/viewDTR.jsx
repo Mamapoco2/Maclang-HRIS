@@ -4,6 +4,7 @@ import {
   updateAttendanceRecord,
   createAttendanceRecord,
 } from "@/services/attendanceService";
+import { getShifts } from "@/services/shiftService";
 import AuthImage from "./AuthImage";
 
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,48 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatDuration(minutes) {
+  const total = Number(minutes);
+  if (!Number.isFinite(total) || total <= 0) return "";
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  if (hours === 0) return `${rest}m`;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
+}
+
+function addOneDay(ymd) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d + 1).toLocaleDateString("en-CA");
+}
+
+function resolveTimeOutDate(date, timeIn, timeOut) {
+  if (!timeOut) return null;
+  return timeOut <= timeIn ? addOneDay(date) : date;
+}
+
+function shiftLabel(shift) {
+  if (!shift) return "";
+  return `${shift.name} (${formatTime12h(shift.start)} - ${formatTime12h(shift.end)})`;
+}
+
+function useShiftOptions() {
+  const [shifts, setShifts] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    getShifts()
+      .then((rows) => {
+        if (active) setShifts(rows);
+      })
+      .catch((err) => console.error(err));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return shifts;
 }
 
 // "08:30:00" -> "08:30" for <input type="time">
@@ -141,7 +184,11 @@ export default function ViewDTR() {
     const formData = new FormData();
     formData.append("work_date", values.date);
     formData.append("time_in", values.time_in);
-    if (values.time_out) formData.append("time_out", values.time_out);
+    if (values.time_out) {
+      formData.append("time_out", values.time_out);
+      formData.append("time_out_date", values.time_out_date);
+    }
+    if (values.shift_id) formData.append("shift_id", values.shift_id);
 
     const response = await updateAttendanceRecord(id, formData);
     const serverRecord =
@@ -249,8 +296,10 @@ export default function ViewDTR() {
             <TableRow className="border-b-2 border-blue-600 hover:bg-transparent">
               <TableHead className="text-blue-700">Employee</TableHead>
               <TableHead className="text-blue-700">Date</TableHead>
+              <TableHead className="text-blue-700">Shift</TableHead>
               <TableHead className="text-blue-700">Time in</TableHead>
               <TableHead className="text-blue-700">Time out</TableHead>
+              <TableHead className="text-blue-700">Late / Under / OT</TableHead>
               <TableHead className="text-blue-700">Status</TableHead>
               <TableHead className="text-right text-blue-700">
                 Actions
@@ -282,6 +331,19 @@ export default function ViewDTR() {
                   >
                     {formatDate(record.date)}
                   </TableCell>
+                  <TableCell data-label="Shift" className={CELL}>
+                    {record.shift ? (
+                      <div className="flex flex-col">
+                        <span className="font-medium">{record.shift.name}</span>
+                        <span className="whitespace-nowrap text-xs text-muted-foreground">
+                          {formatTime12h(record.shift.start)} -{" "}
+                          {formatTime12h(record.shift.end)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell data-label="Time in" className={CELL}>
                     <PunchCell
                       time={record.time_in}
@@ -298,7 +360,14 @@ export default function ViewDTR() {
                       id={record.id}
                       type="out"
                       alt={`${record.name} time out`}
+                      nextDay={
+                        !!record.time_out_date &&
+                        record.time_out_date !== record.date
+                      }
                     />
+                  </TableCell>
+                  <TableCell data-label="Late / Under / OT" className={CELL}>
+                    <Variance record={record} />
                   </TableCell>
                   <TableCell data-label="Status" className={CELL}>
                     <Badge
@@ -336,7 +405,7 @@ export default function ViewDTR() {
 
             {filtered.length === 0 && (
               <TableRow className="hover:bg-transparent max-md:block">
-                <TableCell colSpan={6} className="max-md:block">
+                <TableCell colSpan={8} className="max-md:block">
                   <div className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
                     <strong className="text-base text-foreground">
                       No attendance records found
@@ -381,7 +450,57 @@ export default function ViewDTR() {
 
 /* ---------- time + photo cell ---------- */
 
-function PunchCell({ time, hasImage, id, type, alt }) {
+function Variance({ record }) {
+  if (!record.shift) return <span className="text-muted-foreground">-</span>;
+
+  const items = [
+    ["Late", record.late_minutes, "border-amber-600 text-amber-700"],
+    ["Under", record.undertime_minutes, "border-amber-600 text-amber-700"],
+    ["OT", record.overtime_minutes, "border-blue-600 text-blue-700"],
+  ].filter(([, minutes]) => Number(minutes) > 0);
+
+  if (items.length === 0) {
+    return <span className="text-sm text-muted-foreground">On time</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map(([label, minutes, tone]) => (
+        <Badge key={label} variant="outline" className={tone}>
+          {label} {formatDuration(minutes)}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function ShiftSelect({ id, value, onChange, shifts, currentId, emptyLabel }) {
+  const options = shifts.filter(
+    (shift) => shift.is_active || shift.id === currentId,
+  );
+
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+    >
+      <option value="">{emptyLabel}</option>
+      {options.map((shift) => (
+        <option key={shift.id} value={shift.id}>
+          {shiftLabel({
+            name: shift.name,
+            start: shift.start_time,
+            end: shift.end_time,
+          })}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function PunchCell({ time, hasImage, id, type, alt, nextDay = false }) {
   return (
     <div className="flex items-center gap-3">
       {hasImage ? (
@@ -398,6 +517,11 @@ function PunchCell({ time, hasImage, id, type, alt }) {
       )}
       <span className="whitespace-nowrap font-semibold tabular-nums">
         {formatTime12h(time) || "-"}
+        {nextDay && time && (
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            next day
+          </span>
+        )}
       </span>
     </div>
   );
@@ -409,13 +533,20 @@ function EditDialog({ record, onClose, onSave }) {
   const [date, setDate] = useState(toDateInput(record.date));
   const [timeIn, setTimeIn] = useState(toTimeInput(record.time_in));
   const [timeOut, setTimeOut] = useState(toTimeInput(record.time_out));
+  const [shiftId, setShiftId] = useState(
+    record.shift?.id ? String(record.shift.id) : "",
+  );
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const shifts = useShiftOptions();
+
+  const nextDay = !!timeOut && !!timeIn && timeOut <= timeIn;
 
   const changed =
     date !== toDateInput(record.date) ||
     timeIn !== toTimeInput(record.time_in) ||
-    timeOut !== toTimeInput(record.time_out);
+    timeOut !== toTimeInput(record.time_out) ||
+    shiftId !== (record.shift?.id ? String(record.shift.id) : "");
 
   const submit = async (e) => {
     e.preventDefault();
@@ -424,15 +555,14 @@ function EditDialog({ record, onClose, onSave }) {
     if (!timeIn) return setErr("Time in is required.");
     if (record.time_out && !timeOut)
       return setErr("Time out cannot be removed once it has been recorded.");
-    if (timeOut && timeOut <= timeIn) {
-      return setErr("Time out must be later than time in.");
-    }
     try {
       setSaving(true);
       await onSave(record.id, {
         date,
         time_in: timeIn,
         time_out: timeOut || null,
+        time_out_date: resolveTimeOutDate(date, timeIn, timeOut),
+        shift_id: shiftId,
       });
     } catch (e2) {
       const firstValidation = e2?.response?.data?.errors
@@ -491,7 +621,23 @@ function EditDialog({ record, onClose, onSave }) {
                 value={timeOut}
                 onChange={(e) => setTimeOut(e.target.value)}
               />
+              {nextDay && (
+                <span className="text-xs text-muted-foreground">
+                  Time out is on the next day.
+                </span>
+              )}
             </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="edit-shift">Shift</Label>
+            <ShiftSelect
+              id="edit-shift"
+              value={shiftId}
+              onChange={setShiftId}
+              shifts={shifts}
+              currentId={record.shift?.id}
+              emptyLabel={record.shift ? "Keep current shift" : "No shift"}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             Photos stay attached to this record.
@@ -534,8 +680,12 @@ function AddDialog({ onClose, onCreate }) {
   const [timeOut, setTimeOut] = useState("");
   const [timeInImage, setTimeInImage] = useState(null);
   const [timeOutImage, setTimeOutImage] = useState(null);
+  const [shiftId, setShiftId] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const shifts = useShiftOptions();
+
+  const nextDay = !!timeOut && !!timeIn && timeOut <= timeIn;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -543,15 +693,16 @@ function AddDialog({ onClose, onCreate }) {
     if (!employeeNumber.trim()) return setErr("Enter the employee number.");
     if (!date) return setErr("Choose a date.");
     if (!timeIn) return setErr("Time in is required.");
-    if (timeOut && timeOut <= timeIn) {
-      return setErr("Time out must be later than time in.");
-    }
 
     const formData = new FormData();
     formData.append("employee_number", employeeNumber.trim());
     formData.append("work_date", date);
     formData.append("time_in", timeIn);
-    if (timeOut) formData.append("time_out", timeOut);
+    if (timeOut) {
+      formData.append("time_out", timeOut);
+      formData.append("time_out_date", resolveTimeOutDate(date, timeIn, timeOut));
+    }
+    if (shiftId) formData.append("shift_id", shiftId);
     if (timeInImage) formData.append("time_in_image", timeInImage);
     if (timeOutImage) formData.append("time_out_image", timeOutImage);
 
@@ -627,7 +778,22 @@ function AddDialog({ onClose, onCreate }) {
                 value={timeOut}
                 onChange={(e) => setTimeOut(e.target.value)}
               />
+              {nextDay && (
+                <span className="text-xs text-muted-foreground">
+                  Time out is on the next day.
+                </span>
+              )}
             </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="add-shift">Shift</Label>
+            <ShiftSelect
+              id="add-shift"
+              value={shiftId}
+              onChange={setShiftId}
+              shifts={shifts}
+              emptyLabel="Employee's assigned shift"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">

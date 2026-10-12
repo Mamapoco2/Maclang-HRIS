@@ -427,6 +427,11 @@ const NAV_MAIN = [
         url: "/printDTR",
         permission: "dtr.view",
       },
+      {
+        title: "Work Shifts",
+        url: "/dtrShifts",
+        permission: "dtr.manage",
+      },
     ],
   },
 ];

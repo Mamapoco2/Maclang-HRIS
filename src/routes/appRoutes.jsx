@@ -65,6 +65,7 @@ import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplications
 import DTRPage from "../pages/dtr/dtrPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
 import PrintDTR from "../pages/dtr/components/employeeDtr";
+import DTRShiftsPage from "../pages/dtr/components/shiftsPage";
 import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
 import UserManagementPage from "../pages/accounts/components/userManagementPage";
 
@@ -508,6 +509,15 @@ function AppRoutes() {
               element={
                 <PermissionRoute permission="dtr.view">
                   <PrintDTR />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/dtrShifts"
+              element={
+                <PermissionRoute permission="dtr.manage">
+                  <DTRShiftsPage />
                 </PermissionRoute>
               }
             />

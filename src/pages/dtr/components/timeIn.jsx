@@ -400,8 +400,18 @@ export default function TimeIn() {
       setStatusType("scanning");
       const image = captureImage();
       const attendance = await recordAttendance(recognizedName, image);
+      const variance = [
+        ["Late", attendance.late_minutes],
+        ["Undertime", attendance.undertime_minutes],
+        ["Overtime", attendance.overtime_minutes],
+      ]
+        .filter(([, minutes]) => Number(minutes) > 0)
+        .map(([label, minutes]) => `${label} ${minutes} min`);
       setStatus(
-        `${attendance.type} recorded at ${attendance.time_in || attendance.time_out}`,
+        [
+          `${attendance.type} recorded at ${attendance.time_in || attendance.time_out}`,
+          ...variance,
+        ].join(" · "),
       );
       setStatusType("success");
     } catch (err) {
