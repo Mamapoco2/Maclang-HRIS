@@ -63,7 +63,7 @@ export default function DeleteConfirmModal({
             </p>
             <p className="text-xs text-slate-500 flex items-start gap-2">
               <span className="text-slate-400 mt-0.5">•</span>
-              <span>Only vacant slots can be removed.</span>
+              <span>Only unfilled slots can be removed.</span>
             </p>
             <p className="text-xs text-slate-500 flex items-start gap-2">
               <span className="text-slate-400 mt-0.5">•</span>

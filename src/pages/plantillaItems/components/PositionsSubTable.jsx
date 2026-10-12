@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2 } from "lucide-react";
+import { History, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { plantillaPositionService } from "@/services/plantillaService";
 import {
@@ -19,6 +19,7 @@ import {
 import { getAssignedToDisplay } from "../helpers/formatters";
 import { StatusBadge } from "./StatusBadge";
 import { PositionModal } from "./PositionModal";
+import { PositionHistoryDialog } from "./PositionHistoryDialog";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 
 export function PositionsSubTable({ item, onRefresh }) {
@@ -29,6 +30,7 @@ export function PositionsSubTable({ item, onRefresh }) {
 
   const [editPos, setEditPos] = useState(null);
   const [deletePos, setDeletePos] = useState(null);
+  const [historyPos, setHistoryPos] = useState(null);
 
   const handleDelete = useCallback(async () => {
     try {
@@ -72,8 +74,7 @@ export function PositionsSubTable({ item, onRefresh }) {
               ) : (
                 positions.map((pos) => {
                   const statusKey = (pos.status ?? "").toUpperCase();
-                  const canDelete =
-                    statusKey !== "FILLED" && statusKey !== "UNFILLED";
+                  const canDelete = statusKey !== "FILLED";
                   const assignedTo = getAssignedToDisplay(pos);
                   const itemNumber = formatItemNumber(
                     item.base_item_number,
@@ -147,6 +148,20 @@ export function PositionsSubTable({ item, onRefresh }) {
                             size="icon"
                             className="h-7 w-7 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
                             onClick={() =>
+                              setHistoryPos({
+                                ...pos,
+                                position_slot_name: itemNumber,
+                              })
+                            }
+                            title="View history"
+                          >
+                            <History size={12} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                            onClick={() =>
                               setEditPos({
                                 ...pos,
                                 position_slot_name: itemNumber,
@@ -170,7 +185,7 @@ export function PositionsSubTable({ item, onRefresh }) {
                             title={
                               canDelete
                                 ? "Remove slot"
-                                : "Cannot remove a filled or unfilled slot"
+                                : "Cannot remove a filled slot"
                             }
                           >
                             <Trash2 size={12} />
@@ -197,6 +212,13 @@ export function PositionsSubTable({ item, onRefresh }) {
           setEditPos(null);
           onRefresh();
         }}
+      />
+      <PositionHistoryDialog
+        open={!!historyPos}
+        onOpenChange={(v) => {
+          if (!v) setHistoryPos(null);
+        }}
+        position={historyPos}
       />
       <DeleteConfirmModal
         open={!!deletePos}

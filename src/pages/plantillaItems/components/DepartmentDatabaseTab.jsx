@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { TYPE_BADGE, UNIT_STATUS_STYLES } from "../helpers/constants";
 import {
   useDepartmentDatabase,
+  loadDepartmentDatabase,
   setUnitStatus,
   deleteUnit,
 } from "../helpers/departmentStore";
@@ -106,20 +107,15 @@ function IconBtn({ title, onClick, disabled, danger, children }) {
   );
 }
 
-/**
- * System Management → Plantilla Positions → Department Database.
- *
- * The controlled list of Directorates/Divisions and their Departments/Sections/
- * Units that the plantilla forms pick from. Scoped to this module only.
- */
 export default function DepartmentDatabaseTab() {
-  const { divisions, departments } = useDepartmentDatabase();
+  const { divisions, departments, loading, status, error } = useDepartmentDatabase();
+  const [working, setWorking] = useState(false);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [collapsed, setCollapsed] = useState(new Set());
   const [form, setForm] = useState({ open: false, tier: "division", unit: null, divisionId: null });
-  const [confirm, setConfirm] = useState(null); // { action, unit }
+  const [confirm, setConfirm] = useState(null); 
 
   const childrenOf = (divId) => departments.filter((d) => d.division_id === divId);
   const divisionLinked = (div) =>
@@ -137,7 +133,6 @@ export default function DepartmentDatabaseTab() {
     };
   }, [divisions, departments]);
 
-  // Search + status filter. A division stays visible if it or any child matches.
   const tree = useMemo(() => {
     const q = search.trim().toLowerCase();
     const okStatus = (u) => statusFilter === "ALL" || u.status === statusFilter;
@@ -174,12 +169,15 @@ export default function DepartmentDatabaseTab() {
       divisionId: null,
     });
 
-  const runConfirm = () => {
+  const runConfirm = async () => {
+    if (working) return;
     const { action, unit } = confirm;
+    setWorking(true);
     const res =
       action === "delete"
-        ? deleteUnit(unit)
-        : setUnitStatus(unit, action === "inactivate" ? "INACTIVE" : "ACTIVE");
+        ? await deleteUnit(unit)
+        : await setUnitStatus(unit, action === "inactivate" ? "INACTIVE" : "ACTIVE");
+    setWorking(false);
     if (!res.ok) toast.error(res.error);
     else
       toast.success(
@@ -328,6 +326,21 @@ export default function DepartmentDatabaseTab() {
         </p>
       </div>
 
+      {loading && (
+        <p className="text-xs text-gray-400 mb-3">Loading Department Database…</p>
+      )}
+      {status === "error" && (
+        <p className="text-xs text-red-500 mb-3">
+          {error}{" "}
+          <button
+            className="underline"
+            onClick={() => loadDepartmentDatabase({ force: true })}
+          >
+            Try again
+          </button>
+        </p>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {[
@@ -427,7 +440,7 @@ export default function DepartmentDatabaseTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tree.length === 0 && (
+              {!loading && status !== "error" && tree.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={HEADERS.length} className="text-center py-16 text-sm text-slate-400">
                     No entries match.

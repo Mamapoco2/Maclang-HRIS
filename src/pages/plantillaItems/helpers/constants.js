@@ -5,7 +5,6 @@ export const ITEM_HEADERS = [
   "Title",
   "Approved",
   "Filled",
-  "Vacant",
   "Unfilled",
   "Actions",
 ];
@@ -22,8 +21,7 @@ export const BASE_POSITION_HEADERS = [
 // ─── Status / type styling ──────────────────────────────────────────────────
 export const STATUS_STYLES = {
   FILLED: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  VACANT: "bg-amber-50   text-amber-600   border-amber-200",
-  UNFILLED: "bg-red-50     text-red-600     border-red-200",
+  UNFILLED: "bg-amber-50   text-amber-600   border-amber-200",
 };
 
 export const TYPE_BADGE = {

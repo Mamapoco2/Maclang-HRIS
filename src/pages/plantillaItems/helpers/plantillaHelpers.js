@@ -1,4 +1,8 @@
-import { getActiveUnits, getAllUnits } from "./departmentStore";
+import {
+  getActiveUnits,
+  getAllUnits,
+  loadDepartmentDatabase,
+} from "./departmentStore";
 import { BASE_POSITION_HEADERS, PAGE_SIZE } from "./constants";
 
 // ─── Item list ──────────────────────────────────────────────────────────────
@@ -28,7 +32,6 @@ export function computeItemStats(items) {
   return {
     total_items: items.length,
     filled: all.filter((p) => getStatus(p) === "FILLED").length,
-    vacant: all.filter((p) => getStatus(p) === "VACANT").length,
     unfilled: all.filter((p) => getStatus(p) === "UNFILLED").length,
   };
 }
@@ -135,6 +138,7 @@ export function resolveInheritedConfig(positions = []) {
 // ─── Directorate / Division / Department hierarchy ─────────────────────────
 
 export async function fetchAllUnits() {
+  await loadDepartmentDatabase();
   return getActiveUnits();
 }
 
