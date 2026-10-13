@@ -3,9 +3,13 @@ import {
   getAttendanceRecords,
   updateAttendanceRecord,
   createAttendanceRecord,
+  lookupEmployeeByNumber,
 } from "@/services/attendanceService";
-import { getShifts } from "@/services/shiftService";
+import { useDebounce } from "@/hooks/useDebounce";
 import AuthImage from "./AuthImage";
+import DtrAuditLogSheet from "./DtrAuditLogSheet";
+import { PermissionGate } from "@/components/PermissionGate";
+import { PERMISSIONS } from "@/constants/permissions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,25 +82,8 @@ function shiftLabel(shift) {
   return `${shift.name} (${formatTime12h(shift.start)} - ${formatTime12h(shift.end)})`;
 }
 
-function useShiftOptions() {
-  const [shifts, setShifts] = useState([]);
+const PAGE_SIZE = 10;
 
-  useEffect(() => {
-    let active = true;
-    getShifts()
-      .then((rows) => {
-        if (active) setShifts(rows);
-      })
-      .catch((err) => console.error(err));
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return shifts;
-}
-
-// "08:30:00" -> "08:30" for <input type="time">
 const toTimeInput = (v) => (v ? String(v).slice(0, 5) : "");
 const toDateInput = (v) => (v ? String(v).slice(0, 10) : "");
 
@@ -132,6 +119,7 @@ export default function ViewDTR() {
   const [adding, setAdding] = useState(false); // add-record dialog open
   const [refreshKey, setRefreshKey] = useState(0); // bump to refetch the list
   const [notice, setNotice] = useState(""); // success message
+  const [auditOpen, setAuditOpen] = useState(false);
 
   useEffect(() => {
     if (!notice) return;
@@ -170,6 +158,19 @@ export default function ViewDTR() {
     });
   }, [records, search, dateFrom, dateTo]);
 
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, dateFrom, dateTo]);
+
+  const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, lastPage);
+  const paged = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   const hasFilters = search || dateFrom || dateTo;
   const clearFilters = () => {
     setSearch("");
@@ -188,7 +189,6 @@ export default function ViewDTR() {
       formData.append("time_out", values.time_out);
       formData.append("time_out_date", values.time_out_date);
     }
-    if (values.shift_id) formData.append("shift_id", values.shift_id);
 
     const response = await updateAttendanceRecord(id, formData);
     const serverRecord =
@@ -222,13 +222,33 @@ export default function ViewDTR() {
             when something was logged wrong, or add one that was missed.
           </p>
         </div>
-        <Button
-          type="button"
-          className={`${BTN_PRIMARY} max-md:w-full`}
-          onClick={() => setAdding(true)}
-        >
-          Add attendance
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 max-md:w-full">
+          <PermissionGate permission={PERMISSIONS.DTR_AUDIT_VIEW}>
+            <Button
+              type="button"
+              variant="outline"
+              className="max-md:w-full"
+              onClick={() => setAuditOpen(true)}
+            >
+              Audit log
+            </Button>
+            <DtrAuditLogSheet
+              open={auditOpen}
+              onOpenChange={setAuditOpen}
+              scope="attendance"
+              title="Attendance audit log"
+              description="Who added or edited attendance records, and what changed."
+              searchPlaceholder="Employee number"
+            />
+          </PermissionGate>
+          <Button
+            type="button"
+            className={`${BTN_PRIMARY} max-md:w-full`}
+            onClick={() => setAdding(true)}
+          >
+            Add attendance
+          </Button>
+        </div>
       </header>
 
       {notice && (
@@ -307,7 +327,7 @@ export default function ViewDTR() {
             </TableRow>
           </TableHeader>
           <TableBody className="max-md:block">
-            {filtered.map((record) => {
+            {paged.map((record) => {
               const complete = record.time_in && record.time_out;
               return (
                 <TableRow
@@ -433,6 +453,37 @@ export default function ViewDTR() {
         </Table>
       )}
 
+      {!loading && !error && filtered.length > 0 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {filtered.length} record{filtered.length === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
+            >
+              Previous
+            </Button>
+            <span className="tabular-nums">
+              Page {currentPage} of {lastPage}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= lastPage}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
       {editing && (
         <EditDialog
           record={editing}
@@ -474,32 +525,6 @@ function Variance({ record }) {
   );
 }
 
-function ShiftSelect({ id, value, onChange, shifts, currentId, emptyLabel }) {
-  const options = shifts.filter(
-    (shift) => shift.is_active || shift.id === currentId,
-  );
-
-  return (
-    <select
-      id={id}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-    >
-      <option value="">{emptyLabel}</option>
-      {options.map((shift) => (
-        <option key={shift.id} value={shift.id}>
-          {shiftLabel({
-            name: shift.name,
-            start: shift.start_time,
-            end: shift.end_time,
-          })}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function PunchCell({ time, hasImage, id, type, alt, nextDay = false }) {
   return (
     <div className="flex items-center gap-3">
@@ -533,20 +558,15 @@ function EditDialog({ record, onClose, onSave }) {
   const [date, setDate] = useState(toDateInput(record.date));
   const [timeIn, setTimeIn] = useState(toTimeInput(record.time_in));
   const [timeOut, setTimeOut] = useState(toTimeInput(record.time_out));
-  const [shiftId, setShiftId] = useState(
-    record.shift?.id ? String(record.shift.id) : "",
-  );
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
-  const shifts = useShiftOptions();
 
   const nextDay = !!timeOut && !!timeIn && timeOut <= timeIn;
 
   const changed =
     date !== toDateInput(record.date) ||
     timeIn !== toTimeInput(record.time_in) ||
-    timeOut !== toTimeInput(record.time_out) ||
-    shiftId !== (record.shift?.id ? String(record.shift.id) : "");
+    timeOut !== toTimeInput(record.time_out);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -562,7 +582,6 @@ function EditDialog({ record, onClose, onSave }) {
         time_in: timeIn,
         time_out: timeOut || null,
         time_out_date: resolveTimeOutDate(date, timeIn, timeOut),
-        shift_id: shiftId,
       });
     } catch (e2) {
       const firstValidation = e2?.response?.data?.errors
@@ -628,17 +647,6 @@ function EditDialog({ record, onClose, onSave }) {
               )}
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-shift">Shift</Label>
-            <ShiftSelect
-              id="edit-shift"
-              value={shiftId}
-              onChange={setShiftId}
-              shifts={shifts}
-              currentId={record.shift?.id}
-              emptyLabel={record.shift ? "Keep current shift" : "No shift"}
-            />
-          </div>
           <p className="text-sm text-muted-foreground">
             Photos stay attached to this record.
           </p>
@@ -680,10 +688,31 @@ function AddDialog({ onClose, onCreate }) {
   const [timeOut, setTimeOut] = useState("");
   const [timeInImage, setTimeInImage] = useState(null);
   const [timeOutImage, setTimeOutImage] = useState(null);
-  const [shiftId, setShiftId] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
-  const shifts = useShiftOptions();
+  const [employee, setEmployee] = useState(null);
+  const lookupNumber = useDebounce(employeeNumber.trim(), 400);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!lookupNumber) {
+      setEmployee(null);
+      return undefined;
+    }
+
+    lookupEmployeeByNumber(lookupNumber)
+      .then((found) => {
+        if (active) setEmployee(found);
+      })
+      .catch(() => {
+        if (active) setEmployee(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [lookupNumber]);
 
   const nextDay = !!timeOut && !!timeIn && timeOut <= timeIn;
 
@@ -702,7 +731,6 @@ function AddDialog({ onClose, onCreate }) {
       formData.append("time_out", timeOut);
       formData.append("time_out_date", resolveTimeOutDate(date, timeIn, timeOut));
     }
-    if (shiftId) formData.append("shift_id", shiftId);
     if (timeInImage) formData.append("time_in_image", timeInImage);
     if (timeOutImage) formData.append("time_out_image", timeOutImage);
 
@@ -749,6 +777,12 @@ function AddDialog({ onClose, onCreate }) {
               autoFocus
               required
             />
+            {employee && (
+              <span className="text-xs text-muted-foreground">
+                {employee.name}
+                {employee.shift && ` - ${shiftLabel(employee.shift)}`}
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="add-date">Date</Label>
@@ -784,16 +818,6 @@ function AddDialog({ onClose, onCreate }) {
                 </span>
               )}
             </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="add-shift">Shift</Label>
-            <ShiftSelect
-              id="add-shift"
-              value={shiftId}
-              onChange={setShiftId}
-              shifts={shifts}
-              emptyLabel="Employee's assigned shift"
-            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">

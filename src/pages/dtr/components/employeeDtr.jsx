@@ -743,8 +743,16 @@ function DtrSheet({ result, leftEntriesByDay, rightEntriesByDay }) {
 // ── DtrCopy — walang binago ──────────────────────────────────────────────────
 function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
   const monthRangeText = formatCutoffRangeDisplay(cutoffRange) || "";
+  const hasPunch = (entry) =>
+    !!entry &&
+    [
+      entry.am_arrival,
+      entry.am_departure,
+      entry.pm_arrival,
+      entry.pm_departure,
+    ].some((value) => formatDtrCellDisplay(value));
   const dtrCellValue = (day, entry, rawValue) => {
-    const weekend = isWeekendDay(day, cutoffRange);
+    const weekend = isWeekendDay(day, cutoffRange) && !hasPunch(entry);
     if (!entry) return weekend ? "OFF" : "";
     const formatted = formatDtrCellDisplay(rawValue);
     return formatted || (weekend ? "OFF" : "");

@@ -199,6 +199,7 @@ export const PERMISSION_GROUPS = [
     permissions: [
       { key: "dtr.view", label: "View DTR" },
       { key: "dtr.manage", label: "Manage DTR" },
+      { key: "dtr.audit.view", label: "View DTR Audit Logs" },
     ],
   },
   // ─── Audit Logs ───────────────────────────────────────────

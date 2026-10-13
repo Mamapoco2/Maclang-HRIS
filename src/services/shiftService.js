@@ -22,10 +22,20 @@ export const deleteShift = async (id) => {
   await api.delete(`/dtr/shifts/${id}`);
 };
 
-export const getShiftAssignments = async ({ q, page, perPage } = {}) => {
+export const getShiftAssignments = async ({
+  q,
+  shift,
+  sort,
+  direction,
+  page,
+  perPage,
+} = {}) => {
   const { data } = await api.get("/dtr/shift-assignments", {
     params: {
       ...(q && { q }),
+      ...(shift && { shift }),
+      ...(sort && { sort }),
+      ...(direction && { direction }),
       ...(page && { page }),
       ...(perPage && { per_page: perPage }),
     },

@@ -27,6 +27,14 @@ export const getEmployeeDtrCutoff = async (employeeNumber, month, year) => {
   return data;
 };
 
+export const lookupEmployeeByNumber = async (employeeNumber) => {
+  const { data } = await api.get("/dtr/employees-by-number", {
+    params: { employee_number: employeeNumber },
+  });
+
+  return data?.employee ?? null;
+};
+
 export const createAttendanceRecord = async (formData) => {
   const { data } = await api.post("/dtr/attendances", formData, {
     headers: {
