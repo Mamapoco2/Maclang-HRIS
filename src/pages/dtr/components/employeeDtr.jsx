@@ -161,6 +161,19 @@ function formatMinutes(total) {
   return `${hours}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
+function splitOvertime(total) {
+  const minutes = Math.round(Number(total));
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return { hours: "", minutes: "" };
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return {
+    hours: hours > 0 ? String(hours) : "",
+    minutes: rest > 0 ? String(rest) : "",
+  };
+}
+
 function formatOfficialHours(shifts) {
   if (!Array.isArray(shifts) || shifts.length === 0) {
     return DEFAULT_OFFICIAL_HOURS;
@@ -265,11 +278,12 @@ export default function EmployeeDtr() {
     }
   };
 
-  const sheet = (
+  const renderSheet = (forPrint) => (
     <DtrSheet
       result={result}
       leftEntriesByDay={leftEntriesByDay}
       rightEntriesByDay={rightEntriesByDay}
+      forPrint={forPrint}
     />
   );
 
@@ -681,13 +695,13 @@ export default function EmployeeDtr() {
         )}
 
         {/* ── On-screen preview ── */}
-        {sheet}
+        {renderSheet(false)}
       </div>
 
       {/* ── Print-only copy: nasa <body> mismo, para walang offset ng parent ── */}
       {typeof document !== "undefined" &&
         createPortal(
-          <div className="dtr-print-root">{sheet}</div>,
+          <div className="dtr-print-root">{renderSheet(true)}</div>,
           document.body,
         )}
     </div>
@@ -695,7 +709,7 @@ export default function EmployeeDtr() {
 }
 
 // ── Paper (dalawang DTR + shared signature) ──────────────────────────────────
-function DtrSheet({ result, leftEntriesByDay, rightEntriesByDay }) {
+function DtrSheet({ result, leftEntriesByDay, rightEntriesByDay, forPrint }) {
   return (
     <div className="dtr-paper">
       <div className="employee-dtr-copies grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -705,6 +719,7 @@ function DtrSheet({ result, leftEntriesByDay, rightEntriesByDay }) {
           cutoffRange={result?.left_range}
           shifts={result?.left_shifts}
           totals={result?.left_totals}
+          forPrint={forPrint}
         />
         <DtrCopy
           employeeName={result?.employee?.name || ""}
@@ -712,6 +727,7 @@ function DtrSheet({ result, leftEntriesByDay, rightEntriesByDay }) {
           cutoffRange={result?.right_range}
           shifts={result?.right_shifts}
           totals={result?.right_totals}
+          forPrint={forPrint}
         />
       </div>
 
@@ -740,9 +756,17 @@ function DtrSheet({ result, leftEntriesByDay, rightEntriesByDay }) {
   );
 }
 
-// ── DtrCopy — walang binago ──────────────────────────────────────────────────
-function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
+// ── DtrCopy ──────────────────────────────────────────────────────────────────
+function DtrCopy({
+  employeeName,
+  entriesByDay,
+  cutoffRange,
+  shifts,
+  totals,
+  forPrint,
+}) {
   const monthRangeText = formatCutoffRangeDisplay(cutoffRange) || "";
+  const totalOvertime = splitOvertime(totals?.overtime_minutes);
   const hasPunch = (entry) =>
     !!entry &&
     [
@@ -803,8 +827,8 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
             </span>
           </div>
           <div className="mb-1 flex w-full items-end justify-between gap-1">
-            <span className="flex-[0_0_46%] pb-px text-left text-[9.5px] font-bold leading-[1.15]">
-              For Arrival & Departure Days:
+            <span className="flex-[0_0_62%] whitespace-nowrap pb-px text-left text-[9.5px] font-bold leading-[1.15]">
+              For Arrival & Departure Regular Days:
             </span>
             <span className="block min-h-[18px] flex-1 border-b border-black">
               &nbsp;
@@ -823,13 +847,26 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
         <table className="employee-dtr-grid-table mt-2 w-full border-collapse border-[2px] border-black">
           <colgroup>
             <col style={{ width: "8%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "13.3%" }} />
-            <col style={{ width: "13.3%" }} />
-            <col style={{ width: "13.4%" }} />
+            {forPrint ? (
+              <>
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "12%" }} />
+              </>
+            ) : (
+              <>
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "13.3%" }} />
+                <col style={{ width: "13.3%" }} />
+                <col style={{ width: "13.4%" }} />
+              </>
+            )}
           </colgroup>
           <thead>
             <tr>
@@ -840,7 +877,7 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
                 Days
               </th>
               <th
-                colSpan={7}
+                colSpan={forPrint ? 6 : 7}
                 className="border border-black px-[2px] py-[1px] h-[16px]"
               ></th>
             </tr>
@@ -857,24 +894,35 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
               >
                 Afternoon
               </th>
-              <th
-                rowSpan={2}
-                className="border border-black px-[2px] py-[1px] text-center text-[9.5px] font-bold"
-              >
-                Late
-              </th>
-              <th
-                rowSpan={2}
-                className="border border-black px-[2px] py-[1px] text-center text-[9.5px] font-bold"
-              >
-                Under-time
-              </th>
-              <th
-                rowSpan={2}
-                className="border border-black px-[2px] py-[1px] text-center text-[9.5px] font-bold"
-              >
-                Over-time
-              </th>
+              {forPrint ? (
+                <th
+                  colSpan={2}
+                  className="border border-black px-[2px] py-[1px] text-center text-[9.5px] font-bold"
+                >
+                  Overtime
+                </th>
+              ) : (
+                <>
+                  <th
+                    rowSpan={2}
+                    className="border border-black px-[2px] py-[1px] text-center text-[9.5px] font-bold"
+                  >
+                    Late
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="border border-black px-[2px] py-[1px] text-center text-[9.5px] font-bold"
+                  >
+                    Under-time
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="border border-black px-[2px] py-[1px] text-center text-[9.5px] font-bold"
+                  >
+                    Over-time
+                  </th>
+                </>
+              )}
             </tr>
             <tr>
               <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
@@ -889,6 +937,16 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
               <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
                 Departure
               </th>
+              {forPrint && (
+                <>
+                  <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
+                    Hours
+                  </th>
+                  <th className="border border-black px-[2px] py-[1px] text-center text-[9.5px] ">
+                    Minutes
+                  </th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -896,6 +954,7 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
               const day = idx + 1;
               const entry = entriesByDay.get(day);
               const dayLabel = String(day).padStart(2, "0");
+              const overtime = splitOvertime(entry?.overtime_minutes);
               const cell =
                 "h-[22px] border border-black px-[1px] py-[3px] text-center text-[9.5px]";
               return (
@@ -918,13 +977,24 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
                   <td className={cell}>
                     {dtrCellValue(day, entry, entry?.pm_departure)}
                   </td>
-                  <td className={cell}>{formatMinutes(entry?.late_minutes)}</td>
-                  <td className={cell}>
-                    {formatMinutes(entry?.undertime_minutes)}
-                  </td>
-                  <td className={cell}>
-                    {formatMinutes(entry?.overtime_minutes)}
-                  </td>
+                  {forPrint ? (
+                    <>
+                      <td className={cell}>{overtime.hours}</td>
+                      <td className={cell}>{overtime.minutes}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className={cell}>
+                        {formatMinutes(entry?.late_minutes)}
+                      </td>
+                      <td className={cell}>
+                        {formatMinutes(entry?.undertime_minutes)}
+                      </td>
+                      <td className={cell}>
+                        {formatMinutes(entry?.overtime_minutes)}
+                      </td>
+                    </>
+                  )}
                 </tr>
               );
             })}
@@ -935,15 +1005,28 @@ function DtrCopy({ employeeName, entriesByDay, cutoffRange, shifts, totals }) {
               >
                 Total
               </td>
-              <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
-                {formatMinutes(totals?.late_minutes)}
-              </td>
-              <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
-                {formatMinutes(totals?.undertime_minutes)}
-              </td>
-              <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
-                {formatMinutes(totals?.overtime_minutes)}
-              </td>
+              {forPrint ? (
+                <>
+                  <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
+                    {totalOvertime.hours}
+                  </td>
+                  <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
+                    {totalOvertime.minutes}
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
+                    {formatMinutes(totals?.late_minutes)}
+                  </td>
+                  <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
+                    {formatMinutes(totals?.undertime_minutes)}
+                  </td>
+                  <td className="border border-black px-[1px] py-[1px] text-center text-[9.5px] font-bold">
+                    {formatMinutes(totals?.overtime_minutes)}
+                  </td>
+                </>
+              )}
             </tr>
           </tbody>
         </table>
