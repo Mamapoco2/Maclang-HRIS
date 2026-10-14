@@ -4,6 +4,7 @@ import {
   IconDashboard,
   IconSpeakerphone,
   IconCalendarEvent,
+  IconCalendarTime,
   IconSchool,
   IconInnerShadowTop,
 } from "@tabler/icons-react";
@@ -100,6 +101,18 @@ const NAV_USER = [
     ],
   },
   {
+    title: "Work Schedule",
+    url: "/dtrSchedule",
+    icon: IconCalendarTime,
+    anyOf: [
+      "dtr.manage",
+      "dtr.schedule.view",
+      "dtr.schedule.view.own",
+      "dtr.schedule.manage",
+      "dtr.schedule.approve",
+    ],
+  },
+  {
     title: "Trainings",
     url: "/trainings",
     icon: IconSchool,
@@ -110,6 +123,9 @@ const NAV_USER = [
 function canSee(item, userPermissions, isSuperUser) {
   if (item.superAdminOnly) return isSuperUser;
   if (isSuperUser) return true;
+  if (Array.isArray(item.anyOf)) {
+    return item.anyOf.some((p) => userPermissions.includes(p));
+  }
   if (!item.permission) return true;
   return userPermissions.includes(item.permission);
 }

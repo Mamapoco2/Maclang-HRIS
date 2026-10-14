@@ -1,16 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   getShifts,
   createShift,
   updateShift,
   deleteShift,
-  getShiftAssignments,
-  assignShift,
 } from "@/services/shiftService";
-import { useDebounce } from "@/hooks/useDebounce";
 import DtrAuditLogSheet from "./DtrAuditLogSheet";
 import { PermissionGate } from "@/components/PermissionGate";
 import { PERMISSIONS } from "@/constants/permissions";
+import { AuthContext } from "@/context/authContext";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,8 +56,6 @@ const SHIFT_NAME_OPTIONS = [
 
 const GRACE_MINUTES = 15;
 
-const ASSIGNMENTS_PER_PAGE = 10;
-
 const EMPTY_FORM = {
   name: "",
   start_time: "",
@@ -81,6 +77,12 @@ function formatRange(start, end) {
   return `${formatTime12h(start)} - ${formatTime12h(end)}`;
 }
 
+const SHARED_FILTER = "shared";
+
+function departmentLabel(shift) {
+  return shift.department?.name ?? "All departments";
+}
+
 function errorMessage(err, fallback) {
   const validation = err?.response?.data?.errors
     ? Object.values(err.response.data.errors)[0]?.[0]
@@ -88,8 +90,12 @@ function errorMessage(err, fallback) {
   return validation || err?.response?.data?.message || err?.message || fallback;
 }
 
-export default function ShiftsPage() {
+export default function ShiftsPage({ embedded = false, onChanged }) {
+  const auth = useContext(AuthContext);
+  const isAdmin = auth?.hasPermission(PERMISSIONS.DTR_MANAGE) ?? false;
   const [shifts, setShifts] = useState([]);
+  const [headDepartments, setHeadDepartments] = useState([]);
+  const [departmentFilter, setDepartmentFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -108,7 +114,9 @@ export default function ShiftsPage() {
   const loadShifts = useCallback(async () => {
     try {
       setError("");
-      setShifts(await getShifts());
+      const result = await getShifts();
+      setShifts(result.shifts);
+      setHeadDepartments(result.departments);
     } catch (err) {
       console.error(err);
       setError(errorMessage(err, "Failed to load shifts"));
@@ -121,6 +129,31 @@ export default function ShiftsPage() {
     loadShifts();
   }, [loadShifts]);
 
+  const departmentOptions = useMemo(() => {
+    const byId = new Map();
+    shifts.forEach((shift) => {
+      if (shift.department) byId.set(shift.department.id, shift.department);
+    });
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [shifts]);
+
+  const visibleShifts = useMemo(() => {
+    const filtered = shifts.filter((shift) => {
+      if (!departmentFilter) return true;
+      if (departmentFilter === SHARED_FILTER) return !shift.department;
+      return String(shift.department?.id) === departmentFilter;
+    });
+
+    return filtered
+      .map((shift, index) => ({ shift, index }))
+      .sort((a, b) => {
+        const nameA = a.shift.department?.name ?? "";
+        const nameB = b.shift.department?.name ?? "";
+        return nameA.localeCompare(nameB) || a.index - b.index;
+      })
+      .map(({ shift }) => shift);
+  }, [shifts, departmentFilter]);
+
   const handleSave = async (id, values) => {
     if (id) {
       await updateShift(id, values);
@@ -132,6 +165,7 @@ export default function ShiftsPage() {
     setEditing(null);
     setAdding(false);
     await loadShifts();
+    onChanged?.();
   };
 
   const confirmDelete = async () => {
@@ -141,23 +175,29 @@ export default function ShiftsPage() {
       setDeleteError("");
       setNotice("Shift deleted");
       await loadShifts();
+      onChanged?.();
     } catch (err) {
       setDeleteError(errorMessage(err, "Could not delete the shift."));
     }
   };
 
   return (
-    <div className="flex flex-col gap-10 p-4 text-foreground md:p-7">
+    <div
+      className={`flex flex-col gap-10 text-foreground ${embedded ? "" : "p-4 md:p-7"}`}
+    >
       <section>
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="mb-1.5 text-2xl font-bold tracking-tight">
-              Work shifts
+              Shift types
             </h2>
             <p className="max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+              {isAdmin
+                ? "Shifts for all departments are added here. Shifts added by a department head are available only to that department and are listed under it. "
+                : "Shifts for all departments are set by HR. A shift you add is available only to your department. "}
               Late, undertime and overtime on the DTR are computed against the
-              shift an employee is assigned to. Employees without an assigned
-              shift use the default shift.
+              scheduled shift. Dates without an approved schedule use the
+              default shift.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 max-md:w-full">
@@ -174,8 +214,8 @@ export default function ShiftsPage() {
                 open={auditOpen}
                 onOpenChange={setAuditOpen}
                 scope="shift"
-                title="Work shift audit log"
-                description="Who added, edited, deleted or assigned shifts."
+                title="Shift type audit log"
+                description="Who added, edited or deleted shift types."
                 searchPlaceholder="Shift name"
               />
             </PermissionGate>
@@ -188,6 +228,26 @@ export default function ShiftsPage() {
             </Button>
           </div>
         </header>
+
+        {isAdmin && departmentOptions.length > 0 && (
+          <div className="mb-4 w-full sm:w-72">
+            <Label htmlFor="shift-department-filter">Department</Label>
+            <select
+              id="shift-department-filter"
+              className={SELECT_CLASS}
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+            >
+              <option value="">All shifts</option>
+              <option value={SHARED_FILTER}>All departments only</option>
+              {departmentOptions.map((department) => (
+                <option key={department.id} value={String(department.id)}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {notice && (
           <p role="status" className="mb-4 text-sm font-semibold text-blue-700">
@@ -212,9 +272,10 @@ export default function ShiftsPage() {
             <TableHeader>
               <TableRow className="border-b-2 border-blue-600 hover:bg-transparent">
                 <TableHead className="text-blue-700">Name</TableHead>
+                <TableHead className="text-blue-700">Department</TableHead>
                 <TableHead className="text-blue-700">Hours</TableHead>
                 <TableHead className="text-blue-700">Grace</TableHead>
-                <TableHead className="text-blue-700">Employees</TableHead>
+                <TableHead className="text-blue-700">Scheduled days</TableHead>
                 <TableHead className="text-blue-700">Status</TableHead>
                 <TableHead className="text-right text-blue-700">
                   Actions
@@ -222,9 +283,10 @@ export default function ShiftsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shifts.map((shift) => (
+              {visibleShifts.map((shift) => (
                 <TableRow key={shift.id} className="hover:bg-transparent">
                   <TableCell className="font-semibold">{shift.name}</TableCell>
+                  <TableCell>{departmentLabel(shift)}</TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
                     {formatRange(shift.start_time, shift.end_time)}
                     {shift.crosses_midnight && (
@@ -237,7 +299,7 @@ export default function ShiftsPage() {
                     {shift.grace_minutes} min
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {shift.employees_count}
+                    {shift.scheduled_count}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
@@ -260,43 +322,45 @@ export default function ShiftsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        className={BTN_PRIMARY}
-                        onClick={() => setEditing(shift)}
-                        aria-label={`Edit ${shift.name}`}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setDeleteError("");
-                          setDeleting(shift);
-                        }}
-                        aria-label={`Delete ${shift.name}`}
-                      >
-                        Delete
-                      </Button>
-                    </div>
+                    {shift.can_edit && (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className={BTN_PRIMARY}
+                          onClick={() => setEditing(shift)}
+                          aria-label={`Edit ${shift.name}`}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setDeleteError("");
+                            setDeleting(shift);
+                          }}
+                          aria-label={`Delete ${shift.name}`}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
 
-              {shifts.length === 0 && (
+              {visibleShifts.length === 0 && (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={7}>
                     <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
                       <strong className="text-base text-foreground">
                         No shifts yet
                       </strong>
                       <span>
-                        Add a shift, then mark one as the default for employees
-                        without an assignment.
+                        Add a shift, then mark one as the default for dates
+                        without an approved schedule.
                       </span>
                     </div>
                   </TableCell>
@@ -307,18 +371,12 @@ export default function ShiftsPage() {
         )}
       </section>
 
-      <AssignmentsSection
-        shifts={shifts}
-        onAssigned={(count) => {
-          setNotice(`Updated ${count} employee${count === 1 ? "" : "s"}`);
-          loadShifts();
-        }}
-      />
-
       {(adding || editing) && (
         <ShiftDialog
+          isAdmin={isAdmin}
           shift={editing}
           shifts={shifts}
+          departments={headDepartments}
           onClose={() => {
             setAdding(false);
             setEditing(null);
@@ -338,7 +396,7 @@ export default function ShiftsPage() {
             <AlertDialogTitle>Delete this shift?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleting?.name} will be removed. A shift that is already
-              assigned or used in attendance records cannot be deleted;
+              scheduled or used in attendance records cannot be deleted;
               deactivate it instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -364,7 +422,7 @@ export default function ShiftsPage() {
   );
 }
 
-function ShiftDialog({ shift, shifts, onClose, onSave }) {
+function ShiftDialog({ isAdmin, shift, shifts, departments, onClose, onSave }) {
   const [form, setForm] = useState(
     shift
       ? {
@@ -374,7 +432,7 @@ function ShiftDialog({ shift, shifts, onClose, onSave }) {
           is_default: shift.is_default,
           is_active: shift.is_active,
         }
-      : EMPTY_FORM,
+      : { ...EMPTY_FORM, department_id: departments[0]?.id ?? "" },
   );
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -405,6 +463,9 @@ function ShiftDialog({ shift, shifts, onClose, onSave }) {
         end_time: form.end_time,
         is_default: form.is_default,
         is_active: form.is_active,
+        ...(!isAdmin && !shift && form.department_id
+          ? { department_id: Number(form.department_id) }
+          : {}),
       });
     } catch (err2) {
       setErr(errorMessage(err2, "Could not save the shift. Try again."));
@@ -412,9 +473,16 @@ function ShiftDialog({ shift, shifts, onClose, onSave }) {
     }
   };
 
+  const scopeDepartmentId = shift?.department?.id ?? null;
   const takenNames = new Set(
     shifts
-      .filter((row) => row.id !== shift?.id)
+      .filter(
+        (row) =>
+          row.id !== shift?.id &&
+          (scopeDepartmentId === null ||
+            !row.department ||
+            row.department.id === scopeDepartmentId),
+      )
       .map((row) => row.name.trim().toLowerCase()),
   );
   const nameOptions = SHIFT_NAME_OPTIONS.filter(
@@ -446,21 +514,33 @@ function ShiftDialog({ shift, shifts, onClose, onSave }) {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="shift-name">Name</Label>
-            <select
-              id="shift-name"
-              value={form.name}
-              onChange={(e) => setField("name")(e.target.value)}
-              className={SELECT_CLASS}
-              autoFocus
-              required
-            >
-              <option value="">Select shift name</option>
-              {nameOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
+            {isAdmin ? (
+              <select
+                id="shift-name"
+                value={form.name}
+                onChange={(e) => setField("name")(e.target.value)}
+                className={SELECT_CLASS}
+                autoFocus
+                required
+              >
+                <option value="">Select shift name</option>
+                {nameOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                id="shift-name"
+                value={form.name}
+                maxLength={60}
+                placeholder="e.g. Early Morning Shift"
+                onChange={(e) => setField("name")(e.target.value)}
+                autoFocus
+                required
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -491,23 +571,54 @@ function ShiftDialog({ shift, shifts, onClose, onSave }) {
             </div>
           </div>
 
+          {!isAdmin && !shift && departments.length > 1 && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="shift-department">Department</Label>
+              <select
+                id="shift-department"
+                value={form.department_id}
+                onChange={(e) => setField("department_id")(e.target.value)}
+                className={SELECT_CLASS}
+                required
+              >
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            {shift
+              ? `Available to: ${departmentLabel(shift)}.`
+              : isAdmin
+                ? "Available to all departments."
+                : departments.length === 1
+                  ? `Available only to ${departments[0].name}.`
+                  : "Available only to the selected department."}
+          </p>
+
           <p className="text-xs text-muted-foreground">
             Grace period is {GRACE_MINUTES} minutes for all shifts. Arriving
             within it is not counted as late.
           </p>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="shift-default"
-              checked={form.is_default}
-              onCheckedChange={(checked) =>
-                setField("is_default")(checked === true)
-              }
-            />
-            <Label htmlFor="shift-default">
-              Default shift for employees without an assignment
-            </Label>
-          </div>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="shift-default"
+                checked={form.is_default}
+                onCheckedChange={(checked) =>
+                  setField("is_default")(checked === true)
+                }
+              />
+              <Label htmlFor="shift-default">
+                Default shift for dates without an approved schedule
+              </Label>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Checkbox
               id="shift-active"
@@ -541,342 +652,5 @@ function ShiftDialog({ shift, shifts, onClose, onSave }) {
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function AssignmentsSection({ shifts, onAssigned }) {
-  const [rows, setRows] = useState([]);
-  const [page, setPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [selected, setSelected] = useState(() => new Set());
-  const [targetShift, setTargetShift] = useState("");
-  const [shiftFilter, setShiftFilter] = useState("");
-  const [sort, setSort] = useState({ column: "name", direction: "asc" });
-  const [applying, setApplying] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const debouncedSearch = useDebounce(search.trim(), 400);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch]);
-
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const result = await getShiftAssignments({
-          q: debouncedSearch || undefined,
-          shift: shiftFilter || undefined,
-          sort: sort.column,
-          direction: sort.direction,
-          page,
-          perPage: ASSIGNMENTS_PER_PAGE,
-        });
-        if (!active) return;
-        setRows(result.rows);
-        setLastPage(result.lastPage);
-        setTotal(result.total);
-      } catch (err) {
-        console.error(err);
-        if (active) setError(errorMessage(err, "Failed to load employees"));
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, [debouncedSearch, shiftFilter, sort, page, refreshKey]);
-
-  const changeShiftFilter = (value) => {
-    setShiftFilter(value);
-    setPage(1);
-  };
-
-  const toggleSort = (column) => {
-    setSort((prev) => ({
-      column,
-      direction:
-        prev.column === column && prev.direction === "asc" ? "desc" : "asc",
-    }));
-    setPage(1);
-  };
-
-  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
-
-  const toggleAll = (checked) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      rows.forEach((r) => (checked ? next.add(r.id) : next.delete(r.id)));
-      return next;
-    });
-  };
-
-  const toggleOne = (id, checked) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  };
-
-  const apply = async () => {
-    if (selected.size === 0) return;
-    try {
-      setApplying(true);
-      setError("");
-      const count = await assignShift(
-        Array.from(selected),
-        targetShift ? Number(targetShift) : null,
-      );
-      setSelected(new Set());
-      setRefreshKey((k) => k + 1);
-      onAssigned(count);
-    } catch (err) {
-      setError(errorMessage(err, "Could not update assignments."));
-    } finally {
-      setApplying(false);
-    }
-  };
-
-  const activeShifts = shifts.filter((shift) => shift.is_active);
-
-  return (
-    <section>
-      <header className="mb-4">
-        <h2 className="mb-1.5 text-2xl font-bold tracking-tight">
-          Employee assignments
-        </h2>
-        <p className="max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
-          Select employees, choose a shift and apply. Choose the default option
-          to remove an assignment.
-        </p>
-      </header>
-
-      <div className="mb-4 flex flex-wrap items-end gap-3 border-b pb-4">
-        <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-          <Label htmlFor="assign-search">Employee</Label>
-          <Input
-            id="assign-search"
-            type="search"
-            placeholder="Search by name or employee number"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent"
-          />
-        </div>
-        <div className="flex min-w-[220px] flex-col gap-1.5 max-md:flex-1">
-          <Label htmlFor="assign-filter">Filter by shift</Label>
-          <select
-            id="assign-filter"
-            value={shiftFilter}
-            onChange={(e) => changeShiftFilter(e.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="">All shifts</option>
-            <option value="none">No assigned shift (uses default)</option>
-            {shifts.map((shift) => (
-              <option key={shift.id} value={shift.id}>
-                {shift.name}
-                {shift.is_active ? "" : " (inactive)"}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex min-w-[220px] flex-col gap-1.5 max-md:flex-1">
-          <Label htmlFor="assign-shift">Assign to shift</Label>
-          <select
-            id="assign-shift"
-            value={targetShift}
-            onChange={(e) => setTargetShift(e.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="">Use default shift</option>
-            {activeShifts.map((shift) => (
-              <option key={shift.id} value={shift.id}>
-                {shift.name} ({formatRange(shift.start_time, shift.end_time)})
-              </option>
-            ))}
-          </select>
-        </div>
-        <Button
-          type="button"
-          className={BTN_PRIMARY}
-          disabled={applying || selected.size === 0}
-          onClick={apply}
-        >
-          {applying ? "Applying…" : `Apply to ${selected.size} selected`}
-        </Button>
-      </div>
-
-      {error && (
-        <div
-          role="alert"
-          className="my-3 rounded-md border border-red-300 px-4 py-3 text-sm text-red-600"
-        >
-          {error}
-        </div>
-      )}
-
-      {loading && (
-        <div className="py-4 text-muted-foreground">Loading employees…</div>
-      )}
-
-      {!loading && (
-        <>
-          <Table className="min-w-[760px]">
-            <TableHeader>
-              <TableRow className="border-b-2 border-blue-600 hover:bg-transparent">
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={(checked) => toggleAll(checked === true)}
-                    aria-label="Select all on this page"
-                  />
-                </TableHead>
-                <SortableHead
-                  column="employee_number"
-                  sort={sort}
-                  onSort={toggleSort}
-                >
-                  Employee no.
-                </SortableHead>
-                <SortableHead column="name" sort={sort} onSort={toggleSort}>
-                  Name
-                </SortableHead>
-                <SortableHead
-                  column="assigned_shift"
-                  sort={sort}
-                  onSort={toggleSort}
-                >
-                  Assigned shift
-                </SortableHead>
-                <TableHead className="text-blue-700">Applies</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-transparent">
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.has(row.id)}
-                      onCheckedChange={(checked) =>
-                        toggleOne(row.id, checked === true)
-                      }
-                      aria-label={`Select ${row.name}`}
-                    />
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {row.employee_number}
-                  </TableCell>
-                  <TableCell className="font-semibold">{row.name}</TableCell>
-                  <TableCell>
-                    {row.assigned_shift ? (
-                      row.assigned_shift.name
-                    ) : (
-                      <span className="text-muted-foreground">None</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {row.effective_shift ? (
-                      <span className="tabular-nums">
-                        {row.effective_shift.name} (
-                        {formatRange(
-                          row.effective_shift.start,
-                          row.effective_shift.end,
-                        )}
-                        )
-                        {row.uses_default && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            default
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">No shift</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {rows.length === 0 && (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={5}>
-                    <div className="py-10 text-center text-muted-foreground">
-                      No employees found
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {total} employee{total === 1 ? "" : "s"}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Previous
-              </Button>
-              <span className="tabular-nums">
-                Page {page} of {lastPage}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page >= lastPage}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-function SortableHead({ column, sort, onSort, children }) {
-  const active = sort.column === column;
-  const ariaSort = active
-    ? sort.direction === "asc"
-      ? "ascending"
-      : "descending"
-    : "none";
-
-  return (
-    <TableHead className="text-blue-700" aria-sort={ariaSort}>
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className="inline-flex items-center gap-1 hover:underline"
-      >
-        {children}
-        <span aria-hidden="true" className={active ? "" : "opacity-40"}>
-          {active ? (sort.direction === "asc" ? "\u2191" : "\u2193") : "\u2195"}
-        </span>
-      </button>
-    </TableHead>
   );
 }

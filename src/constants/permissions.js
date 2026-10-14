@@ -105,6 +105,10 @@ export const PERMISSIONS = Object.freeze({
   DTR_VIEW: "dtr.view",
   DTR_MANAGE: "dtr.manage",
   DTR_AUDIT_VIEW: "dtr.audit.view",
+  DTR_SCHEDULE_VIEW: "dtr.schedule.view",
+  DTR_SCHEDULE_VIEW_OWN: "dtr.schedule.view.own",
+  DTR_SCHEDULE_MANAGE: "dtr.schedule.manage",
+  DTR_SCHEDULE_APPROVE: "dtr.schedule.approve",
 
   // ── Bug Reports ──────────────────────────────────────────
   BUG_REPORTS_VIEW: "bug-reports.view",

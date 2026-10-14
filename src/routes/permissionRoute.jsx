@@ -8,6 +8,7 @@ const SUPER_ROLES = ["superadmin", "super-admin"];
 
 export default function PermissionRoute({
   permission,
+  anyOf,
   requireSuperAdmin = false,
   children,
 }) {
@@ -26,9 +27,15 @@ export default function PermissionRoute({
   }
 
   if (isSuperUser) return children;
-  if (!permission) return children;
 
   const userPermissions = user?.permissions ?? [];
+
+  if (Array.isArray(anyOf) && anyOf.length > 0) {
+    if (anyOf.some((p) => userPermissions.includes(p))) return children;
+    return <Navigate to={firstAccessibleRoute} replace />;
+  }
+
+  if (!permission) return children;
   if (userPermissions.includes(permission)) return children;
 
   return <Navigate to={firstAccessibleRoute} replace />;

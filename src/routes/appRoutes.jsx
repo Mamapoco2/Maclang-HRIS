@@ -64,7 +64,7 @@ import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding
 import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplicationsPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
 import PrintDTR from "../pages/dtr/components/employeeDtr";
-import DTRShiftsPage from "../pages/dtr/components/shiftsPage";
+import DTRSchedulePage from "../pages/dtr/components/schedulePage";
 import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
 import UserManagementPage from "../pages/accounts/components/userManagementPage";
 
@@ -512,10 +512,18 @@ function AppRoutes() {
             />
 
             <Route
-              path="/dtrShifts"
+              path="/dtrSchedule"
               element={
-                <PermissionRoute permission="dtr.manage">
-                  <DTRShiftsPage />
+                <PermissionRoute
+                  anyOf={[
+                    "dtr.manage",
+                    "dtr.schedule.view",
+                    "dtr.schedule.view.own",
+                    "dtr.schedule.manage",
+                    "dtr.schedule.approve",
+                  ]}
+                >
+                  <DTRSchedulePage />
                 </PermissionRoute>
               }
             />

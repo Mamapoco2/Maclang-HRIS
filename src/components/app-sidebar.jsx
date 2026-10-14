@@ -428,9 +428,15 @@ const NAV_MAIN = [
         permission: "dtr.view",
       },
       {
-        title: "Work Shifts",
-        url: "/dtrShifts",
-        permission: "dtr.manage",
+        title: "Work Schedule",
+        url: "/dtrSchedule",
+        anyOf: [
+          "dtr.manage",
+          "dtr.schedule.view",
+          "dtr.schedule.view.own",
+          "dtr.schedule.manage",
+          "dtr.schedule.approve",
+        ],
       },
     ],
   },
@@ -442,6 +448,9 @@ const NAV_DOCUMENTS = [{ name: "Reports", url: "#", icon: IconReport }];
 function canSee(item, userPermissions, isSuperUser) {
   if (item.superAdminOnly) return isSuperUser;
   if (isSuperUser) return true;
+  if (Array.isArray(item.anyOf)) {
+    return item.anyOf.some((p) => userPermissions.includes(p));
+  }
   if (!item.permission) return true;
   return userPermissions.includes(item.permission);
 }

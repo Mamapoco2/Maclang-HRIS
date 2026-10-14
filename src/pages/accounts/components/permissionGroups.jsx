@@ -200,6 +200,10 @@ export const PERMISSION_GROUPS = [
       { key: "dtr.view", label: "View DTR" },
       { key: "dtr.manage", label: "Manage DTR" },
       { key: "dtr.audit.view", label: "View DTR Audit Logs" },
+      { key: "dtr.schedule.view", label: "View Work Schedules (all departments)" },
+      { key: "dtr.schedule.view.own", label: "View Own Department Work Schedule" },
+      { key: "dtr.schedule.manage", label: "Manage Work Schedule (department head)" },
+      { key: "dtr.schedule.approve", label: "Approve Work Schedules" },
     ],
   },
   // ─── Audit Logs ───────────────────────────────────────────
