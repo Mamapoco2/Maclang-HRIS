@@ -62,11 +62,17 @@ import NonPlantillaApplicantsPage from "../pages/hiring/non-plantilla/applicants
 import NonPlantillaApplicationsPage from "../pages/hiring/non-plantilla/application/components/applicationPage";
 import NonPlantillaOnboardingPage from "../pages/hiring/non-plantilla/onboarding/onboardingPage";
 import MyApplicationsPage from "../pages/hiring/plantilla/posting/MyApplicationsPage";
+import DTRPage from "../pages/dtr/dtrPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
 import PrintDTR from "../pages/dtr/components/employeeDtr";
-import DTRSchedulePage from "../pages/dtr/components/schedulePage";
+import DTRShiftsPage from "../pages/dtr/components/shiftsPage";
 import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
 import UserManagementPage from "../pages/accounts/components/userManagementPage";
+import PortalLayout from "../pages/portal/PortalLayout";
+import PortalHome from "../pages/portal/HomePage";
+import PortalServices from "../pages/portal/ServicesPage";
+import PortalServiceDetails from "../pages/portal/ServiceDetailsPage";
+import PortalStatistics from "../pages/portal/StatisticsPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -86,6 +92,16 @@ function AppRoutes() {
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/dtr/*" element={<DTRPage />} />
+        </Route>
+
+        {/* ── Hospital portal (public, no auth, not redirected when logged in) ── */}
+        <Route path="/portal" element={<PortalLayout />}>
+          <Route index element={<PortalHome />} />
+          <Route path="services" element={<PortalServices />} />
+          <Route path="services/:slug" element={<PortalServiceDetails />} />
+          <Route path="statistics" element={<PortalStatistics />} />
+          <Route path="*" element={<Navigate to="/portal" replace />} />
         </Route>
 
         <Route path="/status/403" element={<Status403 />} />
@@ -512,18 +528,10 @@ function AppRoutes() {
             />
 
             <Route
-              path="/dtrSchedule"
+              path="/dtrShifts"
               element={
-                <PermissionRoute
-                  anyOf={[
-                    "dtr.manage",
-                    "dtr.schedule.view",
-                    "dtr.schedule.view.own",
-                    "dtr.schedule.manage",
-                    "dtr.schedule.approve",
-                  ]}
-                >
-                  <DTRSchedulePage />
+                <PermissionRoute permission="dtr.manage">
+                  <DTRShiftsPage />
                 </PermissionRoute>
               }
             />

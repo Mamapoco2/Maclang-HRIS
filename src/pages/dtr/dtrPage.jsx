@@ -1,5 +1,4 @@
 import { Routes, Route, Link, useLocation } from "react-router-dom";
-import FaceRecognize from "./components/timeIn";
 
 export default function App() {
   const location = useLocation();
