@@ -27,6 +27,12 @@ export const getEmployeeDtrCutoff = async (employeeNumber, month, year) => {
   return data;
 };
 
+export const getMyDtrCutoff = async (month, year) => {
+  const { data } = await api.get("/dtr/me/dtr", { params: { month, year } });
+
+  return data;
+};
+
 export const lookupEmployeeByNumber = async (employeeNumber) => {
   const { data } = await api.get("/dtr/employees-by-number", {
     params: { employee_number: employeeNumber },

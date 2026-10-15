@@ -25,7 +25,7 @@ import LeaveBalance from "../pages/leave/BalancesPage";
 import LeaveCalendar from "../pages/leave/CalendarPage";
 import LeaveApproval from "../pages/leave/ApprovalsPage";
 import LeaveRequest from "../pages/leave/RequestsPage";
-import SuspensionsPage from "../pages/leave/SuspensionsPage";
+import SuspensionsPage from "../pages/leave/Suspensionspage";
 import NewLeaveRequest from "../pages/leave/NewRequestPage";
 import Accounts from "../pages/accounts/components/accountsPage";
 import ManPower from "../pages/manpower/manPowerPage";
@@ -34,7 +34,7 @@ import OPCRForm from "../pages/spms/OPCRPage";
 import MFOPage from "../pages/spms/MFOPage";
 import PerformancePeriod from "../pages/spms/PerformancePeriodPage";
 import Departments from "../pages/departments/departmentPage";
-import PlantillaItems from "../pages/plantillaItems/plantillaItemsPage";
+import PlantillaItems from "../pages/plantillaItems/PlantillaItemsPage";
 import Status403 from "../pages/status/403/403Status";
 import Announcement from "../pages/announcement/announcementPage";
 import ProtectedRoute from "./protectedRoutes";
@@ -55,7 +55,7 @@ import OrientationMonitoringPage from "../pages/orientation/monitoring/orientati
 import TaskMonitoringPage from "../pages/taskMonitoring/taskMonitoringPage";
 import BugReportsPage from "../pages/bugReport/bugReportPage";
 import ReleaseManagerPage from "../pages/releaseManager/releaseManagerPage";
-import AuditLogsPage from "../pages/audit/auditLogsPage";
+import AuditLogsPage from "../pages/audit/AuditLogsPage";
 import RenewalsPage from "../pages/renewals/renewalsPage";
 import PlantillaPositionsPage from "../pages/hiring/plantilla/posting/plantillaPostingPage";
 import NonPlantillaApplicantsPage from "../pages/hiring/non-plantilla/applicants/components/applicantsPage";
@@ -66,6 +66,7 @@ import DTRPage from "../pages/dtr/dtrPage";
 import DTRRecordsPage from "../pages/dtr/components/viewDTR";
 import PrintDTR from "../pages/dtr/components/employeeDtr";
 import DTRShiftsPage from "../pages/dtr/components/shiftsPage";
+import DTRSchedulePage from "../pages/dtr/components/schedulePage";
 import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
 import UserManagementPage from "../pages/accounts/components/userManagementPage";
 import PortalLayout from "../pages/portal/PortalLayout";
@@ -535,8 +536,27 @@ function AppRoutes() {
                 </PermissionRoute>
               }
             />
+
+            <Route
+              path="/dtrSchedule"
+              element={
+                <PermissionRoute
+                  anyOf={[
+                    "dtr.manage",
+                    "dtr.schedule.view",
+                    "dtr.schedule.view.own",
+                    "dtr.schedule.manage",
+                    "dtr.schedule.approve",
+                  ]}
+                >
+                  <DTRSchedulePage />
+                </PermissionRoute>
+              }
+            />
           </Route>{" "}
         </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
