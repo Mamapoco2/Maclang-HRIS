@@ -10,6 +10,10 @@ export const cosPositionService = {
   /** GET /api/cos-positions/:id */
   getOne: (id) => api.get(`/cos-positions/${id}`).then((r) => r.data),
 
+  /** GET /api/cos-positions/:id/employees */
+  getEmployees: (id) =>
+    api.get(`/cos-positions/${id}/employees`).then((r) => r.data),
+
   /** POST /api/cos-positions */
   create: (payload) => api.post("/cos-positions", payload).then((r) => r.data),
 
@@ -30,6 +34,10 @@ export const consultantPositionService = {
 
   /** GET /api/consultant-positions/:id */
   getOne: (id) => api.get(`/consultant-positions/${id}`).then((r) => r.data),
+
+  /** GET /api/consultant-positions/:id/employees */
+  getEmployees: (id) =>
+    api.get(`/consultant-positions/${id}/employees`).then((r) => r.data),
 
   /** POST /api/consultant-positions */
   create: (payload) =>

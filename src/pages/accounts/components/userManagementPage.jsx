@@ -13,17 +13,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getRoles } from "@/services/rolesService";
-import {
-  updateUserPermissions,
-  updateUserRole,
-} from "@/services/accountsService";
+import { updateUserRole } from "@/services/accountsService";
 import {
   SEARCH_MAX_LENGTH,
   formatUserName,
   getApiErrorMessage,
 } from "@/utils/userManagement";
-import RoleViewModal from "./roleViewModal";
-import PermissionsModal from "./permissionModal";
 import { DEFAULT_ROLE_NAME } from "../roles";
 import UserManagementTable from "./UserManagementTable";
 import UserPagination from "./UserPagination";
@@ -42,9 +37,6 @@ export default function UserManagementPage() {
   const [roles, setRoles] = useState([]);
   const [savingIds, setSavingIds] = useState(() => new Set());
   const [pendingChange, setPendingChange] = useState(null);
-  const [viewingRole, setViewingRole] = useState(null);
-  const [editingUser, setEditingUser] = useState(null);
-  const [permissionsSaving, setPermissionsSaving] = useState(false);
 
   useEffect(() => {
     if (!canViewRoles) return undefined;
@@ -103,31 +95,6 @@ export default function UserManagementPage() {
     }
   }, [pendingChange, reload, setSaving]);
 
-  const handleViewRole = useCallback(
-    (roleName) => {
-      const role = roles.find((r) => r.name === roleName);
-      if (role) setViewingRole(role);
-    },
-    [roles],
-  );
-
-  const handleSavePermissions = useCallback(
-    async (userId, permissions) => {
-      setPermissionsSaving(true);
-      try {
-        await updateUserPermissions(userId, permissions);
-        toast.success("Permissions updated successfully.");
-        setEditingUser(null);
-        reload();
-      } catch (err) {
-        toast.error(getApiErrorMessage(err, "Failed to update permissions."));
-      } finally {
-        setPermissionsSaving(false);
-      }
-    },
-    [reload],
-  );
-
   const roleFilterOptions = useMemo(() => roles.map((r) => r.name), [roles]);
   const busy = list.loading || list.isSearchPending;
 
@@ -145,7 +112,7 @@ export default function UserManagementPage() {
               </h1>
               <p className="text-xs leading-tight text-gray-500">
                 {canManage
-                  ? "Assign a role to each employee, then fine-tune individual access under Permissions."
+                  ? "Assign a role to each employee."
                   : "View each employee's assigned role."}{" "}
                 New accounts default to {DEFAULT_ROLE_NAME}.
               </p>
@@ -241,11 +208,8 @@ export default function UserManagementPage() {
             loading={list.loading}
             hasFilters={list.hasFilters}
             canManage={canManage}
-            canViewRoles={canViewRoles}
             savingIds={savingIds}
             onRoleChange={handleRoleChange}
-            onViewRole={handleViewRole}
-            onEditPermissions={setEditingUser}
             onClearFilters={list.clearFilters}
           />
 
@@ -262,20 +226,6 @@ export default function UserManagementPage() {
         change={pendingChange}
         onConfirm={confirmRoleChange}
         onCancel={() => setPendingChange(null)}
-      />
-
-      <RoleViewModal
-        open={!!viewingRole}
-        onClose={() => setViewingRole(null)}
-        role={viewingRole}
-      />
-
-      <PermissionsModal
-        open={!!editingUser}
-        user={editingUser}
-        onClose={() => setEditingUser(null)}
-        onSave={handleSavePermissions}
-        saving={permissionsSaving}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Eye, KeyRound, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -17,11 +17,8 @@ import {
   getRoleBadgeClass,
 } from "@/utils/userManagement";
 
-const COLUMNS = ["Employee", "Email", "Role", "Actions"];
+const COLUMNS = ["Employee", "Email", "Role"];
 const SKELETON_ROWS = 6;
-
-const ACTION_BUTTON =
-  "inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40";
 
 function RoleCell({ user, roles, canEdit, saving, onChange }) {
   const roleName = getCurrentRoleName(user);
@@ -79,15 +76,10 @@ function UserRow({
   user,
   roles,
   canManage,
-  canViewRoles,
   saving,
   onRoleChange,
-  onViewRole,
-  onEditPermissions,
 }) {
   const displayName = formatUserName(user);
-  const roleName = getCurrentRoleName(user);
-  const hasRoleDetails = roles.some((r) => r.name === roleName);
 
   return (
     <tr className="transition-colors hover:bg-gray-50">
@@ -123,32 +115,6 @@ function UserRow({
           onChange={onRoleChange}
         />
       </td>
-
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          {canViewRoles && (
-            <button
-              type="button"
-              onClick={() => onViewRole(roleName)}
-              disabled={!hasRoleDetails}
-              className={ACTION_BUTTON}
-            >
-              <Eye size={11} /> View role
-            </button>
-          )}
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => onEditPermissions(user)}
-              disabled={saving}
-              title="Grant or revoke individual permissions for this user"
-              className={ACTION_BUTTON}
-            >
-              <KeyRound size={11} /> Permissions
-            </button>
-          )}
-        </div>
-      </td>
     </tr>
   );
 }
@@ -173,9 +139,6 @@ function SkeletonRows() {
       <td className="px-4 py-3">
         <Skeleton className="h-7 w-44 rounded-lg" />
       </td>
-      <td className="px-4 py-3">
-        <Skeleton className="h-7 w-32 rounded-lg" />
-      </td>
     </tr>
   ));
 }
@@ -186,11 +149,8 @@ export default function UserManagementTable({
   loading,
   hasFilters,
   canManage,
-  canViewRoles,
   savingIds,
   onRoleChange,
-  onViewRole,
-  onEditPermissions,
   onClearFilters,
 }) {
   const initialLoad = loading && users.length === 0;
@@ -250,11 +210,8 @@ export default function UserManagementTable({
                 user={user}
                 roles={roles}
                 canManage={canManage}
-                canViewRoles={canViewRoles}
                 saving={savingIds.has(user.id)}
                 onRoleChange={onRoleChange}
-                onViewRole={onViewRole}
-                onEditPermissions={onEditPermissions}
               />
             ))
           )}

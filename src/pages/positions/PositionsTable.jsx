@@ -9,11 +9,20 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Trash2, ChevronDown, ClipboardList } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  ChevronDown,
+  ClipboardList,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import PositionFormModal from "./PositionFormModal";
 import DeletePositionDialog from "./DeletePositionDialog";
+import PositionHoldersDialog from "./PositionHoldersDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { PERMISSIONS } from "@/constants/permissions";
 
 const PAGE_SIZE = 15;
 
@@ -56,7 +65,11 @@ export default function PositionsTable({
   label,
   onRefresh,
 }) {
+  const { hasPermission } = useAuth();
+  const canViewHolders = hasPermission(PERMISSIONS.EMPLOYEES_VIEW);
+
   const [page, setPage] = useState(1);
+  const [holdersPos, setHoldersPos] = useState(null);
   const [editPos, setEditPos] = useState(null);
   const [deletePos, setDeletePos] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -104,8 +117,8 @@ export default function PositionsTable({
   };
 
   const headers = showTypeColumn
-    ? ["#", "Title", "Type", "Actions"]
-    : ["#", "Title", "Actions"];
+    ? ["#", "Title", "Type", "Employees", "Actions"]
+    : ["#", "Title", "Employees", "Actions"];
 
   return (
     <>
@@ -119,7 +132,9 @@ export default function PositionsTable({
                     key={h}
                     className={cn(
                       "text-[10px] font-semibold uppercase tracking-widest text-gray-400 py-3 whitespace-nowrap",
-                      h === "Actions" ? "text-center" : "text-left",
+                      h === "Actions" || h === "Employees"
+                        ? "text-center"
+                        : "text-left",
                       h === "#" && "w-10 text-center",
                     )}
                   >
@@ -171,6 +186,29 @@ export default function PositionsTable({
                           <TypeBadge type={pos._type} />
                         </TableCell>
                       )}
+
+                      <TableCell className="text-center">
+                        {canViewHolders ? (
+                          <button
+                            type="button"
+                            onClick={() => setHoldersPos(pos)}
+                            title="View employees holding this position"
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium font-mono transition-colors",
+                              (pos.holders_count ?? 0) > 0
+                                ? "border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                : "border-gray-100 bg-gray-50 text-gray-400 hover:bg-gray-100",
+                            )}
+                          >
+                            <Users size={11} />
+                            {pos.holders_count ?? 0}
+                          </button>
+                        ) : (
+                          <span className="font-mono text-xs text-gray-500">
+                            {pos.holders_count ?? 0}
+                          </span>
+                        )}
+                      </TableCell>
 
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -280,6 +318,16 @@ export default function PositionsTable({
           )}
         </div>
       </div>
+
+      <PositionHoldersDialog
+        open={!!holdersPos}
+        onOpenChange={(v) => {
+          if (!v) setHoldersPos(null);
+        }}
+        position={holdersPos}
+        service={resolveService(holdersPos)}
+        label={resolveLabel(holdersPos)}
+      />
 
       {/* Edit modal */}
       <PositionFormModal
