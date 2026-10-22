@@ -1,5 +1,6 @@
-import { FormSection, FieldSelect, NativeSelect } from "../shared/FormField";
+import { FormSection, FieldSelect, SelectField } from "../shared/FormField";
 import { MultiCombobox } from "../shared/Combobox";
+import { Input } from "@/components/ui/input";
 import {
   PREFIX_OPTIONS,
   SUFFIX_OPTIONS,
@@ -9,6 +10,9 @@ import {
 } from "../../utils/employeeConstants";
 import { stripEmployeeNumberPrefix } from "../../utils/employeeFormatters";
 
+// Names are saved in capitals, so the inputs show capitals as you type.
+const NAME_INPUT = "h-9 uppercase placeholder:normal-case";
+
 export function PersonalInformationSection({ formData, handleChange }) {
   const employeeNumberPrefix =
     EMPLOYEE_TYPE_PREFIXES[formData.employeeType] ?? "";
@@ -17,12 +21,15 @@ export function PersonalInformationSection({ formData, handleChange }) {
   );
 
   return (
-    <FormSection label="Employee information">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <FieldSelect label="Employee No." className="sm:col-span-1">
-          <div className="field-input">
+    <FormSection
+      label="Employee information"
+      description="Basic details used on records and documents."
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <FieldSelect label="Employee no.">
+          <div className="flex h-9 items-center rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
             {employeeNumberPrefix && (
-              <span className="text-black-900 select-none shrink-0">
+              <span className="shrink-0 select-none pr-1 font-medium text-muted-foreground">
                 {employeeNumberPrefix}
               </span>
             )}
@@ -36,71 +43,71 @@ export function PersonalInformationSection({ formData, handleChange }) {
                     stripEmployeeNumberPrefix(e.target.value),
                 )
               }
-              className="flex-1 min-w-0 h-full bg-transparent outline-none border-0 p-0"
+              className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 uppercase outline-none"
             />
           </div>
         </FieldSelect>
 
         <FieldSelect label="Prefix">
-          <NativeSelect
+          <SelectField
             value={formData.prefix}
             onChange={(v) => handleChange("prefix", v)}
             options={PREFIX_OPTIONS}
-            placeholder="—"
+            placeholder="Select prefix"
           />
         </FieldSelect>
 
-        <FieldSelect label="First name" className="sm:col-span-1">
-          <input
+        <FieldSelect label="First name">
+          <Input
             type="text"
             value={formData.firstName}
             onChange={(e) => handleChange("firstName", e.target.value)}
-            className="field-input"
+            className={NAME_INPUT}
           />
         </FieldSelect>
 
-        <FieldSelect label="Middle name" className="sm:col-span-1">
-          <input
+        <FieldSelect label="Middle name">
+          <Input
             type="text"
             value={formData.middleName}
             onChange={(e) => handleChange("middleName", e.target.value)}
-            className="field-input"
+            className={NAME_INPUT}
           />
         </FieldSelect>
 
-        <FieldSelect label="Last name" className="sm:col-span-1">
-          <input
+        <FieldSelect label="Last name">
+          <Input
             type="text"
             value={formData.lastName}
             onChange={(e) => handleChange("lastName", e.target.value)}
-            className="field-input"
+            className={NAME_INPUT}
           />
         </FieldSelect>
 
         <FieldSelect label="Suffix">
-          <NativeSelect
+          <SelectField
             value={formData.suffix}
             onChange={(v) => handleChange("suffix", v)}
             options={SUFFIX_OPTIONS}
-            placeholder="—"
+            placeholder="Select suffix"
           />
         </FieldSelect>
 
-        <FieldSelect label="Title / profession" className="sm:col-span-2">
+        <FieldSelect label="Sex">
+          <SelectField
+            value={formData.gender}
+            onChange={(v) => handleChange("gender", v)}
+            options={GENDER_OPTIONS}
+            placeholder="Select sex"
+          />
+        </FieldSelect>
+
+        <FieldSelect label="Title / profession">
           <MultiCombobox
             value={formData.title}
             onChange={(v) => handleChange("title", v)}
             placeholder="Select titles"
             options={TITLE_OPTIONS}
-          />
-        </FieldSelect>
-
-        <FieldSelect label="Sex">
-          <NativeSelect
-            value={formData.gender}
-            onChange={(v) => handleChange("gender", v)}
-            options={GENDER_OPTIONS}
-            placeholder="Select sex"
           />
         </FieldSelect>
       </div>

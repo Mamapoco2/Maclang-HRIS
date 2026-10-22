@@ -1,16 +1,18 @@
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CENSUS } from "./data";
+import { CENSUS } from "./hospital";
 
 const Placeholder = ({ name }) => (
   <div className="rounded-xl bg-white p-8 text-center text-sm text-slate-500 ring-1 ring-slate-100">{name} information will be listed here.</div>
 );
 
-export default function StatisticsPage() {
+export default function StatisticsPage({
+  subtitle = "Public information on our services, prices, and performance.",
+}) {
   return (
     <section className="mx-auto max-w-4xl px-8 py-14">
       <h1 className="text-3xl font-bold text-[#0b2a5b]">Hospital Statistics and Patient Information</h1>
-      <p className="mt-2 text-sm text-slate-500">Public information on our services, prices, and performance.</p>
+      <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
 
       <Tabs defaultValue="statistics" className="mt-8">
         <TabsList className="bg-transparent p-0">

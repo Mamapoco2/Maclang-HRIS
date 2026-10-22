@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Clock, Facebook, Mail, MapPin, Phone, Youtube } from "lucide-react";
-import Logo from "./Logo";
+import Logo from "../../shared/components/Logo";
 import { FOOTER_LINKS, HOSPITAL as M } from "../data";
 
 const Col = ({ title, links }) => (
@@ -18,7 +18,7 @@ const Col = ({ title, links }) => (
   </div>
 );
 
-export default function PortalFooter() {
+export default function CustomerFooter() {
   return (
     <footer className="bg-[#0d2a52] text-white">
       <div className="mx-auto grid max-w-7xl grid-cols-[1.4fr_1fr_1fr_1.4fr] gap-10 px-8 py-12">
@@ -81,6 +81,7 @@ export default function PortalFooter() {
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Use</a>
             <a href="#">Accessibility</a>
+            <Link to="/portal">Employee Portal</Link>
           </span>
         </div>
       </div>

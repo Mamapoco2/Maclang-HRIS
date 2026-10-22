@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Users,
   FileText,
@@ -6,14 +6,12 @@ import {
   Download,
   Eye,
   Trash2,
-  Calendar,
   Clock,
   Building,
   Briefcase,
   Search,
   CheckCircle2,
   AlertCircle,
-  History,
   RefreshCw,
   Printer,
   ChevronLeft,
@@ -22,16 +20,54 @@ import {
   ArrowUpDown,
   File,
   FilePlus,
-  ClipboardList,
-  Bell,
-  AlertTriangle,
+  Paperclip,
   Loader2,
   FileCheck,
   UserCheck,
-  Paperclip,
   ArrowLeft,
   Info,
 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+
 import { employeeService } from "../../services/employeeService";
 import { contractService } from "../../services/contractService";
 import AutoRenewalPanel from "./components/autorenewalpanels";
@@ -262,129 +298,7 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-// ─── BADGE ────────────────────────────────────────────────────────────────────
-
-function Badge({ status }) {
-  const map = {
-    Active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    "Expiring Soon": "bg-amber-50 text-amber-700 border-amber-200",
-    Expired: "bg-red-50 text-red-700 border-red-200",
-    "In Progress": "bg-blue-50 text-blue-700 border-blue-200",
-    Pending: "bg-slate-50 text-slate-600 border-slate-200",
-    Completed: "bg-purple-50 text-purple-700 border-purple-200",
-    Renewed: "bg-teal-50 text-teal-700 border-teal-200",
-    "For Renewal": "bg-orange-50 text-orange-700 border-orange-200",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
-      ${map[status] || "bg-slate-100 text-slate-600 border-slate-200"}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-// ─── SKELETON ─────────────────────────────────────────────────────────────────
-
-function Skeleton({ className = "" }) {
-  return <div className={`animate-pulse bg-slate-200 rounded ${className}`} />;
-}
-
-function TableSkeleton() {
-  return (
-    <div className="space-y-3 p-6">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="flex gap-4 items-center">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-7 w-7 rounded-full shrink-0" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CardSkeleton() {
-  return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4">
-      <Skeleton className="h-16 w-16 rounded-xl" />
-      <Skeleton className="h-5 w-48" />
-      <Skeleton className="h-4 w-32" />
-      <div className="grid grid-cols-2 gap-4 pt-2">
-        {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-4" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── EMPTY / ERROR STATE ──────────────────────────────────────────────────────
-
-function EmptyState({ icon: Icon, title, desc, action }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-      <div className="p-4 rounded-full bg-slate-100">
-        <Icon className="w-8 h-8 text-slate-400" />
-      </div>
-      <p className="text-sm font-medium text-slate-700">{title}</p>
-      {desc && <p className="text-xs text-slate-400 max-w-xs">{desc}</p>}
-      {action}
-    </div>
-  );
-}
-
-function ErrorState({ message, onRetry }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-      <div className="p-4 rounded-full bg-red-50">
-        <AlertCircle className="w-8 h-8 text-red-400" />
-      </div>
-      <p className="text-sm font-medium text-slate-700">Failed to load data</p>
-      <p className="text-xs text-slate-400 max-w-xs">{message}</p>
-      {onRetry && (
-        <button
-          onClick={onRetry}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700"
-        >
-          <RefreshCw className="w-3 h-3" /> Retry
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ─── TOAST ────────────────────────────────────────────────────────────────────
-
-function Toast({ toasts, remove }) {
-  return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 min-w-72">
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          className={`flex items-start gap-3 p-4 rounded-lg shadow-lg border text-sm
-            ${t.type === "success" ? "bg-white border-emerald-200" : "bg-white border-red-200"}`}
-        >
-          {t.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-          )}
-          <span className="flex-1 text-slate-700">{t.message}</span>
-          <button onClick={() => remove(t.id)}>
-            <X className="w-4 h-4 text-slate-400" />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
+// ─── TOAST STATE ──────────────────────────────────────────────────────────────
 
 function useToast() {
   const [toasts, setToasts] = useState([]);
@@ -398,68 +312,6 @@ function useToast() {
     [],
   );
   return { toasts, add, remove };
-}
-
-// ─── DIALOG ───────────────────────────────────────────────────────────────────
-
-function Dialog({ open, onClose, title, children, size = "md" }) {
-  if (!open) return null;
-  const widths = {
-    sm: "max-w-sm",
-    md: "max-w-lg",
-    lg: "max-w-2xl",
-    xl: "max-w-4xl",
-  };
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div
-        className={`bg-white rounded-xl shadow-2xl w-full ${widths[size]} max-h-[90vh] flex flex-col`}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-800">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmDialog({
-  open,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  confirmLabel = "Delete",
-  loading,
-}) {
-  return (
-    <Dialog open={open} onClose={onClose} title={title} size="sm">
-      <p className="text-sm text-slate-600 mb-6">{message}</p>
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onConfirm}
-          disabled={loading}
-          className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-60 flex items-center gap-2"
-        >
-          {loading && <Loader2 className="w-3 h-3 animate-spin" />}
-          {confirmLabel}
-        </button>
-      </div>
-    </Dialog>
-  );
 }
 
 // ─── HOOKS ────────────────────────────────────────────────────────────────────
@@ -611,13 +463,216 @@ function useActiveContract(employee) {
   return { activeContract, setActiveContract, contractLoading };
 }
 
-// ─── SUMMARY CARDS ────────────────────────────────────────────────────────────
+// ─── STATUS BADGE ─────────────────────────────────────────────────────────────
+
+const STATUS_STYLES = {
+  Active: [
+    "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    "bg-emerald-500",
+  ],
+  "Expiring Soon": [
+    "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    "bg-amber-500",
+  ],
+  Expired: ["bg-red-500/10 text-red-700 dark:text-red-400", "bg-red-500"],
+  "In Progress": [
+    "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    "bg-blue-500",
+  ],
+  Pending: ["bg-muted text-muted-foreground", "bg-muted-foreground/60"],
+  Completed: [
+    "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+    "bg-violet-500",
+  ],
+  Renewed: ["bg-teal-500/10 text-teal-700 dark:text-teal-400", "bg-teal-500"],
+  "For Renewal": [
+    "bg-orange-500/10 text-orange-700 dark:text-orange-400",
+    "bg-orange-500",
+  ],
+  Generated: [
+    "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    "bg-emerald-500",
+  ],
+};
+
+function StatusBadge({ status }) {
+  const [tone, dot] = STATUS_STYLES[status] ?? STATUS_STYLES.Pending;
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1.5 border-transparent font-medium whitespace-nowrap",
+        tone,
+      )}
+    >
+      <span className={cn("size-1.5 rounded-full", dot)} />
+      {status}
+    </Badge>
+  );
+}
+
+// ─── SMALL SHARED PIECES ──────────────────────────────────────────────────────
+
+function initials(name) {
+  return (
+    String(name ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0])
+      .join("")
+      .toUpperCase() || "?"
+  );
+}
+
+function PersonAvatar({ employee, className }) {
+  return (
+    <Avatar className={className}>
+      <AvatarImage src={employee.photo} alt={employee.name} />
+      <AvatarFallback>{initials(employee.name)}</AvatarFallback>
+    </Avatar>
+  );
+}
+
+function EmptyState({ icon: Icon, title, desc }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+      <div className="rounded-full bg-muted p-3">
+        <Icon className="size-5 text-muted-foreground" />
+      </div>
+      <p className="text-sm font-medium">{title}</p>
+      {desc && <p className="max-w-sm text-sm text-muted-foreground">{desc}</p>}
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+      <div className="rounded-full bg-destructive/10 p-3">
+        <AlertCircle className="size-5 text-destructive" />
+      </div>
+      <p className="text-sm font-medium">Could not load data</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
+      {onRetry && (
+        <Button size="sm" variant="outline" onClick={onRetry} className="mt-2">
+          <RefreshCw /> Try again
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div className="space-y-4 p-6">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="flex items-center gap-4">
+          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="ml-auto h-8 w-16" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Field({ label, children, className }) {
+  return (
+    <div className={cn("space-y-2", className)}>
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function OptionSelect({ value, onChange, options, placeholder, className }) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className={cn("w-full", className)}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>
+            {o}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+
+function Toast({ toasts, remove }) {
+  return (
+    <div className="fixed bottom-4 right-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          role="status"
+          className="flex items-start gap-3 rounded-lg border bg-background p-4 text-sm shadow-lg"
+        >
+          {t.type === "success" ? (
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+          ) : (
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+          )}
+          <span className="flex-1">{t.message}</span>
+          <button
+            onClick={() => remove(t.id)}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Dismiss"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmLabel = "Delete",
+  loading,
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={loading}>
+            {loading && <Loader2 className="animate-spin" />}
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── SUMMARY ──────────────────────────────────────────────────────────────────
 
 function SummaryCards({ employees }) {
-  const summary = useMemo(
+  const s = useMemo(
     () => ({
       total: employees.length,
-      expiringThisMonth: employees.filter(
+      expiring: employees.filter(
         (e) =>
           e.daysRemaining != null &&
           e.daysRemaining > 0 &&
@@ -635,140 +690,172 @@ function SummaryCards({ employees }) {
     [employees],
   );
 
-  const cards = [
+  const items = [
     {
-      label: "Total Contracts",
-      value: summary.total,
-      desc: "COS & Consultant only",
-      icon: FileText,
-      color: "blue",
+      label: "Total contracts",
+      value: s.total,
+      desc: "COS and Consultant",
+      tone: "",
     },
     {
-      label: "Expiring This Month",
-      value: summary.expiringThisMonth,
-      desc: "Contracts ending within 30 days",
-      icon: Bell,
-      color: "amber",
+      label: "Expiring in 30 days",
+      value: s.expiring,
+      desc: "Plan these renewals now",
+      tone: s.expiring ? "text-amber-600" : "",
     },
     {
-      label: "Expired Contracts",
-      value: summary.expired,
-      desc: "Require immediate renewal action",
-      icon: AlertTriangle,
-      color: "red",
+      label: "Expired",
+      value: s.expired,
+      desc: "Need action today",
+      tone: s.expired ? "text-destructive" : "",
     },
     {
-      label: "Renewal In Progress",
-      value: summary.inProgress,
-      desc: "Currently being processed",
-      icon: RefreshCw,
-      color: "indigo",
+      label: "Renewal in progress",
+      value: s.inProgress,
+      desc: "Being processed",
+      tone: "",
     },
     {
-      label: "Completed Renewals",
-      value: summary.completed,
-      desc: "Successfully renewed this period",
-      icon: CheckCircle2,
-      color: "emerald",
+      label: "Renewed",
+      value: s.completed,
+      desc: "Completed this period",
+      tone: "",
     },
   ];
 
-  const colorMap = {
-    blue: "bg-blue-50 text-blue-600",
-    amber: "bg-amber-50 text-amber-600",
-    red: "bg-red-50 text-red-600",
-    indigo: "bg-indigo-50 text-indigo-600",
-    emerald: "bg-emerald-50 text-emerald-600",
-  };
-
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      {cards.map(({ label, value, desc, icon: Icon, color }) => (
-        <div
-          key={label}
-          className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex flex-col gap-3"
-        >
+    <Card className="gap-0 overflow-hidden py-0">
+      <div className="grid grid-cols-2 lg:grid-cols-5">
+        {items.map((it, i) => (
           <div
-            className={`w-9 h-9 rounded-lg flex items-center justify-center ${colorMap[color]}`}
+            key={it.label}
+            className={cn(
+              "p-5",
+              i % 2 === 0 && "border-r lg:border-r-0",
+              i < items.length - 1 && "lg:border-r",
+              i < items.length - 1 && "border-b lg:border-b-0",
+            )}
           >
-            <Icon className="w-4 h-4" />
+            <p className="text-sm text-muted-foreground">{it.label}</p>
+            <p
+              className={cn(
+                "mt-1 text-3xl font-semibold tabular-nums",
+                it.tone,
+              )}
+            >
+              {it.value}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{it.desc}</p>
           </div>
-          <div>
-            <p className="text-2xl font-bold text-slate-800">{value}</p>
-            <p className="text-xs font-medium text-slate-700 mt-0.5">{label}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
 // ─── FILTERS ──────────────────────────────────────────────────────────────────
 
-function RenewalFilters({ filters, onChange, onReset, departments }) {
+function FilterSelect({ value, onChange, allLabel, options, className }) {
   return (
-    <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-44">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            value={filters.search}
-            onChange={(e) => onChange("search", e.target.value)}
-            placeholder="Search employee..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-          />
-        </div>
-        <select
-          value={filters.department}
-          onChange={(e) => onChange("department", e.target.value)}
-          className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-slate-700 bg-white"
-        >
-          <option value="">Department</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        {[
-          {
-            key: "contractStatus",
-            label: "Contract Status",
-            options: CONTRACT_STATUSES,
-          },
-          {
-            key: "renewalStatus",
-            label: "Renewal Status",
-            options: RENEWAL_STATUSES,
-          },
-        ].map(({ key, label, options }) => (
-          <select
-            key={key}
-            value={filters[key]}
-            onChange={(e) => onChange(key, e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-slate-700 bg-white"
-          >
-            <option value="">{label}</option>
-            {options.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
+    <Select
+      value={value || "all"}
+      onValueChange={(v) => onChange(v === "all" ? "" : v)}
+    >
+      <SelectTrigger className={cn("w-full sm:w-44", className)}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{allLabel}</SelectItem>
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>
+            {o}
+          </SelectItem>
         ))}
-        <button
-          onClick={onReset}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Reset
-        </button>
+      </SelectContent>
+    </Select>
+  );
+}
+
+function RenewalFilters({ filters, onChange, onReset, departments }) {
+  const hasFilters = Object.values(filters).some(Boolean);
+  return (
+    <div className="flex flex-wrap items-center gap-3 p-4">
+      <div className="relative min-w-52 flex-1">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={filters.search}
+          onChange={(e) => onChange("search", e.target.value)}
+          placeholder="Search by name or number"
+          className="pl-9"
+        />
       </div>
+      <FilterSelect
+        value={filters.department}
+        onChange={(v) => onChange("department", v)}
+        allLabel="All departments"
+        options={departments}
+      />
+      <FilterSelect
+        value={filters.contractStatus}
+        onChange={(v) => onChange("contractStatus", v)}
+        allLabel="All contract statuses"
+        options={CONTRACT_STATUSES}
+      />
+      <FilterSelect
+        value={filters.renewalStatus}
+        onChange={(v) => onChange("renewalStatus", v)}
+        allLabel="All renewal statuses"
+        options={RENEWAL_STATUSES}
+      />
+      {hasFilters && (
+        <Button variant="ghost" onClick={onReset}>
+          <X /> Clear
+        </Button>
+      )}
     </div>
   );
 }
 
 // ─── EMPLOYEE TABLE ───────────────────────────────────────────────────────────
+
+function SortHead({ label, k, sortKey, sortDir, onSort, className }) {
+  const active = sortKey === k;
+  return (
+    <TableHead className={className}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onSort(k)}
+        className="-ml-3 h-8 gap-1.5 font-medium"
+      >
+        {label}
+        <ArrowUpDown
+          className={cn("size-3", active ? "opacity-100" : "opacity-40")}
+        />
+        {active && (
+          <span className="sr-only">
+            {sortDir === "asc" ? "ascending" : "descending"}
+          </span>
+        )}
+      </Button>
+    </TableHead>
+  );
+}
+
+function DaysRemaining({ days }) {
+  if (days == null) return <span className="text-muted-foreground">—</span>;
+  if (days < 0)
+    return (
+      <span className="font-medium text-destructive">
+        {Math.abs(days)} days overdue
+      </span>
+    );
+  return (
+    <span className={cn("font-medium", days <= 30 ? "text-amber-600" : "")}>
+      {days} {days === 1 ? "day" : "days"}
+    </span>
+  );
+}
 
 function EmployeeRenewalTable({
   employees,
@@ -776,6 +863,7 @@ function EmployeeRenewalTable({
   loading,
   error,
   onRetry,
+  toolbar,
 }) {
   const [sortKey, setSortKey] = useState("daysRemaining");
   const [sortDir, setSortDir] = useState("asc");
@@ -810,204 +898,144 @@ function EmployeeRenewalTable({
       setSortDir("asc");
     }
   }
-
-  function SortBtn({ label, k }) {
-    return (
-      <button
-        onClick={() => toggleSort(k)}
-        className="flex items-center gap-1 hover:text-slate-800 whitespace-nowrap"
-      >
-        {label}
-        <ArrowUpDown className="w-3 h-3 opacity-50" />
-      </button>
-    );
-  }
-
-  if (loading)
-    return (
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
-        <TableSkeleton />
-      </div>
-    );
-  if (error)
-    return (
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
-        <ErrorState message={error} onRetry={onRetry} />
-      </div>
-    );
+  const sortProps = { sortKey, sortDir, onSort: toggleSort };
 
   return (
-    // FIX: min-w-0 lets this card shrink inside its flex/grid parent instead
-    // of growing to fit the table, which is what pushed content sideways.
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden min-w-0">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
-              {[
-                ["employeeNumber", "Employee Number"],
-                ["name", "Employee Name"],
-                ["department", "Department"],
-                ["position", "Position"],
-                ["employmentType", "Employment Type"],
-                ["startDate", "Start Date"],
-                ["endDate", "End Date"],
-                ["daysRemaining", "Days Remaining"],
-              ].map(([k, l]) => (
-                <th
-                  key={k}
-                  className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide"
-                >
-                  <SortBtn label={l} k={k} />
-                </th>
-              ))}
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Contract Status
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Renewal Status
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {paginated.length === 0 ? (
-              <tr>
-                <td colSpan={11}>
-                  <EmptyState
-                    icon={Users}
-                    title="No COS or Consultant employees found"
-                    desc="Plantilla employees are excluded from contract renewal. Adjust your filters to see results."
-                  />
-                </td>
-              </tr>
-            ) : (
-              paginated.map((emp) => (
-                <tr
-                  key={emp.id}
-                  className="hover:bg-slate-50/60 transition-colors"
-                >
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                    {emp.employeeNumber}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={emp.photo}
-                        alt={emp.name}
-                        className="w-7 h-7 rounded-full shrink-0"
-                        onError={(e) => (e.target.style.display = "none")}
-                      />
-                      <span className="font-medium text-slate-800 whitespace-nowrap">
-                        {emp.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                    {emp.department}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                    {emp.position}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                      ${
-                        emp.employmentType?.toLowerCase().includes("consultant")
-                          ? "bg-purple-50 text-purple-700"
-                          : "bg-sky-50 text-sky-700"
-                      }`}
-                    >
+    <Card className="min-w-0 gap-0 overflow-hidden py-0">
+      {toolbar}
+      <div className="border-t">
+        {loading ? (
+          <TableSkeleton />
+        ) : error ? (
+          <ErrorState message={error} onRetry={onRetry} />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <SortHead
+                  label="Employee"
+                  k="name"
+                  {...sortProps}
+                  className="pl-4"
+                />
+                <SortHead label="Department" k="department" {...sortProps} />
+                <SortHead label="Type" k="employmentType" {...sortProps} />
+                <SortHead label="Contract period" k="endDate" {...sortProps} />
+                <SortHead label="Time left" k="daysRemaining" {...sortProps} />
+                <TableHead>Contract</TableHead>
+                <TableHead>Renewal</TableHead>
+                <TableHead className="pr-4 text-right">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginated.length === 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={8}>
+                    <EmptyState
+                      icon={Users}
+                      title="No COS or Consultant employees found"
+                      desc="Plantilla employees are excluded from contract renewal. Try changing or clearing your filters."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginated.map((emp) => (
+                  <TableRow
+                    key={emp.id}
+                    className="cursor-pointer"
+                    onClick={() => onSelect(emp)}
+                  >
+                    <TableCell className="pl-4">
+                      <div className="flex items-center gap-3">
+                        <PersonAvatar employee={emp} className="size-9" />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{emp.name}</p>
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {emp.employeeNumber}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="max-w-52 truncate">{emp.department}</p>
+                      <p className="max-w-52 truncate text-xs text-muted-foreground">
+                        {emp.position}
+                      </p>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {emp.employmentType || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                    {formatDate(emp.startDate)}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                    {formatDate(emp.endDate)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {emp.daysRemaining == null ? (
-                      <span className="text-slate-400 text-xs">—</span>
-                    ) : (
-                      <span
-                        className={`font-semibold text-sm
-                        ${
-                          emp.daysRemaining < 0
-                            ? "text-red-600"
-                            : emp.daysRemaining <= 30
-                              ? "text-amber-600"
-                              : "text-slate-700"
-                        }`}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {formatDate(emp.startDate)} to {formatDate(emp.endDate)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <DaysRemaining days={emp.daysRemaining} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={emp.contractStatus} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={emp.renewalStatus} />
+                    </TableCell>
+                    <TableCell className="pr-4 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(emp);
+                        }}
                       >
-                        {emp.daysRemaining < 0
-                          ? `${Math.abs(emp.daysRemaining)}d overdue`
-                          : `${emp.daysRemaining}d`}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge status={emp.contractStatus} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge status={emp.renewalStatus} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => onSelect(emp)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                    >
-                      <Eye className="w-3 h-3" /> View
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                        <Eye /> View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-          <span className="text-xs text-slate-500">
-            Showing {(page - 1) * pageSize + 1}–
+      {!loading && !error && totalPages > 1 && (
+        <div className="flex items-center justify-between border-t px-4 py-3">
+          <span className="text-sm text-muted-foreground">
+            Showing {(page - 1) * pageSize + 1} to{" "}
             {Math.min(page * pageSize, sorted.length)} of {sorted.length}
           </span>
-          <div className="flex items-center gap-1">
-            <button
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="outline"
+              className="size-8"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-40 text-slate-500"
+              aria-label="Previous page"
             >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i + 1)}
-                className={`w-7 h-7 rounded text-xs font-medium
-                  ${page === i + 1 ? "bg-blue-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
+              <ChevronLeft />
+            </Button>
+            <span className="text-sm tabular-nums">
+              {page} / {totalPages}
+            </span>
+            <Button
+              size="icon"
+              variant="outline"
+              className="size-8"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-40 text-slate-500"
+              aria-label="Next page"
             >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+              <ChevronRight />
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
-// ─── UPLOAD CARD ──────────────────────────────────────────────────────────────
+// ─── DOCUMENTS ────────────────────────────────────────────────────────────────
 
 function UploadDocumentsCard({ toast }) {
   const [docs, setDocs] = useState([]);
@@ -1015,6 +1043,7 @@ function UploadDocumentsCard({ toast }) {
   const [uploading, setUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const inputRef = useRef(null);
 
   function handleFiles(files) {
     const allowed = [
@@ -1080,42 +1109,36 @@ function UploadDocumentsCard({ toast }) {
     }, 800);
   }
 
-  const docTypes = {
-    PDF: "text-red-600 bg-red-50",
-    DOCX: "text-blue-600 bg-blue-50",
-    Image: "text-purple-600 bg-purple-50",
-  };
-
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm min-w-0">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-50">
-            <Upload className="w-4 h-4 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-800">
-              Employee Submitted Documents
-            </h3>
-            <p className="text-xs text-slate-400">
-              Upload documents submitted by the employee for contract renewal
-            </p>
-          </div>
-        </div>
-        <div className="p-6 space-y-5">
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>Employee documents</CardTitle>
+          <CardDescription>
+            Upload the documents the employee submitted for this renewal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
           <div
+            role="button"
+            tabIndex={0}
             onDragOver={(e) => {
               e.preventDefault();
               setDragging(true);
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
-            onClick={() => document.getElementById("fileInput").click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer
-              ${dragging ? "border-blue-400 bg-blue-50/50" : "border-slate-200 hover:border-blue-300 hover:bg-slate-50/50"}`}
+            onClick={() => inputRef.current?.click()}
+            onKeyDown={(e) =>
+              (e.key === "Enter" || e.key === " ") && inputRef.current?.click()
+            }
+            className={cn(
+              "flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed p-8 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              dragging ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+            )}
           >
             <input
-              id="fileInput"
+              ref={inputRef}
               type="file"
               multiple
               className="hidden"
@@ -1123,129 +1146,127 @@ function UploadDocumentsCard({ toast }) {
               onChange={(e) => handleFiles(Array.from(e.target.files))}
             />
             {uploading ? (
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                <p className="text-sm text-slate-500">Uploading files...</p>
-              </div>
+              <>
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Uploading files...
+                </p>
+              </>
             ) : (
               <>
-                <Upload
-                  className={`w-8 h-8 mx-auto mb-3 ${dragging ? "text-blue-500" : "text-slate-300"}`}
-                />
-                <p className="text-sm font-medium text-slate-600">
-                  Drag and drop files here
+                <Upload className="size-6 text-muted-foreground" />
+                <p className="mt-1 text-sm font-medium">
+                  Drop files here, or click to browse
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  or click to browse — PDF, DOC, DOCX, JPG, PNG · Max 10 MB each
+                <p className="text-xs text-muted-foreground">
+                  PDF, DOC, DOCX, JPG or PNG. Up to 10 MB each.
                 </p>
               </>
             )}
           </div>
+
           {docs.length === 0 ? (
             <EmptyState
               icon={Paperclip}
-              title="No employee documents uploaded yet."
-              desc="Use the area above to upload supporting documents for this renewal."
+              title="No documents yet"
+              desc="Files you upload will be listed here."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-y border-slate-100">
-                  <tr>
-                    {[
-                      "File Name",
-                      "Type",
-                      "Uploaded By",
-                      "Upload Date",
-                      "File Size",
-                      "Actions",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="pl-4">File</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Uploaded</TableHead>
+                    <TableHead>Size</TableHead>
+                    <TableHead className="pr-4 text-right">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {docs.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-slate-50/60">
-                      <td className="px-4 py-3">
+                    <TableRow key={doc.id}>
+                      <TableCell className="pl-4">
                         <div className="flex items-center gap-2">
-                          <File className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span className="text-slate-700 text-xs truncate max-w-40">
-                            {doc.name}
-                          </span>
+                          <File className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="max-w-48 truncate">{doc.name}</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${docTypes[doc.type]}`}
-                        >
-                          {doc.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">
-                        {doc.by}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">
-                        {formatDate(doc.date)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{doc.type}</Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {formatDate(doc.date)} by {doc.by}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {formatFileSize(doc.size)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-700"
-                            title="View"
+                      </TableCell>
+                      <TableCell className="pr-4">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            asChild
+                            size="icon"
+                            variant="ghost"
+                            className="size-8"
                           >
-                            <Eye className="w-3.5 h-3.5" />
-                          </a>
-                          <a
-                            href={doc.url}
-                            download={doc.name}
-                            className="p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-700"
-                            title="Download"
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label="View"
+                            >
+                              <Eye />
+                            </a>
+                          </Button>
+                          <Button
+                            asChild
+                            size="icon"
+                            variant="ghost"
+                            className="size-8"
                           >
-                            <Download className="w-3.5 h-3.5" />
-                          </a>
-                          <button
+                            <a
+                              href={doc.url}
+                              download={doc.name}
+                              aria-label="Download"
+                            >
+                              <Download />
+                            </a>
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 text-destructive hover:text-destructive"
                             onClick={() => setDeleteTarget(doc)}
-                            className="p-1.5 rounded hover:bg-red-50 text-slate-500 hover:text-red-600"
-                            title="Delete"
+                            aria-label="Delete"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                            <Trash2 />
+                          </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
         loading={deleting}
-        title="Delete Document"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete Document"
+        title="Delete document"
+        message={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
+        confirmLabel="Delete document"
       />
     </>
   );
 }
 
-// ─── GENERATE CONTRACT CARD ───────────────────────────────────────────────────
+// ─── GENERATE CONTRACT ────────────────────────────────────────────────────────
 
 function GenerateContractCard({ employee, toast }) {
   const [form, setForm] = useState({
@@ -1253,7 +1274,7 @@ function GenerateContractCard({ employee, toast }) {
     contractType: employee.contractType,
     startDate: "",
     endDate: "",
-    salary: employee.salary?.replace?.(",", "") ?? "",
+    salary: employee.salary?.replace?.(/,/g, "") ?? "",
     allowances: "",
     schedule: employee.schedule ?? SCHEDULES[0],
     position: employee.position,
@@ -1265,9 +1286,7 @@ function GenerateContractCard({ employee, toast }) {
   const [generating, setGenerating] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
-  function set(k, v) {
-    setForm((p) => ({ ...p, [k]: v }));
-  }
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   function handleGenerate() {
     if (!form.startDate || !form.endDate) {
@@ -1291,350 +1310,324 @@ function GenerateContractCard({ employee, toast }) {
     }, 1800);
   }
 
-  const inputCls =
-    "w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-slate-700";
-  const labelCls = "block text-xs font-medium text-slate-600 mb-1.5";
-
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm min-w-0">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-50">
-              <FileText className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">
-                Generate Contract
-              </h3>
-              <p className="text-xs text-slate-400">
-                Create a new employment contract for this employee
-              </p>
-            </div>
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>Generate contract</CardTitle>
+          <CardDescription>
+            Create a new employment contract. You do not need uploaded documents
+            first.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Contract template">
+              <OptionSelect
+                value={form.template}
+                onChange={(v) => set("template", v)}
+                options={TEMPLATES}
+                placeholder="Select a template"
+              />
+            </Field>
+            <Field label="New contract type">
+              <OptionSelect
+                value={form.contractType}
+                onChange={(v) => set("contractType", v)}
+                options={CONTRACT_TYPES}
+              />
+            </Field>
+            <Field label="Start date">
+              <Input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => set("startDate", e.target.value)}
+              />
+            </Field>
+            <Field label="End date">
+              <Input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => set("endDate", e.target.value)}
+              />
+            </Field>
+            <Field label="Salary (PHP)">
+              <Input
+                type="number"
+                value={form.salary}
+                onChange={(e) => set("salary", e.target.value)}
+              />
+            </Field>
+            <Field label="Allowances">
+              <Input
+                value={form.allowances}
+                onChange={(e) => set("allowances", e.target.value)}
+                placeholder="e.g. Transportation, Meal"
+              />
+            </Field>
+            <Field label="Work schedule">
+              <OptionSelect
+                value={form.schedule}
+                onChange={(v) => set("schedule", v)}
+                options={SCHEDULES}
+              />
+            </Field>
+            <Field label="Probation">
+              <OptionSelect
+                value={form.probation}
+                onChange={(v) => set("probation", v)}
+                options={["No", "Yes — 3 months", "Yes — 6 months"]}
+              />
+            </Field>
+            <Field label="Position">
+              <Input
+                value={form.position}
+                onChange={(e) => set("position", e.target.value)}
+              />
+            </Field>
+            <Field label="Department">
+              <Input
+                value={form.department}
+                onChange={(e) => set("department", e.target.value)}
+              />
+            </Field>
+            <Field label="Remarks" className="md:col-span-2">
+              <Textarea
+                value={form.remarks}
+                onChange={(e) => set("remarks", e.target.value)}
+                rows={3}
+                placeholder="Additional notes or terms"
+                className="resize-none"
+              />
+            </Field>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs">
-            <Info className="w-3.5 h-3.5" /> Available regardless of uploaded
-            documents
-          </div>
-        </div>
-        <div className="p-6 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              ["template", "Contract Template", "select", TEMPLATES, true],
-              [
-                "contractType",
-                "New Contract Type",
-                "select",
-                CONTRACT_TYPES,
-                false,
-              ],
-              ["startDate", "Start Date", "date", null],
-              ["endDate", "End Date", "date", null],
-              ["salary", "Salary (PHP)", "number", null],
-              ["allowances", "Allowances", "text", null],
-              ["schedule", "Work Schedule", "select", SCHEDULES, false],
-              ["position", "Position", "text", null],
-              ["department", "Department", "text", null],
-              [
-                "probation",
-                "Probation Status",
-                "select",
-                ["No", "Yes — 3 months", "Yes — 6 months"],
-                false,
-              ],
-            ].map(([key, label, type, options, withBlank]) => (
-              <div key={key}>
-                <label className={labelCls}>{label}</label>
-                {type === "select" ? (
-                  <select
-                    value={form[key]}
-                    onChange={(e) => set(key, e.target.value)}
-                    className={inputCls}
-                  >
-                    {withBlank && <option value="">Select template</option>}
-                    {options.map((o) => (
-                      <option key={o}>{o}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type={type}
-                    value={form[key]}
-                    onChange={(e) => set(key, e.target.value)}
-                    placeholder={
-                      key === "allowances"
-                        ? "e.g. Transportation, Meal"
-                        : undefined
-                    }
-                    className={inputCls}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <div>
-            <label className={labelCls}>Remarks</label>
-            <textarea
-              value={form.remarks}
-              onChange={(e) => set("remarks", e.target.value)}
-              rows={3}
-              placeholder="Additional notes or terms..."
-              className={`${inputCls} resize-none`}
-            />
-          </div>
-          <div className="flex flex-wrap gap-3 pt-1">
-            <button
-              onClick={() => setPreviewing(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
-            >
-              <Eye className="w-4 h-4" /> Preview Contract
-            </button>
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
-            >
-              {generating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <FileText className="w-4 h-4" />
-              )}
-              {generating ? "Generating..." : "Generate Contract"}
-            </button>
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleGenerate} disabled={generating}>
+              {generating ? <Loader2 className="animate-spin" /> : <FileText />}
+              {generating ? "Generating..." : "Generate contract"}
+            </Button>
+            <Button variant="outline" onClick={() => setPreviewing(true)}>
+              <Eye /> Preview
+            </Button>
             {generated && (
               <>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50">
-                  <Download className="w-4 h-4" /> Download PDF
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50">
-                  <Printer className="w-4 h-4" /> Print Contract
-                </button>
+                <Button variant="outline">
+                  <Download /> Download PDF
+                </Button>
+                <Button variant="outline">
+                  <Printer /> Print
+                </Button>
               </>
             )}
           </div>
+
           {generated && (
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm font-semibold text-emerald-800">
-                  Contract Generated Successfully
-                </span>
+            <div className="rounded-lg border bg-emerald-500/5 p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="size-4" /> Contract generated
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <dl className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                 {[
-                  ["Contract Number", generated.number],
-                  ["Generated Date", generated.date],
-                  ["Generated By", generated.by],
+                  ["Contract number", generated.number],
+                  ["Generated on", generated.date],
+                  ["Generated by", generated.by],
                   ["Status", generated.status],
                 ].map(([k, v]) => (
                   <div key={k}>
-                    <p className="text-emerald-600 font-medium">{k}</p>
-                    <p className="text-emerald-900 font-semibold mt-0.5">{v}</p>
+                    <dt className="text-xs text-muted-foreground">{k}</dt>
+                    <dd className="mt-0.5 font-medium">{v}</dd>
                   </div>
                 ))}
-              </div>
+              </dl>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <Dialog
-        open={previewing}
-        onClose={() => setPreviewing(false)}
-        title="Contract Preview"
-        size="lg"
-      >
-        <div className="text-center mb-6">
-          <p className="text-xs text-slate-500 uppercase tracking-widest">
-            Employment Contract
-          </p>
-          <h2 className="text-lg font-bold text-slate-800 mt-1">
-            {form.contractType} Contract
-          </h2>
-        </div>
-        <div className="space-y-4 text-sm text-slate-700">
-          <p>
-            This contract is entered into between{" "}
-            <strong>{employee.name}</strong> (Employee) and the Company.
-          </p>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2 border border-slate-100 rounded-lg p-4 bg-slate-50">
+      <Dialog open={previewing} onOpenChange={setPreviewing}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{form.contractType} contract preview</DialogTitle>
+            <DialogDescription>
+              Between {employee.name} (Employee) and the Company. Review all
+              details before generating.
+            </DialogDescription>
+          </DialogHeader>
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-4 rounded-lg border bg-muted/40 p-4 text-sm">
             {[
               ["Position", form.position],
               ["Department", form.department],
-              ["Start Date", formatDate(form.startDate)],
-              ["End Date", formatDate(form.endDate)],
+              ["Start date", formatDate(form.startDate)],
+              ["End date", formatDate(form.endDate)],
               ["Salary", `PHP ${Number(form.salary).toLocaleString()}`],
               ["Schedule", form.schedule],
               ["Probation", form.probation],
               ["Allowances", form.allowances || "None"],
             ].map(([k, v]) => (
               <div key={k}>
-                <span className="text-xs text-slate-500">{k}: </span>
-                <span className="font-medium">{v || "—"}</span>
+                <dt className="text-xs text-muted-foreground">{k}</dt>
+                <dd className="mt-0.5 font-medium">{v || "—"}</dd>
               </div>
             ))}
-          </div>
+          </dl>
           {form.remarks && (
-            <p>
-              <strong>Remarks:</strong> {form.remarks}
+            <p className="text-sm">
+              <span className="font-medium">Remarks:</span> {form.remarks}
             </p>
           )}
-          <p className="text-xs text-slate-400 pt-4 border-t border-slate-100">
-            Preview only. Review all details before generating the final
-            contract.
-          </p>
-        </div>
-        <div className="flex justify-end gap-3 mt-5">
-          <button
-            onClick={() => setPreviewing(false)}
-            className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
-          >
-            Close Preview
-          </button>
-          <button
-            onClick={() => {
-              setPreviewing(false);
-              handleGenerate();
-            }}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-          >
-            Confirm &amp; Generate
-          </button>
-        </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewing(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setPreviewing(false);
+                handleGenerate();
+              }}
+            >
+              Confirm and generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </>
   );
 }
 
-// ─── RENEWAL TIMELINE ─────────────────────────────────────────────────────────
+// ─── TIMELINE ─────────────────────────────────────────────────────────────────
 
 function RenewalTimeline() {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
-      <div className="flex items-center gap-2 mb-5">
-        <Clock className="w-4 h-4 text-slate-400" />
-        <h3 className="text-sm font-semibold text-slate-800">
-          Renewal Timeline
-        </h3>
-      </div>
-      <div className="relative">
-        <div className="absolute left-5 top-5 bottom-5 w-px bg-slate-100" />
-        <div className="space-y-5">
-          {TIMELINE_STEPS_TEMPLATE.map((step, i) => {
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="size-4 text-muted-foreground" /> Renewal progress
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ol className="relative space-y-6">
+          <span
+            className="absolute bottom-4 left-4 top-4 w-px bg-border"
+            aria-hidden
+          />
+          {TIMELINE_STEPS_TEMPLATE.map((step) => {
             const Icon = step.icon;
             return (
-              <div key={i} className="flex items-start gap-4 relative">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-2
-                  ${step.done ? "bg-blue-600 border-blue-600" : "bg-white border-slate-200"}`}
+              <li key={step.label} className="relative flex items-start gap-4">
+                <span
+                  className={cn(
+                    "z-10 flex size-8 shrink-0 items-center justify-center rounded-full border",
+                    step.done
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground",
+                  )}
                 >
-                  <Icon
-                    className={`w-4 h-4 ${step.done ? "text-white" : "text-slate-300"}`}
-                  />
-                </div>
-                <div className="pt-1.5">
+                  <Icon className="size-4" />
+                </span>
+                <div className="pt-0.5">
                   <p
-                    className={`text-sm font-medium ${step.done ? "text-slate-800" : "text-slate-400"}`}
+                    className={cn(
+                      "text-sm font-medium",
+                      !step.done && "text-muted-foreground",
+                    )}
                   >
                     {step.label}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {step.date ? formatDate(step.date) : "Pending"}
+                  <p className="text-xs text-muted-foreground">
+                    {step.date ? formatDate(step.date) : "Not yet"}
                   </p>
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
-      </div>
-    </div>
+        </ol>
+      </CardContent>
+    </Card>
   );
 }
 
-// ─── RENEWAL HISTORY ──────────────────────────────────────────────────────────
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
 
 function RenewalHistoryTable({ employee }) {
   const rows = useMemo(() => defaultHistory(employee), [employee]);
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm min-w-0">
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
-        <History className="w-4 h-4 text-slate-400" />
-        <h3 className="text-sm font-semibold text-slate-800">
-          Renewal History
-        </h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
+    <Card className="min-w-0 gap-0 overflow-hidden py-0">
+      <CardHeader className="py-6">
+        <CardTitle>Renewal history</CardTitle>
+        <CardDescription>Every contract this employee has had.</CardDescription>
+      </CardHeader>
+      <div className="border-t">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
               {[
-                "Contract Number",
-                "Contract Type",
-                "Effective Date",
-                "End Date",
-                "Generated By",
+                "Contract number",
+                "Type",
+                "Effective",
+                "Ends",
+                "Generated by",
                 "Status",
-              ].map((h) => (
-                <th
+              ].map((h, i) => (
+                <TableHead
                   key={h}
-                  className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap"
+                  className={cn("whitespace-nowrap", i === 0 && "pl-6")}
                 >
                   {h}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((row) => (
-              <tr key={row.contractNumber} className="hover:bg-slate-50/60">
-                <td className="px-4 py-3 font-mono text-xs text-slate-600">
+              <TableRow key={row.contractNumber}>
+                <TableCell className="pl-6 font-mono text-xs">
                   {row.contractNumber}
-                </td>
-                <td className="px-4 py-3 text-slate-600">{row.type}</td>
-                <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                </TableCell>
+                <TableCell>{row.type}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   {formatDate(row.effective)}
-                </td>
-                <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
                   {formatDate(row.end)}
-                </td>
-                <td className="px-4 py-3 text-slate-600">{row.by}</td>
-                <td className="px-4 py-3">
-                  <Badge status={row.status} />
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell>{row.by}</TableCell>
+                <TableCell>
+                  <StatusBadge status={row.status} />
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
-    </div>
+    </Card>
   );
 }
 
-// ─── EMPLOYEE CONTRACT CARD ───────────────────────────────────────────────────
+// ─── CURRENT CONTRACT ─────────────────────────────────────────────────────────
 
 function EmployeeContractCard({ employee, contract }) {
   const startDate = contract?.start_date ?? employee.startDate;
   const endDate = contract?.end_date ?? employee.endDate;
   const salary =
     contract?.salary ?? (employee.salary !== "—" ? employee.salary : null);
-
   const daysRemaining = endDate
     ? Math.round((new Date(endDate) - new Date()) / 86_400_000)
     : null;
 
   const fields = [
     [
-      "Contract Number",
+      "Contract number",
       contract?.id ? `CTR-${contract.id}` : employee.contractNumber,
     ],
-    ["Employment Type", employee.employmentType],
-    ["Start Date", formatDate(startDate)],
-    ["End Date", formatDate(endDate)],
+    ["Employment type", employee.employmentType || "—"],
+    ["Start date", formatDate(startDate)],
+    ["End date", formatDate(endDate)],
     ["Salary", salary ? `PHP ${Number(salary).toLocaleString()}` : "—"],
-    ["Work Schedule", employee.schedule],
-    ["Employment Status", employee.employmentStatus],
+    ["Work schedule", employee.schedule],
+    ["Employment status", employee.employmentStatus],
     [
-      "Days Remaining",
+      "Time left",
       daysRemaining == null
         ? "—"
         : daysRemaining < 0
@@ -1644,170 +1637,163 @@ function EmployeeContractCard({ employee, contract }) {
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
-      <div className="flex items-center gap-2 mb-4">
-        <FileCheck className="w-4 h-4 text-slate-400" />
-        <h3 className="text-sm font-semibold text-slate-800">
-          Current Contract
-        </h3>
-      </div>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-        {fields.map(([k, v]) => (
-          <div key={k}>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
-              {k}
-            </p>
-            <p
-              className={`text-sm font-medium mt-0.5
-              ${
-                k === "Days Remaining" &&
-                daysRemaining != null &&
-                daysRemaining < 0
-                  ? "text-red-600"
-                  : "text-slate-800"
-              }`}
-            >
-              {v}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileCheck className="size-4 text-muted-foreground" /> Current
+          contract
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid grid-cols-2 gap-x-8 gap-y-5 md:grid-cols-4">
+          {fields.map(([k, v]) => (
+            <div key={k}>
+              <dt className="text-xs text-muted-foreground">{k}</dt>
+              <dd
+                className={cn(
+                  "mt-1 text-sm font-medium",
+                  k === "Time left" &&
+                    daysRemaining != null &&
+                    daysRemaining < 0 &&
+                    "text-destructive",
+                )}
+              >
+                {v}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
   );
 }
 
 // ─── DETAIL PAGE ──────────────────────────────────────────────────────────────
 
+function BackButton({ onBack }) {
+  return (
+    <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
+      <ArrowLeft /> All renewals
+    </Button>
+  );
+}
+
 function EmployeeRenewalDetails({ employeeId, listSnapshot, onBack, toast }) {
   const { employee: fetched, loading, error } = useEmployeeDetail(employeeId);
   const employee = fetched ?? listSnapshot;
-
   const { activeContract, setActiveContract, contractLoading } =
     useActiveContract(employee);
 
   if (loading && !employee) {
     return (
-      <div className="space-y-6 min-w-0">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to List
-        </button>
-        <CardSkeleton />
+      <div className="space-y-6">
+        <BackButton onBack={onBack} />
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
   }
 
   if (error && !employee) {
     return (
-      <div className="space-y-4 min-w-0">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to List
-        </button>
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+      <div className="space-y-4">
+        <BackButton onBack={onBack} />
+        <Card>
           <ErrorState message={error} />
-        </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 min-w-0">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to List
-        </button>
-        <span className="text-slate-200">/</span>
-        <span className="text-sm text-slate-800 font-medium">
-          {employee.name}
-        </span>
+    <div className="min-w-0 space-y-6">
+      <div className="flex items-center gap-2">
+        <BackButton onBack={onBack} />
         {(loading || contractLoading) && (
-          <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin" />
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
         )}
       </div>
 
-      {/* Header */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-          <img
-            src={employee.photo}
-            alt={employee.name}
-            className="w-16 h-16 rounded-xl"
-            onError={(e) => (e.target.style.display = "none")}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <p className="text-xs font-mono text-slate-400">
-                  {employee.employeeNumber}
-                </p>
-                <h2 className="text-xl font-bold text-slate-800 mt-0.5">
-                  {employee.name}
-                </h2>
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500">
-                  <span className="flex items-center gap-1">
-                    <Building className="w-3.5 h-3.5" />
-                    {employee.department}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="w-3.5 h-3.5" />
-                    {employee.position}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" />
-                    {employee.employmentType}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge status={employee.contractStatus} />
-                <Badge status={employee.renewalStatus} />
-              </div>
+      <Card className="min-w-0">
+        <CardContent className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          <PersonAvatar employee={employee} className="size-16" />
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-xs text-muted-foreground">
+              {employee.employeeNumber}
+            </p>
+            <h2 className="text-xl font-semibold">{employee.name}</h2>
+            <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Building className="size-3.5" /> {employee.department}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Briefcase className="size-3.5" /> {employee.position}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Users className="size-3.5" /> {employee.employmentType}
+              </span>
             </div>
           </div>
-        </div>
-      </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge status={employee.contractStatus} />
+            <StatusBadge status={employee.renewalStatus} />
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0">
-        <div className="lg:col-span-2 space-y-6 min-w-0">
-          <EmployeeContractCard employee={employee} contract={activeContract} />
+      <Tabs defaultValue="overview" className="min-w-0 gap-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="contract">New contract</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
 
-          {activeContract ? (
-            <AutoRenewalPanel
-              contract={activeContract}
-              toast={toast}
-              onUpdated={(updated) => setActiveContract(updated)}
-            />
-          ) : (
-            !contractLoading && (
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 min-w-0">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Info className="w-4 h-4" />
-                  <p className="text-sm">
-                    No active contract found in the hiring module for this
-                    employee. Create one via the{" "}
-                    <strong>Hiring → Contracts</strong> section first.
-                  </p>
-                </div>
-              </div>
-            )
-          )}
+        <TabsContent value="overview" className="min-w-0">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-3">
+            <div className="min-w-0 space-y-6 lg:col-span-2">
+              <EmployeeContractCard
+                employee={employee}
+                contract={activeContract}
+              />
+              {activeContract ? (
+                <AutoRenewalPanel
+                  contract={activeContract}
+                  toast={toast}
+                  onUpdated={(updated) => setActiveContract(updated)}
+                />
+              ) : (
+                !contractLoading && (
+                  <Card>
+                    <CardContent className="flex items-start gap-3 text-sm text-muted-foreground">
+                      <Info className="mt-0.5 size-4 shrink-0" />
+                      <p>
+                        No active contract was found in the hiring module for
+                        this employee. Create one under{" "}
+                        <span className="font-medium text-foreground">
+                          Hiring, Contracts
+                        </span>{" "}
+                        first.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )
+              )}
+            </div>
+            <RenewalTimeline />
+          </div>
+        </TabsContent>
 
+        <TabsContent value="documents" className="min-w-0">
           <UploadDocumentsCard toast={toast} />
+        </TabsContent>
+        <TabsContent value="contract" className="min-w-0">
           <GenerateContractCard employee={employee} toast={toast} />
+        </TabsContent>
+        <TabsContent value="history" className="min-w-0">
           <RenewalHistoryTable employee={employee} />
-        </div>
-        <div className="space-y-6 min-w-0">
-          <RenewalTimeline />
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -1842,59 +1828,18 @@ export default function App() {
     [employees, filters.contractStatus, filters.renewalStatus],
   );
 
-  function handleFilter(k, v) {
-    setFilters((p) => ({ ...p, [k]: v }));
-  }
-  function resetFilters() {
+  const handleFilter = (k, v) => setFilters((p) => ({ ...p, [k]: v }));
+  const resetFilters = () =>
     setFilters({
       search: "",
       department: "",
       contractStatus: "",
       renewalStatus: "",
     });
-  }
 
   return (
-    // FIX: min-w-0 on the page root (same pattern as the Employees page) lets
-    // this page shrink inside the layout's flex chain instead of forcing the
-    // sidebar area to widen when the table below is wide.
-    <div className="min-h-screen min-w-0 bg-slate-50 font-sans">
-      {/* ── Sticky Header ── */}
-      {/* FIX: max-w-screen-2xl is a fixed 1536px cap (fine on its own), but
-          combined with mx-auto it still doesn't stop this bar from being
-          forced wider than the viewport by flex-shrink issues below — so we
-          also constrain width to the actual parent via w-full + min-w-0,
-          matching the Employees page's header bar. */}
-      <header className="bg-white border-b border-slate-100 shadow-sm top-0 w-full min-w-0">
-        <div className="max-w-screen-2xl mx-auto px-6 py-3.5 flex items-center justify-between w-full min-w-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <ClipboardList className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 leading-none">HRIS</p>
-              <p className="text-sm font-semibold text-slate-800 leading-tight">
-                Contract Renewal
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Calendar className="w-3.5 h-3.5" />
-            {new Date().toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </div>
-        </div>
-      </header>
-
-      {/* ── Content ── */}
-      {/* FIX: min-w-0 + overflow-x-hidden so the wide table inside contains
-          its own horizontal scroll instead of pushing this whole block, and
-          therefore the sidebar layout, sideways — same fix as the Employees
-          page's content wrapper. */}
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-8 space-y-6 min-w-0 overflow-x-hidden">
+    <div className="min-h-screen min-w-0 bg-muted/30">
+      <main className="mx-auto min-w-0 max-w-screen-2xl space-y-6 overflow-x-hidden py-8 sm:px-6">
         {selected ? (
           <EmployeeRenewalDetails
             employeeId={selected.id}
@@ -1904,38 +1849,45 @@ export default function App() {
           />
         ) : (
           <>
-            <div>
-              <h1 className="text-lg font-bold text-slate-800">
-                Employee Contract Renewals
-              </h1>
-              <p className="text-sm text-slate-400 mt-0.5">
-                Manage renewals for Contract of Service and Consultant
-                employees. Plantilla positions are excluded.
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Contract renewals
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Contract of Service and Consultant employees. Plantilla
+                  positions are not included.
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {new Date().toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
               </p>
             </div>
+
             <SummaryCards employees={filtered} />
-            <RenewalFilters
-              filters={filters}
-              onChange={handleFilter}
-              onReset={resetFilters}
-              departments={departments}
-            />
-            {!loading && !error && (
-              <p className="text-xs text-slate-500">
-                {filtered.length} COS/Consultant employee(s) found
-              </p>
-            )}
+
             <EmployeeRenewalTable
               employees={filtered}
               loading={loading}
               error={error}
               onRetry={reload}
               onSelect={(emp) => setSelected({ id: emp.id, snapshot: emp })}
+              toolbar={
+                <RenewalFilters
+                  filters={filters}
+                  onChange={handleFilter}
+                  onReset={resetFilters}
+                  departments={departments}
+                />
+              }
             />
           </>
         )}
       </main>
-
       <Toast toasts={toast.toasts} remove={toast.remove} />
     </div>
   );

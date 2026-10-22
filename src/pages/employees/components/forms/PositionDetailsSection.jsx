@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Calendar } from "lucide-react";
-import { FieldSelect } from "../shared/FormField";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { FieldSelect, FormPanel } from "../shared/FormField";
 import { SingleCombobox } from "../shared/Combobox";
 import { positionLabel } from "../../utils/employeeFormatters";
 
@@ -134,22 +136,23 @@ function DateField({ label, value, onChange, min, max }) {
   return (
     <FieldSelect label={label}>
       <div className="relative">
-        <input
+        <Input
           type="text"
           inputMode="numeric"
           placeholder="MM/DD/YYYY"
           value={text}
           onChange={handleTextChange}
           onBlur={handleBlur}
-          className={`field-input pr-8 ${error ? "border-red-400 focus:border-red-400" : ""}`}
+          aria-invalid={error ? true : undefined}
+          className={cn("h-9 pr-9", error && "border-destructive")}
         />
         <button
           type="button"
           onClick={openPicker}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-1.5 text-muted-foreground transition-colors hover:text-foreground"
           aria-label={`Open calendar for ${label}`}
         >
-          <Calendar size={14} />
+          <Calendar className="size-4" />
         </button>
         {/* Hidden native date input, used only to render the calendar
             picker UI. Its value stays in sync so opening it always
@@ -163,17 +166,25 @@ function DateField({ label, value, onChange, min, max }) {
           onChange={handlePickerChange}
           tabIndex={-1}
           aria-hidden="true"
-          className="absolute inset-0 h-0 w-0 opacity-0 pointer-events-none"
+          className="pointer-events-none absolute inset-0 h-0 w-0 opacity-0"
         />
       </div>
-      {error && <p className="mt-1 text-[10px] text-red-500">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </FieldSelect>
+  );
+}
+
+function ReadOnlyValue({ children }) {
+  return (
+    <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">
+      {children}
+    </div>
   );
 }
 
 function ContractDatesFields({ formData, handleChange }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <DateField
         label="First day of service"
         value={formData.firstDayOfService}
@@ -181,14 +192,14 @@ function ContractDatesFields({ formData, handleChange }) {
       />
 
       <DateField
-        label="Contract period — from"
+        label="Contract period: from"
         value={formData.contractPeriodFrom}
         onChange={(v) => handleChange("contractPeriodFrom", v)}
         max={formData.contractPeriodTo}
       />
 
       <DateField
-        label="Contract period — to"
+        label="Contract period: to"
         value={formData.contractPeriodTo}
         onChange={(v) => handleChange("contractPeriodTo", v)}
         min={formData.contractPeriodFrom}
@@ -209,11 +220,8 @@ export function PositionDetailsSection({
 }) {
   if (formData.employeeType === "Plantilla") {
     return (
-      <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-          Plantilla position details
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <FormPanel title="Plantilla position details">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FieldSelect label="Position slot" className="sm:col-span-2">
             <SingleCombobox
               value={formData.plantillaPositionId}
@@ -242,30 +250,27 @@ export function PositionDetailsSection({
           </FieldSelect>
 
           <FieldSelect label="Salary grade">
-            <div className="field-input flex items-center bg-gray-100 text-gray-500 cursor-default">
-              {formData.sgLevel ? `SG ${formData.sgLevel}` : "—"}
-            </div>
+            <ReadOnlyValue>
+              {formData.sgLevel ? `SG ${formData.sgLevel}` : "Not set"}
+            </ReadOnlyValue>
           </FieldSelect>
 
           <FieldSelect label="Step increment">
-            <div className="field-input flex items-center bg-gray-100 text-gray-500 cursor-default">
+            <ReadOnlyValue>
               {selectedStepLabel ||
                 (!formData.plantillaPositionId
                   ? "Select a position first"
-                  : "—")}
-            </div>
+                  : "Not set")}
+            </ReadOnlyValue>
           </FieldSelect>
         </div>
-      </div>
+      </FormPanel>
     );
   }
 
   if (formData.employeeType === "Contract of Service") {
     return (
-      <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-          Contract of service position
-        </p>
+      <FormPanel title="Contract of service position">
         <FieldSelect label="COS position">
           <SingleCombobox
             value={formData.cosPositionId}
@@ -283,16 +288,13 @@ export function PositionDetailsSection({
         </FieldSelect>
 
         <ContractDatesFields formData={formData} handleChange={handleChange} />
-      </div>
+      </FormPanel>
     );
   }
 
   if (formData.employeeType === "Consultant") {
     return (
-      <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-          Consultant position
-        </p>
+      <FormPanel title="Consultant position">
         <FieldSelect label="Consultant position">
           <SingleCombobox
             value={formData.consultantPositionId}
@@ -310,7 +312,7 @@ export function PositionDetailsSection({
         </FieldSelect>
 
         <ContractDatesFields formData={formData} handleChange={handleChange} />
-      </div>
+      </FormPanel>
     );
   }
 

@@ -1,9 +1,10 @@
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { FormSection, FieldSelect, NativeSelect } from "../shared/FormField";
+import { Label } from "@/components/ui/label";
+import { FormSection, FieldSelect, SelectField } from "../shared/FormField";
 import { MultiCombobox, SingleCombobox } from "../shared/Combobox";
 import {
   EMPLOYEE_TYPES,
-  GENDER_OPTIONS,
   STATUS_OPTIONS,
   POSITION_CLASSIFICATION_OPTIONS,
 } from "../../utils/employeeConstants";
@@ -13,7 +14,6 @@ import {
 } from "../../utils/employeeFormatters";
 import { CompensationSection } from "./CompensationSection";
 import { PositionDetailsSection } from "./PositionDetailsSection";
-import { toast } from "sonner";
 
 export function EmploymentInformationSection({
   formData,
@@ -31,10 +31,32 @@ export function EmploymentInformationSection({
   handleMonthlySalaryChange,
   handleAnnualSalaryChange,
 }) {
+  const changeEmployeeType = (value) =>
+    setFormData((prev) => {
+      if (employeeNumberNeedsReentry(prev.employeeNumber, value)) {
+        toast.info(
+          "Employment type changed — please enter a new Employee No. for this type (numbers aren't shared across Plantilla/COS/Consultant).",
+        );
+        return {
+          ...prev,
+          employeeType: value,
+          employeeNumber: applyEmployeeNumberPrefix("", value),
+        };
+      }
+      return {
+        ...prev,
+        employeeType: value,
+        employeeNumber: applyEmployeeNumberPrefix(prev.employeeNumber, value),
+      };
+    });
+
   return (
-    <FormSection label="Employment information">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-        <FieldSelect label="Position classification" className="sm:col-span-1">
+    <FormSection
+      label="Employment information"
+      description="Where this person works and how they are employed."
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FieldSelect label="Position classification">
           <MultiCombobox
             value={formData.rolePosition}
             onChange={(v) => handleChange("rolePosition", v)}
@@ -80,7 +102,7 @@ export function EmploymentInformationSection({
         </FieldSelect>
 
         <FieldSelect label="Status">
-          <NativeSelect
+          <SelectField
             value={formData.status}
             onChange={(v) => handleChange("status", v)}
             options={STATUS_OPTIONS}
@@ -90,78 +112,66 @@ export function EmploymentInformationSection({
       </div>
 
       {pendingProvision?.pending && (
-        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 normal-case">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200">
           This employee has a <strong>Completed</strong> application for{" "}
           <strong>{pendingProvision.posting_title}</strong>. The Employee Type
-          and Position have been automatically filled in — please review and
+          and Position have been automatically filled in. Please review and
           save to proceed with provisioning.
         </div>
       )}
 
-      {/* Employee type pills */}
-      <div className="space-y-1 mb-4">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+      {/* Employee type */}
+      <div className="space-y-2">
+        <Label className="text-xs font-medium text-muted-foreground">
           Employee type
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {EMPLOYEE_TYPES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() =>
-                setFormData((prev) => {
-                  if (
-                    employeeNumberNeedsReentry(prev.employeeNumber, t.value)
-                  ) {
-                    toast.info(
-                      "Employment type changed — please enter a new Employee No. for this type (numbers aren't shared across Plantilla/COS/Consultant).",
-                    );
-                    return {
-                      ...prev,
-                      employeeType: t.value,
-                      employeeNumber: applyEmployeeNumberPrefix("", t.value),
-                    };
-                  }
-                  return {
-                    ...prev,
-                    employeeType: t.value,
-                    employeeNumber: applyEmployeeNumberPrefix(
-                      prev.employeeNumber,
-                      t.value,
-                    ),
-                  };
-                })
-              }
-              className={cn(
-                "w-full py-2 px-3 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all duration-150",
-                formData.employeeType === t.value
-                  ? "bg-gray-900 text-white border-gray-900"
-                  : "bg-white text-gray-400 border-gray-200 hover:border-gray-400 hover:text-gray-700",
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+        </Label>
+        <div
+          role="radiogroup"
+          aria-label="Employee type"
+          className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+        >
+          {EMPLOYEE_TYPES.map((t) => {
+            const selected = formData.employeeType === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => changeEmployeeType(t.value)}
+                className={cn(
+                  "flex h-10 items-center justify-center rounded-md border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                  selected
+                    ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                    : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <CompensationSection
-        formData={formData}
-        setFormData={setFormData}
-        handleMonthlySalaryChange={handleMonthlySalaryChange}
-        handleAnnualSalaryChange={handleAnnualSalaryChange}
-      />
+      <div className="space-y-4">
+        <CompensationSection
+          formData={formData}
+          setFormData={setFormData}
+          handleMonthlySalaryChange={handleMonthlySalaryChange}
+          handleAnnualSalaryChange={handleAnnualSalaryChange}
+        />
 
-      <PositionDetailsSection
-        formData={formData}
-        handleChange={handleChange}
-        positions={positions}
-        selectedPositionLabel={selectedPositionLabel}
-        selectedStepLabel={selectedStepLabel}
-        handlePositionChange={handlePositionChange}
-        cosPositions={cosPositions}
-        consultantPositions={consultantPositions}
-      />
+        <PositionDetailsSection
+          formData={formData}
+          handleChange={handleChange}
+          positions={positions}
+          selectedPositionLabel={selectedPositionLabel}
+          selectedStepLabel={selectedStepLabel}
+          handlePositionChange={handlePositionChange}
+          cosPositions={cosPositions}
+          consultantPositions={consultantPositions}
+        />
+      </div>
     </FormSection>
   );
 }

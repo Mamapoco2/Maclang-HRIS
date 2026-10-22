@@ -1,100 +1,114 @@
 import React, { useState, useMemo } from "react";
 import {
-  IconEdit,
-  IconTrash,
-  IconEye,
-  IconChevronUp,
-  IconChevronDown,
-  IconSelector,
-} from "@tabler/icons-react";
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { StatusBadge } from "./shared/StatusBadge";
+import EmployeeEmpty from "./employeeEmpty";
+import {
+  formatRole,
+  getAvatarUrl,
+  getDeptNames,
+  getEmployeeStatus,
+  toTitleCase,
+} from "../utils/employeeDisplay";
 
-const formatRole = (role) =>
-  (Array.isArray(role) ? role : [role].filter(Boolean))
-    .filter(Boolean)
-    .join(", ") || "-";
-
-const getDeptNames = (emp) => {
-  if (Array.isArray(emp.departments) && emp.departments.length > 0)
-    return emp.departments.map((d) => d.name).filter(Boolean);
-  if (emp.department?.name) return [emp.department.name];
-  if (Array.isArray(emp.department_ids) && emp.department_ids.length > 0)
-    return emp.department_ids.map((id) => `Dept #${id}`);
-  return [];
-};
-
-const getStatusFromInfo = (emp) => {
-  const manual = emp.employment_status?.toUpperCase();
-  if (manual === "RESIGN") return "Resign";
-  if (manual === "INACTIVE") return "Inactive";
-  if (manual === "ACTIVE") return "Active";
-  const infoStatus = emp.info?.status;
-  if (!infoStatus || infoStatus === "EMPTY") return "Inactive";
-  return "Active";
-};
-
-const STATUS_CONFIG = {
-  Active: {
-    dot: "bg-emerald-500",
-    pill: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  Inactive: {
-    dot: "bg-gray-300",
-    pill: "bg-gray-100 text-gray-600 border-gray-200",
-  },
-  Resign: { dot: "bg-red-400", pill: "bg-red-50 text-red-700 border-red-200" },
-};
-
+// Name sorts by last name, matching how the old "Last Name" column behaved.
 const COLUMNS = [
   {
-    label: "Username",
-    key: "username",
-    accessor: (emp) => emp.user?.username || "",
-  },
-  {
-    label: "Last Name",
+    label: "Employee",
     key: "last_name",
     accessor: (emp) => emp.last_name || "",
-  },
-  {
-    label: "First Name",
-    key: "first_name",
-    accessor: (emp) => emp.first_name || "",
-  },
-  {
-    label: "Middle Name",
-    key: "middle_name",
-    accessor: (emp) => emp.middle_name || "",
+    className: "min-w-64",
   },
   {
     label: "Position",
     key: "position",
     accessor: (emp) => formatRole(emp.role_position),
+    className: "min-w-40",
   },
   {
     label: "Division",
     key: "division",
     accessor: (emp) => emp.division?.name || "",
+    className: "min-w-36",
   },
   {
     label: "Department",
     key: "department",
-    accessor: (emp) => getDeptNames(emp).join(", "),
+    accessor: (emp) => getDeptNames(emp, { fallbackToIds: true }).join(", "),
+    className: "min-w-44",
   },
-  { label: "Status", key: "status", accessor: (emp) => getStatusFromInfo(emp) },
-  { label: "Actions", key: null, accessor: null },
+  {
+    label: "Status",
+    key: "status",
+    accessor: (emp) => getEmployeeStatus(emp),
+    className: "min-w-28",
+  },
 ];
 
 function SortIcon({ direction }) {
-  if (direction === "asc")
-    return <IconChevronUp size={13} className="text-blue-500" />;
-  if (direction === "desc")
-    return <IconChevronDown size={13} className="text-blue-500" />;
-  return (
-    <IconSelector
-      size={13}
-      className="text-gray-300 group-hover:text-gray-400 transition-colors"
-    />
-  );
+  if (direction === "asc") return <ArrowUp className="size-3.5" />;
+  if (direction === "desc") return <ArrowDown className="size-3.5" />;
+  return <ArrowUpDown className="size-3.5 opacity-40" />;
+}
+
+function formatName(emp) {
+  const last = toTitleCase(emp.last_name);
+  const rest = [emp.first_name, emp.middle_name]
+    .filter(Boolean)
+    .map(toTitleCase)
+    .join(" ");
+  if (last && rest) return `${last}, ${rest}`;
+  return last || rest || "No name";
+}
+
+function LoadingRows() {
+  return Array.from({ length: 8 }).map((_, i) => (
+    <TableRow key={i} className="hover:bg-transparent">
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-9 rounded-full" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-3.5 w-36" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3.5 w-28" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-20 rounded-md" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3.5 w-32" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="ml-auto h-8 w-24" />
+      </TableCell>
+    </TableRow>
+  ));
 }
 
 export default function EmployeeTable({
@@ -110,7 +124,6 @@ export default function EmployeeTable({
   const rows = Array.isArray(employees) ? employees : [];
 
   const handleSort = (key) => {
-    if (!key) return;
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
       setSortKey(key);
@@ -131,207 +144,167 @@ export default function EmployeeTable({
     });
   }, [rows, sortKey, sortDir]);
 
-  const getAvatarUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    return `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ?? "http://localhost:8000"}/storage/${url}`;
-  };
+  const showEmpty = !loading && sortedRows.length === 0;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <colgroup>
-            <col className="w-12" />
-            <col className="w-36" />
-            <col className="w-44" />
-            <col className="w-36" />
-            <col className="w-44" />
-            <col className="w-40" />
-            <col className="w-36" />
-            <col className="w-56" />
-            <col className="w-28" />
-            <col className="w-48" />
-          </colgroup>
-
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
-              {/* Avatar col */}
-              <th className="py-3 px-4" />
-
-              {COLUMNS.map(({ label, key }) => (
-                <th
-                  key={label}
-                  onClick={() => handleSort(key)}
-                  className={[
-                    "py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide select-none",
-                    key
-                      ? "cursor-pointer group hover:text-gray-600 transition-colors"
-                      : "",
-                  ].join(" ")}
+    <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
+      <Table>
+        <TableHeader className="bg-muted/50">
+          <TableRow className="hover:bg-transparent">
+            {COLUMNS.map(({ label, key, className }) => {
+              const active = sortKey === key;
+              return (
+                <TableHead
+                  key={key}
+                  className={cn("h-11 text-center", className)}
+                  aria-sort={
+                    active
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
                 >
-                  <span className="inline-flex items-center gap-1">
-                    {label}
-                    {key && (
-                      <SortIcon direction={sortKey === key ? sortDir : null} />
+                  <button
+                    type="button"
+                    onClick={() => handleSort(key)}
+                    className={cn(
+                      "inline-flex items-center justify-center gap-1.5 rounded px-1 text-xs font-medium transition-colors hover:text-foreground",
+                      active ? "text-foreground" : "text-muted-foreground",
                     )}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td className="py-3.5 px-4">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 mx-auto" />
-                  </td>
-                  {Array.from({ length: 9 }).map((__, j) => (
-                    <td key={j} className="py-3.5 px-4">
-                      <div
-                        className="h-3 rounded-full bg-gray-100"
-                        style={{ width: `${55 + ((j * 7) % 35)}%` }}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : sortedRows.length > 0 ? (
-              sortedRows.map((emp) => {
-                const deptNames = getDeptNames(emp);
-                const status = getStatusFromInfo(emp);
-                const avatarSrc = getAvatarUrl(emp.avatar_url);
-                const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.Inactive;
-
-                return (
-                  <tr
-                    key={emp.id}
-                    className="hover:bg-gray-50 transition-colors"
                   >
-                    {/* Avatar */}
-                    <td className="py-3 px-4">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center flex-shrink-0 mx-auto">
-                        {avatarSrc ? (
-                          <img
+                    {label}
+                    <SortIcon direction={active ? sortDir : null} />
+                  </button>
+                </TableHead>
+              );
+            })}
+            <TableHead className="h-11 w-36 text-center text-xs font-medium text-muted-foreground">
+              Actions
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody>
+          {loading ? (
+            <LoadingRows />
+          ) : (
+            sortedRows.map((emp) => {
+              const deptNames = getDeptNames(emp, { fallbackToIds: true });
+              const avatarSrc = getAvatarUrl(emp.avatar_url);
+              const role = formatRole(emp.role_position);
+              const name = formatName(emp);
+
+              return (
+                <TableRow key={emp.id}>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-3">
+                      <Avatar className="size-9">
+                        {avatarSrc && (
+                          <AvatarImage
                             src={avatarSrc}
-                            className="w-full h-full object-cover"
-                            alt="avatar"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                              e.currentTarget.parentElement.querySelector(
-                                ".fallback-initials",
-                              ).style.display = "flex";
-                            }}
+                            alt=""
+                            className="object-cover"
                           />
-                        ) : null}
-                        <span
-                          className="fallback-initials text-gray-500 text-[11px] font-semibold items-center justify-center w-full h-full"
-                          style={{ display: avatarSrc ? "none" : "flex" }}
-                        >
-                          {emp.last_name?.[0]}
+                        )}
+                        <AvatarFallback className="bg-muted text-xs font-medium text-muted-foreground">
                           {emp.first_name?.[0]}
-                        </span>
+                          {emp.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 text-center">
+                        <p className="truncate text-sm font-medium leading-tight">
+                          {name}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {emp.user?.username || emp.employee_number || ""}
+                        </p>
                       </div>
-                    </td>
+                    </div>
+                  </TableCell>
 
-                    <td className="py-3 px-4 text-xs text-gray-500 uppercase">
-                      {emp.user?.username || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-gray-700 uppercase font-medium">
-                      {emp.last_name || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-gray-800 uppercase font-medium">
-                      {emp.first_name || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-gray-500 uppercase">
-                      {emp.middle_name || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-gray-600 uppercase">
-                      {formatRole(emp.role_position)}
-                    </td>
-                    <td className="py-3 px-4">
-                      {emp.division?.name ? (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium uppercase">
-                          {emp.division.name}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-gray-600 uppercase">
-                      {deptNames.length > 0
-                        ? deptNames.map((n) => n.toUpperCase()).join(", ")
-                        : "—"}
-                    </td>
+                  <TableCell className="text-center text-sm">
+                    {role ? (
+                      toTitleCase(role)
+                    ) : (
+                      <span className="text-muted-foreground">Not set</span>
+                    )}
+                  </TableCell>
 
-                    {/* Status */}
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cfg.pill}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`}
-                        />
-                        {status.toUpperCase()}
+                  <TableCell className="text-center">
+                    {emp.division?.name ? (
+                      <Badge variant="secondary" className="font-medium">
+                        {emp.division.name}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        Not set
                       </span>
-                    </td>
+                    )}
+                  </TableCell>
 
-                    {/* Actions */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => onView(emp)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
-                        >
-                          <IconEye size={12} /> View
-                        </button>
-                        <button
-                          onClick={() => onEdit(emp)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-gray-600 bg-white border border-gray-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-colors"
-                        >
-                          <IconEdit size={12} /> Edit
-                        </button>
-                        <button
-                          onClick={() => onDelete(emp.id)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-gray-600 bg-white border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
-                        >
-                          <IconTrash size={12} /> Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={10} className="text-center py-16 text-gray-400">
-                  <div className="flex flex-col items-center gap-2">
-                    <svg
-                      className="w-8 h-8 text-gray-200"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    <p className="text-sm text-gray-400">No employees found</p>
-                    <p className="text-xs text-gray-300">
-                      Try adjusting your search or filters
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  <TableCell className="max-w-56 text-center text-sm">
+                    {deptNames.length > 0 ? (
+                      <span
+                        className="line-clamp-2 whitespace-normal"
+                        title={deptNames.join(", ")}
+                      >
+                        {deptNames.join(", ")}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Not set</span>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <StatusBadge status={getEmployeeStatus(emp)} />
+                  </TableCell>
+
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        onClick={() => onView(emp)}
+                        title="View profile"
+                        aria-label={`View ${name}`}
+                      >
+                        <Eye className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        onClick={() => onEdit(emp)}
+                        title="Edit employee"
+                        aria-label={`Edit ${name}`}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => onDelete(emp.id)}
+                        title="Delete employee"
+                        aria-label={`Delete ${name}`}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+
+      {showEmpty && <EmployeeEmpty />}
     </div>
   );
 }

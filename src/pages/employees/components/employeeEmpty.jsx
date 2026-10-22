@@ -1,16 +1,14 @@
-import { IconSearch } from "@tabler/icons-react";
+import { SearchX } from "lucide-react";
 
 export default function EmployeeEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-10">
-      <IconSearch size={48} stroke={1.5} className="text-muted-foreground" />
-
-      <p className="font-bold text-muted-foreground">
-        No result for your search
-      </p>
-
-      <p className="text-sm text-muted-foreground">
-        Try using different keywords or filters.
+    <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+      <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-muted">
+        <SearchX className="size-6 text-muted-foreground" />
+      </div>
+      <p className="text-sm font-medium">No employees found</p>
+      <p className="max-w-xs text-sm text-muted-foreground">
+        Try a different name or clear the filters to see everyone again.
       </p>
     </div>
   );

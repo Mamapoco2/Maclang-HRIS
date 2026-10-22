@@ -1,11 +1,11 @@
-# RMBGH Hospital Website (public, desktop)
+# RMBGH Portals (src/pages/portal)
 
-Rosario Maclang Bautista General Hospital — public pages at `/portal` (no login required).
+| Site | URL | Who | Booking? |
+|---|---|---|---|
+| Employee Portal (`employee/`) | `/portal`, `/portal/statistics` | Signed-in employees (ProtectedRoute) | No |
+| Customer site (`customer/`) | `/patients`, `/patients/services`, `/patients/services/:slug`, `/patients/statistics` | Public | Yes |
 
-Routes: `/portal`, `/portal/services`, `/portal/services/:slug`, `/portal/statistics`
+`shared/` holds the logo, photo blocks, hospital info and the statistics page used by both.
 
-## To customize
-- `data.js` — hospital address, phone numbers, email (marked TODO), services, news, stats, census chart (sample data).
-- Images: put in `public/portal/` — `hero.jpg`, `news-1.jpg`..`news-3.jpg`, `director.jpg`. Missing files fall back to illustrations.
-- Staff Access menu (navbar): HRIS -> `/login`; set the real ICS address in `STAFF_SYSTEMS` in `data.js`.
-- Logo uses `src/assets/rmbghlogo.png`.
+TODO: real ICS address in `employee/data.js`; hospital email in `shared/hospital.js`; replace sample news.
+Images stay in `public/portal/` and `src/assets/`.

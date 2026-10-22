@@ -1,5 +1,8 @@
 import { Camera, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatusBadge } from "../shared/StatusBadge";
+import { getAvatarUrl, toTitleCase } from "../../utils/employeeDisplay";
 
 export function EmployeeHeader({
   employee,
@@ -16,17 +19,15 @@ export function EmployeeHeader({
   handleAvatarFile,
   removeAvatar,
 }) {
-  const hasAvatar = avatarPreview ?? employee?.avatar_url;
+  const avatarSrc = avatarPreview ?? getAvatarUrl(employee?.avatar_url);
+  const hasAvatar = !!avatarSrc;
 
   return (
-    <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 border-b border-gray-100">
-      {/* Avatar */}
-      <div
-        className="relative group flex-shrink-0"
-        style={{ width: 52, height: 52 }}
-      >
-        <div
-          className="w-full h-full rounded-full overflow-hidden cursor-pointer border border-gray-200 hover:border-gray-400 transition-all duration-150"
+    <div className="flex flex-wrap items-center gap-4 border-b py-4 pl-4 pr-14 sm:flex-nowrap sm:pl-6">
+      {/* Avatar: click to choose a photo, or drop an image on it */}
+      <div className="group relative shrink-0">
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault();
@@ -38,32 +39,34 @@ export function EmployeeHeader({
             setIsDragging(false);
             handleAvatarFile(e.dataTransfer.files[0]);
           }}
-          style={{
-            boxShadow: isDragging ? "0 0 0 3px rgba(0,0,0,0.15)" : undefined,
-          }}
-        >
-          {hasAvatar ? (
-            <img
-              src={avatarPreview ?? employee.avatar_url}
-              className="w-full h-full object-cover"
-              alt="avatar"
-            />
-          ) : (
-            <div className="flex items-center justify-center w-full h-full bg-gray-100 text-sm font-medium text-gray-500 select-none uppercase">
-              {initials}
-            </div>
+          aria-label="Change photo"
+          title="Click or drop an image to change the photo"
+          className={cn(
+            "relative block rounded-full outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            isDragging && "ring-[3px] ring-ring/50",
           )}
-          <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center pointer-events-none">
-            <Camera className="w-4 h-4 text-white" />
-          </div>
-        </div>
+        >
+          <Avatar className="size-14 border">
+            {hasAvatar && (
+              <AvatarImage src={avatarSrc} alt="" className="object-cover" />
+            )}
+            <AvatarFallback className="bg-muted text-base font-medium text-muted-foreground">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+            <Camera className="size-4 text-white" />
+          </span>
+        </button>
+
         {hasAvatar && (
           <button
             type="button"
             onClick={removeAvatar}
-            className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-colors shadow"
+            aria-label="Remove photo"
+            className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-white shadow transition-colors hover:bg-destructive/90"
           >
-            <X className="w-3 h-3" />
+            <X className="size-3" />
           </button>
         )}
         <input
@@ -75,56 +78,31 @@ export function EmployeeHeader({
         />
       </div>
 
-      {/* Name / role */}
-      <div className="flex-1 min-w-0">
-        <h2 className="text-base font-semibold text-gray-900 uppercase tracking-wide truncate leading-tight">
-          {displayName}
+      {/* Name and role */}
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-lg font-semibold leading-tight tracking-tight">
+          {toTitleCase(displayName)}
         </h2>
-        <p className="text-xs text-gray-400 uppercase tracking-wider mt-0.5 truncate">
-          {roleDisplay}
+        <p className="mt-0.5 truncate text-sm text-muted-foreground">
+          {toTitleCase(roleDisplay)}
           {departmentName ? ` · ${departmentName}` : ""}
         </p>
         {activePositionLabel && (
-          <p className="text-[11px] text-gray-400 uppercase tracking-widest mt-0.5 truncate font-medium">
+          <p className="truncate text-xs text-muted-foreground">
             {activePositionLabel}
           </p>
         )}
       </div>
 
-      {/* Employee number + status badge */}
-      <div className="flex-shrink-0 ml-auto text-right space-y-1.5">
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">
-            Employee No.
-          </p>
-          <p className="text-sm font-semibold text-gray-900 tracking-wide">
-            {formData.employeeNumber || "—"}
+      {/* Employee number and status */}
+      <div className="ml-auto flex shrink-0 flex-col items-end gap-1.5">
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">Employee no.</p>
+          <p className="font-mono text-sm font-semibold">
+            {formData.employeeNumber || "Not set"}
           </p>
         </div>
-        {formData.status && (
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full",
-              formData.status === "ACTIVE"
-                ? "bg-emerald-50 text-emerald-700"
-                : formData.status === "INACTIVE"
-                  ? "bg-gray-100 text-gray-500"
-                  : "bg-red-50 text-red-600",
-            )}
-          >
-            <span
-              className={cn(
-                "w-1.5 h-1.5 rounded-full",
-                formData.status === "ACTIVE"
-                  ? "bg-emerald-500"
-                  : formData.status === "INACTIVE"
-                    ? "bg-gray-400"
-                    : "bg-red-500",
-              )}
-            />
-            {formData.status}
-          </span>
-        )}
+        {formData.status && <StatusBadge status={formData.status} />}
       </div>
     </div>
   );

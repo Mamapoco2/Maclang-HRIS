@@ -1,10 +1,12 @@
 import { useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export function CurrencyInput({
   value,
   onChange,
   readOnly = false,
-  className = "field-input",
+  className,
 }) {
   const inputRef = useRef(null);
 
@@ -58,15 +60,24 @@ export function CurrencyInput({
   };
 
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      inputMode="decimal"
-      value={formatDisplay(value)}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      readOnly={readOnly}
-      className={className}
-    />
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+        {"₱"}
+      </span>
+      <Input
+        ref={inputRef}
+        type="text"
+        inputMode="decimal"
+        value={formatDisplay(value)}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        readOnly={readOnly}
+        className={cn(
+          "h-9 pl-7 tabular-nums",
+          readOnly && "cursor-default bg-muted text-muted-foreground",
+          className,
+        )}
+      />
+    </div>
   );
 }

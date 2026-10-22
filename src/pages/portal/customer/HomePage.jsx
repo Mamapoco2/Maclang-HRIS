@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import PhotoBlock from "./components/PhotoBlock";
-import HeroArt from "./components/HeroArt";
+import PhotoBlock from "../shared/components/PhotoBlock";
+import HeroArt from "../shared/components/HeroArt";
 import heroImg from "@/assets/hero.jpg";
 import { ANNOUNCEMENTS, NEWS, QUICK_SERVICES, STATS } from "./data";
 
@@ -37,12 +37,12 @@ function Hero() {
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button asChild className="bg-[#0a3d91] hover:bg-[#0a4bb8]">
-            <Link to="/portal/services">
+            <Link to="/patients/services">
               Our Services <ArrowRight className="size-4" />
             </Link>
           </Button>
           <Button asChild variant="outline" className="bg-white/70">
-            <Link to="/portal/about">About the Hospital</Link>
+            <Link to="/patients/about">About the Hospital</Link>
           </Button>
         </div>
       </div>
@@ -74,7 +74,7 @@ function QuickServices() {
   );
 }
 
-const SectionHead = ({ title, to = "/portal/news" }) => (
+const SectionHead = ({ title, to = "/patients/news" }) => (
   <div className="mb-4 flex items-end justify-between">
     <h2 className="text-lg font-semibold text-[#0b2a5b]">{title}</h2>
     <Link
@@ -115,7 +115,7 @@ function NewsAndAnnouncements() {
                   {n.title}
                 </h3>
                 <Link
-                  to="/portal/news"
+                  to="/patients/news"
                   className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-[#0a4bb8]"
                 >
                   Read More <ArrowRight className="size-3" />
@@ -161,7 +161,7 @@ function DirectorMessage() {
           className="h-full"
         />
         <div className="relative p-8">
-          <Quote className="absolute -left-1 top-4 size-8 fill-[#0a4bb8]/80 text-[#0a4bb8]/80" />
+          <Quote className="absolute-left-1 top-4 size-8 fill-[#0a4bb8]/80 text-[#0a4bb8]/80" />
           <div className="pl-8">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
               Message from the Medical Center Chief

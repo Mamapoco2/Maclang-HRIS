@@ -14,19 +14,19 @@ export default function EmployeeDeleteDialog({ open, onClose, onConfirm }) {
     <AlertDialog open={open} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+          <AlertDialogTitle>Delete this employee?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this employee? This action cannot be
-            undone and will permanently remove their record.
+            This permanently removes the employee record. This action cannot be
+            undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700"
+            className="!bg-destructive !text-white hover:!bg-destructive/90"
           >
-            Delete
+            Delete employee
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

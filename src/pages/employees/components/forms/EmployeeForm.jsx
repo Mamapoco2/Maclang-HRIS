@@ -2,7 +2,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Save, Loader2 } from "lucide-react";
 import { employeeService } from "@/services/employeeService";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useEmployeeFormState } from "../../hooks/useEmployeeFormState";
 import { useDivisions } from "../../hooks/useDivisions";
@@ -186,8 +187,7 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col bg-white w-full min-w-0 relative"
-      style={{ maxHeight: "min(90vh, 90dvh)", fontFamily: "inherit" }}
+      className="relative flex max-h-[92dvh] w-full min-w-0 flex-col bg-background"
     >
       <EmployeeHeader
         employee={employee}
@@ -205,27 +205,21 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         removeAvatar={removeAvatar}
       />
 
-      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-      <div className="flex border-b border-gray-100 px-4 sm:px-6 bg-white overflow-x-auto">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "py-3 mr-4 sm:mr-6 text-xs font-semibold uppercase tracking-widest border-b-2 -mb-px transition-colors duration-150 whitespace-nowrap",
-              activeTab === tab.id
-                ? "border-gray-900 text-gray-900"
-                : "border-transparent text-gray-400 hover:text-gray-600",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs */}
+      <div className="border-b px-4 py-3 sm:px-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
-      {/* ── Scrollable body ──────────────────────────────────────────────── */}
-      <div className="overflow-y-auto flex-1 min-w-0 px-4 sm:px-6 py-6 space-y-8">
+      {/* Scrollable body */}
+      <div className="min-h-0 min-w-0 flex-1 space-y-8 overflow-y-auto px-4 py-6 sm:px-6">
         {initializing ? (
           <FormLoader
             label={employee ? "Loading employee data..." : "Preparing form..."}
@@ -264,46 +258,44 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
         )}
       </div>
 
-      {/* ── Footer / Submit ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 bg-white">
-        <button
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-2 border-t bg-muted/30 px-4 py-4 sm:px-6">
+        <Button
           type="button"
+          variant="outline"
           onClick={onClose}
           disabled={submitting}
-          className="text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 transition-colors px-2 sm:px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={submitting || initializing}
-          className="inline-flex items-center gap-2 h-9 px-4 sm:px-5 rounded-lg bg-gray-900 text-white text-xs font-semibold uppercase tracking-wider hover:bg-gray-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-        >
+        </Button>
+        <Button type="submit" disabled={submitting || initializing}>
           {submitting ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
               Saving...
             </>
           ) : (
             <>
-              <Save className="w-3.5 h-3.5" />
+              <Save className="size-4" />
               {employee ? "Update employee" : "Add employee"}
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {submitting && (
-        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
-          <div className="flex flex-col items-center gap-2 text-gray-500">
-            <Loader2 className="w-6 h-6 animate-spin" />
-            <p className="text-xs font-semibold uppercase tracking-widest">
-              Saving employee...
-            </p>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Loader2 className="size-6 animate-spin" />
+            <p className="text-sm font-medium">Saving employee...</p>
           </div>
         </div>
       )}
 
+      {/* Kept for the Personal Data Sheet steps, which are shared with the
+          profile page and style their inputs with ".field-input". Colors are
+          derived from the current text color so it follows light/dark themes
+          without depending on a particular shadcn token format. */}
       <style>{`
         .field-input {
           display: flex;
@@ -311,29 +303,22 @@ export default function EmployeeForm({ employee, refresh, onClose }) {
           width: 100%;
           height: 36px;
           padding: 0 10px;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          font-size: 12px;
+          border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+          border-radius: 6px;
+          font-size: 14px;
           font-family: inherit;
-          text-transform: uppercase;
-          color: #111827;
-          background: white;
+          color: inherit;
+          background: transparent;
           outline: none;
           transition: border-color 0.15s, box-shadow 0.15s;
-          letter-spacing: 0.02em;
         }
         .field-input:focus {
-          border-color: #9ca3af;
-          box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+          border-color: color-mix(in srgb, currentColor 55%, transparent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
         }
         .field-input::placeholder {
-          color: #d1d5db;
-          text-transform: none;
+          color: color-mix(in srgb, currentColor 40%, transparent);
         }
-        /* Hide the native calendar icon (Chrome/Edge/Safari) — a custom
-           lucide "Calendar" icon is rendered at the right edge instead.
-           The native indicator stays, invisible, stretched over the full
-           input so the whole field is still clickable to open the picker. */
         input[type="date"].field-input::-webkit-calendar-picker-indicator {
           position: absolute;
           inset: 0;

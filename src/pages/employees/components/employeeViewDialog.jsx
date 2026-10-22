@@ -1,105 +1,99 @@
 import React, { useState } from "react";
+import { Banknote, Building2, User } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "./shared/StatusBadge";
 import {
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Briefcase,
-  Users,
-  User,
-  Building2,
-  TrendingUp,
-} from "lucide-react";
+  formatCurrency,
+  formatDate,
+  formatRole,
+  getAvatarUrl,
+  getDeptNames,
+  getEmployeeStatus,
+  toTitleCase,
+} from "../utils/employeeDisplay";
 
-const formatRole = (role) =>
-  (Array.isArray(role) ? role : [role].filter(Boolean))
-    .filter(Boolean)
-    .join(", ") || null;
-
-const getDeptNames = (employee) => {
-  if (Array.isArray(employee.departments) && employee.departments.length > 0)
-    return employee.departments.map((d) => d.name).filter(Boolean);
-  if (employee.department?.name) return [employee.department.name];
-  return [];
-};
-
-const getAvatarUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  return `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ?? "http://localhost:8000"}/storage/${url}`;
-};
-
-const getStatusFromInfo = (employee, info) => {
-  const manual = employee.employment_status?.toUpperCase();
-  if (manual === "RESIGN") return "Resign";
-  if (manual === "INACTIVE") return "Inactive";
-  if (manual === "ACTIVE") return "Active";
-  if (!info?.status || info.status === "EMPTY") return "Inactive";
-  return "Active";
-};
-
-const STATUS_CONFIG = {
-  Active: {
-    dot: "bg-teal-500",
-    pill: "text-teal-700 bg-teal-50 ring-1 ring-teal-200",
-  },
-  Inactive: {
-    dot: "bg-gray-300",
-    pill: "text-gray-500 bg-gray-100 ring-1 ring-gray-200",
-  },
-  Resign: {
-    dot: "bg-red-400",
-    pill: "text-red-600 bg-red-50 ring-1 ring-red-200",
-  },
-};
-
+// Name for the profile header: names in title case, professional titles
+// (MD, RN, ...) kept in capitals.
 function buildDisplayName(employee) {
-  const up = (v) => (v ? String(v).trim().toUpperCase() : "");
+  const clean = (v) => (v ? String(v).trim() : "");
+  const withDot = (v) =>
+    /^(dr|mr|ms|mrs|engr|atty|hon|jr|sr)$/i.test(v) ? `${v}.` : v;
 
-  const rawPrefix = up(employee.prefix);
-  const prefix =
-    rawPrefix && !rawPrefix.endsWith(".") ? `${rawPrefix}.` : rawPrefix;
-  const first = up(employee.first_name);
-  const middle = up(employee.middle_name);
-  const last = up(employee.last_name);
-  const rawSuffix = up(employee.suffix);
-  const suffix =
-    rawSuffix && !rawSuffix.endsWith(".") ? `${rawSuffix}.` : rawSuffix;
+  const prefix = toTitleCase(withDot(clean(employee.prefix)));
+  const nameParts = [
+    employee.first_name,
+    employee.middle_name,
+    employee.last_name,
+  ]
+    .map(clean)
+    .filter(Boolean)
+    .map(toTitleCase)
+    .join(" ");
+  const suffix = toTitleCase(withDot(clean(employee.suffix)));
 
-  const titleArr = Array.isArray(employee.title)
-    ? employee.title.map(up).filter(Boolean)
-    : employee.title
-      ? [up(employee.title)]
-      : [];
-  const titleStr = titleArr.join(", ");
-
-  const nameParts = [first, middle, last].filter(Boolean).join(" ");
+  const titles = (
+    Array.isArray(employee.title)
+      ? employee.title
+      : employee.title
+        ? [employee.title]
+        : []
+  )
+    .map((t) => clean(t).toUpperCase())
+    .filter(Boolean)
+    .join(", ");
 
   const withAffixes = [prefix, nameParts, suffix].filter(Boolean).join(" ");
+  const full = titles ? `${withAffixes}, ${titles}` : withAffixes;
 
-  const full = titleStr ? `${withAffixes}, ${titleStr}` : withAffixes;
-
-  return { full, withAffixes, titleStr, prefix, nameParts, suffix };
+  return { full };
 }
 
-const formatCurrency = (value) => {
-  if (value === null || value === undefined || value === "") return null;
-  const cleaned =
-    typeof value === "string" ? value.replace(/[^0-9.-]/g, "") : value;
-  if (cleaned === "") return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n)
-    ? `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
-    : null;
-};
+function Detail({ label, value }) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="break-words text-sm font-medium">
+        {value || (
+          <span className="font-normal text-muted-foreground">Not set</span>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+function Group({ icon: Icon, title, children }) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Icon className="size-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      <dl className="grid grid-cols-1 gap-y-4">{children}</dl>
+    </section>
+  );
+}
+
+function SalaryTile({ label, value }) {
+  return (
+    <div className="rounded-lg border bg-muted/40 px-4 py-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tabular-nums">
+        {value || (
+          <span className="text-sm font-normal text-muted-foreground">
+            Not set
+          </span>
+        )}
+      </p>
+    </div>
+  );
+}
 
 export default function EmployeeViewDialog({ open, onClose, employee }) {
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -148,10 +142,10 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
     : null;
   const positionDisplay =
     positionItemNumber && positionTitle
-      ? `${positionItemNumber} \u00b7 ${positionTitle}`
+      ? `${positionItemNumber} · ${positionTitle}`
       : positionTitle;
   const positionRowLabel = isPlantillaPosition
-    ? "Plantilla Position"
+    ? "Plantilla position"
     : "Position";
 
   const salaryGradeObj =
@@ -180,215 +174,155 @@ export default function EmployeeViewDialog({ open, onClose, employee }) {
   const deptNames = getDeptNames(employee);
   const avatarSrc = getAvatarUrl(employee.avatar_url);
   const email = employee.user?.email ?? info.email ?? null;
-  const status = getStatusFromInfo(employee, info);
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.Inactive;
+  const status = getEmployeeStatus(employee);
 
   const { full } = buildDisplayName(employee);
+  const role =
+    formatRole(employee.role_position) || employee.position_designation;
 
-  const InfoRow = ({ icon: Icon, label, value }) => (
-    <div className="flex items-start gap-3 py-2.5 border-b border-gray-100 last:border-none">
-      <Icon className="h-3.5 w-3.5 text-gray-300 mt-1 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
-          {label}
-        </p>
-        <p className="text-[13px] text-gray-800 mt-0.5 font-medium uppercase break-words">
-          {value || <span className="text-gray-300 font-normal">—</span>}
-        </p>
-      </div>
-    </div>
-  );
+  const contractFrom = formatDate(employee.contract_period_from, "short");
+  const contractTo = formatDate(employee.contract_period_to, "short");
 
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl overflow-hidden rounded-xl border-gray-200 gap-0 p-0">
-          {/* Header bar */}
-          <div className="px-6 py-4 border-b border-gray-100">
-            <DialogTitle className="text-base font-semibold text-gray-800">
-              Employee Profile
-            </DialogTitle>
-          </div>
+        <DialogContent className="max-h-[92dvh] gap-0 overflow-hidden p-0 sm:max-w-3xl">
+          <DialogTitle className="sr-only">Employee profile</DialogTitle>
+          <DialogDescription className="sr-only">
+            Personal and employment details for {full || "this employee"}.
+          </DialogDescription>
 
-          {/* Profile strip */}
-          <div className="flex items-center gap-4 px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <div
-              className="cursor-pointer flex-shrink-0"
-              onClick={() => avatarSrc && setPreviewOpen(true)}
-            >
-              <Avatar className="h-16 w-16 ring-2 ring-white shadow-sm hover:opacity-90 transition-opacity">
-                <AvatarImage src={avatarSrc} />
-                <AvatarFallback className="bg-gray-200 text-gray-600 text-lg font-semibold">
-                  {employee.first_name?.[0]}
-                  {employee.last_name?.[0]}
-                </AvatarFallback>
-              </Avatar>
-            </div>
+          <div className="max-h-[92dvh] overflow-y-auto">
+            {/* Profile header */}
+            <div className="flex flex-col gap-4 border-b bg-muted/40 px-6 py-6 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() => avatarSrc && setPreviewOpen(true)}
+                disabled={!avatarSrc}
+                aria-label="Enlarge photo"
+                className="shrink-0 self-start rounded-full outline-none transition-opacity focus-visible:ring-[3px] focus-visible:ring-ring/50 enabled:cursor-zoom-in enabled:hover:opacity-90 sm:self-auto"
+              >
+                <Avatar className="size-20 border-2 border-background shadow-sm">
+                  <AvatarImage src={avatarSrc} className="object-cover" />
+                  <AvatarFallback className="bg-muted text-xl font-semibold text-muted-foreground">
+                    {employee.first_name?.[0]}
+                    {employee.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
 
-            <div className="flex-1 min-w-0">
-              {employee.employee_number && (
-                <p className="text-[10px] text-gray-400 font-mono mb-1 uppercase tracking-widest">
-                  {employee.employee_number}
-                </p>
-              )}
-
-              <h2 className="text-base font-semibold text-gray-900 uppercase leading-snug">
-                {full || "—"}
-              </h2>
-
-              <p className="text-xs text-gray-400 mt-0.5 truncate uppercase">
-                {formatRole(employee.role_position) ||
-                  employee.position_designation ||
-                  "No position assigned"}
-              </p>
-
-              <div className="mt-2 flex gap-1.5 flex-wrap">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${cfg.pill}`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                  {status}
-                </span>
-                {employee.employment_type && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border border-gray-200 bg-white text-gray-500 uppercase">
-                    {employee.employment_type}
-                  </span>
+              <div className="min-w-0 flex-1 space-y-1.5 pr-6">
+                {employee.employee_number && (
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {employee.employee_number}
+                  </p>
                 )}
+                <h2 className="text-xl font-semibold leading-snug tracking-tight">
+                  {full || "Unnamed employee"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {role ? toTitleCase(role) : "No position assigned"}
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <StatusBadge status={status} />
+                  {employee.employment_type && (
+                    <Badge
+                      variant="outline"
+                      className="rounded-full font-medium"
+                    >
+                      {employee.employment_type}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Two-column info grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
-            {/* Personal */}
-            <div className="px-6 py-5">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                Personal Information
-              </p>
-              <InfoRow icon={Mail} label="Email" value={email} />
-              <InfoRow
-                icon={Calendar}
-                label="Birthdate"
-                value={
-                  info.birthdate
-                    ? new Date(info.birthdate).toLocaleDateString("en-PH", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
-                    : null
-                }
-              />
-              <InfoRow icon={User} label="Gender" value={info.gender} />
-              <InfoRow icon={Phone} label="Contact" value={info.contact} />
-              <InfoRow icon={MapPin} label="Address" value={info.address} />
-            </div>
-
-            {/* Employment */}
-            <div className="px-6 py-5">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                Employment Information
-              </p>
-              <InfoRow
-                icon={Building2}
-                label="Division"
-                value={employee.division?.name}
-              />
-              <InfoRow
-                icon={Users}
-                label="Department"
-                value={deptNames.length > 0 ? deptNames.join(", ") : null}
-              />
-              <InfoRow
-                icon={Briefcase}
-                label={positionRowLabel}
-                value={positionDisplay}
-              />
-
-              {isPlantillaPosition && (
-                <>
-                  <InfoRow
-                    icon={TrendingUp}
-                    label="Salary Grade"
-                    value={salaryGradeLevel ? `SG-${salaryGradeLevel}` : null}
+            <div className="space-y-8 px-6 py-6">
+              <div className="grid gap-8 md:grid-cols-2">
+                <Group icon={User} title="Personal information">
+                  <Detail label="Email" value={email} />
+                  <Detail
+                    label="Birthdate"
+                    value={formatDate(info.birthdate)}
                   />
-                  <InfoRow
-                    icon={TrendingUp}
-                    label="Step"
-                    value={stepLabel ? `Step ${stepLabel}` : null}
+                  <Detail
+                    label="Gender"
+                    value={info.gender && toTitleCase(info.gender)}
                   />
-                </>
-              )}
+                  <Detail label="Contact number" value={info.contact} />
+                  <Detail label="Address" value={info.address} />
+                </Group>
 
-              {(isCos || isConsultant) && (
-                <>
-                  <InfoRow
-                    icon={Calendar}
-                    label="First Day of Service"
-                    value={
-                      employee.first_day_of_service
-                        ? new Date(
-                            employee.first_day_of_service,
-                          ).toLocaleDateString("en-PH", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
-                        : null
-                    }
+                <Group icon={Building2} title="Assignment">
+                  <Detail label="Division" value={employee.division?.name} />
+                  <Detail
+                    label="Department"
+                    value={deptNames.length > 0 ? deptNames.join(", ") : null}
                   />
-                  <InfoRow
-                    icon={Calendar}
-                    label="Contract Period"
-                    value={
-                      employee.contract_period_from ||
-                      employee.contract_period_to
-                        ? [
-                            employee.contract_period_from
-                              ? new Date(
-                                  employee.contract_period_from,
-                                ).toLocaleDateString("en-PH", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })
-                              : "—",
-                            employee.contract_period_to
-                              ? new Date(
-                                  employee.contract_period_to,
-                                ).toLocaleDateString("en-PH", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })
-                              : "—",
-                          ].join(" – ")
-                        : null
-                    }
+                  <Detail label={positionRowLabel} value={positionDisplay} />
+
+                  {isPlantillaPosition && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <Detail
+                        label="Salary grade"
+                        value={
+                          salaryGradeLevel ? `SG-${salaryGradeLevel}` : null
+                        }
+                      />
+                      <Detail
+                        label="Step"
+                        value={stepLabel ? `Step ${stepLabel}` : null}
+                      />
+                    </div>
+                  )}
+
+                  {(isCos || isConsultant) && (
+                    <>
+                      <Detail
+                        label="First day of service"
+                        value={formatDate(employee.first_day_of_service)}
+                      />
+                      <Detail
+                        label="Contract period"
+                        value={
+                          contractFrom || contractTo
+                            ? `${contractFrom ?? "-"} to ${contractTo ?? "-"}`
+                            : null
+                        }
+                      />
+                    </>
+                  )}
+                </Group>
+              </div>
+
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Banknote className="size-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">Compensation</h3>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SalaryTile
+                    label="Gross salary (monthly)"
+                    value={formatCurrency(grossSalary)}
                   />
-                </>
-              )}
-
-              <InfoRow
-                icon={DollarSign}
-                label="Annual Salary"
-                value={formatCurrency(annualSalary)}
-              />
-
-              <InfoRow
-                icon={DollarSign}
-                label="Gross Salary"
-                value={formatCurrency(grossSalary)}
-              />
+                  <SalaryTile
+                    label="Annual salary"
+                    value={formatCurrency(annualSalary)}
+                  />
+                </div>
+              </section>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-sm p-2 border-none">
-          <DialogTitle className="sr-only">Employee Avatar Preview</DialogTitle>
-          <div className="flex justify-center items-center">
+        <DialogContent className="max-w-sm border-none p-2">
+          <DialogTitle className="sr-only">Employee photo</DialogTitle>
+          <DialogDescription className="sr-only">
+            Enlarged employee photo.
+          </DialogDescription>
+          <div className="flex items-center justify-center">
             <img
               src={avatarSrc}
               alt="Employee"

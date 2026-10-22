@@ -69,11 +69,17 @@ import DTRShiftsPage from "../pages/dtr/components/shiftsPage";
 import DTRSchedulePage from "../pages/dtr/components/schedulePage";
 import RoleManagementPage from "../pages/accounts/components/roleManagementPage";
 import UserManagementPage from "../pages/accounts/components/userManagementPage";
-import PortalLayout from "../pages/portal/PortalLayout";
-import PortalHome from "../pages/portal/HomePage";
-import PortalServices from "../pages/portal/ServicesPage";
-import PortalServiceDetails from "../pages/portal/ServiceDetailsPage";
-import PortalStatistics from "../pages/portal/StatisticsPage";
+
+// Employee portal (login required, no booking)
+import EmployeeLayout from "../pages/portal/employee/EmployeeLayout";
+import EmployeeHome from "../pages/portal/employee/EmployeeHomePage";
+// Customer site (public: patients & visitors)
+import CustomerLayout from "../pages/portal/customer/CustomerLayout";
+import CustomerHome from "../pages/portal/customer/HomePage";
+import CustomerServices from "../pages/portal/customer/ServicesPage";
+import CustomerServiceDetails from "../pages/portal/customer/ServiceDetailsPage";
+// Shared by both
+import PortalStatistics from "../pages/portal/shared/StatisticsPage";
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useContext(AuthContext);
@@ -96,18 +102,36 @@ function AppRoutes() {
           <Route path="/dtr/*" element={<DTRPage />} />
         </Route>
 
-        {/* ── Hospital portal (public, no auth, not redirected when logged in) ── */}
-        <Route path="/portal" element={<PortalLayout />}>
-          <Route index element={<PortalHome />} />
-          <Route path="services" element={<PortalServices />} />
-          <Route path="services/:slug" element={<PortalServiceDetails />} />
+        {/* ── Customer site (public, no auth, not redirected when logged in) ── */}
+        <Route path="/patients" element={<CustomerLayout />}>
+          <Route index element={<CustomerHome />} />
+          <Route path="services" element={<CustomerServices />} />
+          <Route path="services/:slug" element={<CustomerServiceDetails />} />
           <Route path="statistics" element={<PortalStatistics />} />
-          <Route path="*" element={<Navigate to="/portal" replace />} />
+          <Route path="*" element={<Navigate to="/patients" replace />} />
         </Route>
 
         <Route path="/status/403" element={<Status403 />} />
 
         <Route element={<ProtectedRoute />}>
+          {/* ── Employee portal (employees only, no booking) ── */}
+          <Route
+            path="/portal"
+            element={
+              <ProfileGate>
+                <EmployeeLayout />
+              </ProfileGate>
+            }
+          >
+            <Route index element={<EmployeeHome />} />
+            <Route
+              path="statistics"
+              element={
+                <PortalStatistics subtitle="Internal census and performance figures for hospital staff." />
+              }
+            />
+            <Route path="*" element={<Navigate to="/portal" replace />} />
+          </Route>
           <Route
             element={
               <ProfileGate>
